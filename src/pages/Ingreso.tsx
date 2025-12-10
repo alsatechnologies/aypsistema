@@ -7,25 +7,31 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Plus, Search, LogOut, Car, Clock, MapPin, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
+import NuevoIngresoDialog, { NuevoIngresoData, MotivoVisita } from '@/components/ingreso/NuevoIngresoDialog';
 
 interface Ingreso {
   id: number;
   nombreChofer: string;
   empresa: string;
   procedenciaDestino: string;
-  motivo: 'Reciba' | 'Embarque' | 'Visita' | 'Proveedor';
+  motivo: MotivoVisita;
   placas: string;
   vehiculo: string;
   fechaHoraIngreso: string;
   fechaHoraSalida: string | null;
   ubicacion: string;
+  // Campos para Báscula
+  producto?: string;
+  cliente?: string;
+  proveedor?: string;
+  tipoTransporte?: 'Camión' | 'Ferroviaria';
+  enviadoAOficina?: boolean;
 }
 
 const Ingreso = () => {
   const [search, setSearch] = useState('');
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [ingresos, setIngresos] = useState<Ingreso[]>([
     { 
       id: 1, 
@@ -37,7 +43,11 @@ const Ingreso = () => {
       vehiculo: 'Tractocamión',
       fechaHoraIngreso: '2024-12-10 08:30',
       fechaHoraSalida: null,
-      ubicacion: 'Báscula 1'
+      ubicacion: 'Báscula Camión',
+      producto: 'Frijol Soya',
+      proveedor: 'Oleaginosas del Bajío',
+      tipoTransporte: 'Camión',
+      enviadoAOficina: true
     },
     { 
       id: 2, 
@@ -49,7 +59,11 @@ const Ingreso = () => {
       vehiculo: 'Pipa',
       fechaHoraIngreso: '2024-12-10 09:15',
       fechaHoraSalida: null,
-      ubicacion: 'Patio de espera'
+      ubicacion: 'Patio de espera',
+      producto: 'Aceite Crudo de Soya',
+      cliente: 'Aceites del Pacífico SA',
+      tipoTransporte: 'Camión',
+      enviadoAOficina: true
     },
     { 
       id: 3, 
@@ -61,7 +75,11 @@ const Ingreso = () => {
       vehiculo: 'Torton',
       fechaHoraIngreso: '2024-12-10 07:45',
       fechaHoraSalida: '2024-12-10 11:30',
-      ubicacion: '-'
+      ubicacion: '-',
+      producto: 'Pasta de Soya',
+      proveedor: 'Granos del Norte',
+      tipoTransporte: 'Camión',
+      enviadoAOficina: true
     },
     { 
       id: 4, 
@@ -99,6 +117,45 @@ const Ingreso = () => {
     setIngresos(prev => prev.map(ing => 
       ing.id === id ? { ...ing, fechaHoraSalida: now, ubicacion: '-' } : ing
     ));
+    toast.success('Salida registrada correctamente');
+  };
+
+  const handleNuevoIngreso = (data: NuevoIngresoData) => {
+    const now = new Date().toLocaleString('es-MX', { 
+      year: 'numeric', 
+      month: '2-digit', 
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).replace(',', '');
+
+    const esBascula = data.motivo === 'Reciba' || data.motivo === 'Embarque';
+
+    const nuevoIngreso: Ingreso = {
+      id: Date.now(),
+      nombreChofer: data.nombreChofer,
+      empresa: data.empresa,
+      procedenciaDestino: data.procedenciaDestino,
+      motivo: data.motivo,
+      placas: data.placas,
+      vehiculo: data.vehiculo,
+      fechaHoraIngreso: now,
+      fechaHoraSalida: null,
+      ubicacion: data.ubicacion || 'Patio de espera',
+      producto: data.producto,
+      cliente: data.cliente,
+      proveedor: data.proveedor,
+      tipoTransporte: data.tipoTransporte,
+      enviadoAOficina: esBascula,
+    };
+
+    setIngresos(prev => [nuevoIngreso, ...prev]);
+
+    if (esBascula) {
+      toast.success('Ingreso registrado y enviado a Oficina para generar orden de báscula');
+    } else {
+      toast.success('Ingreso registrado correctamente');
+    }
   };
 
   const filteredIngresos = ingresos.filter(ing => 
@@ -155,107 +212,13 @@ const Ingreso = () => {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button className="bg-primary hover:bg-primary/90">
-                <Plus className="h-4 w-4 mr-2" />
-                Nuevo Registro
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg">
-              <DialogHeader>
-                <DialogTitle>Registrar Ingreso</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Nombre del Chofer</Label>
-                    <Input placeholder="Nombre completo" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Empresa</Label>
-                    <Input placeholder="Nombre de la empresa" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Vehículo</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Tipo de vehículo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="tractocamion">Tractocamión</SelectItem>
-                        <SelectItem value="pipa">Pipa</SelectItem>
-                        <SelectItem value="torton">Torton</SelectItem>
-                        <SelectItem value="camioneta">Camioneta</SelectItem>
-                        <SelectItem value="ferrocarril">Ferrocarril</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Placas</Label>
-                    <Input placeholder="ABC-123-A" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Motivo</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar motivo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="reciba">Reciba</SelectItem>
-                        <SelectItem value="embarque">Embarque</SelectItem>
-                        <SelectItem value="visita">Visita</SelectItem>
-                        <SelectItem value="proveedor">Proveedor</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Ubicación</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Asignar ubicación" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="bascula1">Báscula 1</SelectItem>
-                        <SelectItem value="bascula2">Báscula 2</SelectItem>
-                        <SelectItem value="patio">Patio de espera</SelectItem>
-                        <SelectItem value="descarga">Área de descarga</SelectItem>
-                        <SelectItem value="carga">Área de carga</SelectItem>
-                        <SelectItem value="oficinas">Oficinas</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Procedencia / Destino</Label>
-                  <Input placeholder="Ej: Guadalajara, JAL" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Proveedor (opcional)</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleccionar proveedor" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="prov1">Oleaginosas del Bajío</SelectItem>
-                      <SelectItem value="prov2">Granos del Norte</SelectItem>
-                      <SelectItem value="prov3">Aceites Industriales</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <DialogFooter>
-                <DialogClose asChild>
-                  <Button variant="outline">Cancelar</Button>
-                </DialogClose>
-                <Button className="bg-primary hover:bg-primary/90">Registrar Ingreso</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button 
+            className="bg-primary hover:bg-primary/90"
+            onClick={() => setDialogOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Nuevo Registro
+          </Button>
         </div>
 
         {/* Table */}
@@ -273,11 +236,12 @@ const Ingreso = () => {
                 <TableRow>
                   <TableHead>Nombre Chofer</TableHead>
                   <TableHead>Empresa</TableHead>
+                  <TableHead>Vehículo</TableHead>
+                  <TableHead>Placas</TableHead>
                   <TableHead>Procedencia/Destino</TableHead>
                   <TableHead>Motivo</TableHead>
-                  <TableHead>Placas</TableHead>
-                  <TableHead>Fecha/Hora Ingreso</TableHead>
-                  <TableHead>Fecha/Hora Salida</TableHead>
+                  <TableHead>Ingreso</TableHead>
+                  <TableHead>Salida</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -286,14 +250,24 @@ const Ingreso = () => {
                   <TableRow key={ingreso.id} className="cursor-pointer hover:bg-muted/50">
                     <TableCell className="font-medium">{ingreso.nombreChofer}</TableCell>
                     <TableCell>{ingreso.empresa}</TableCell>
+                    <TableCell>{ingreso.vehiculo}</TableCell>
+                    <TableCell className="font-mono text-sm">{ingreso.placas}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
                         <MapPin className="h-3 w-3 text-muted-foreground" />
                         {ingreso.procedenciaDestino}
                       </div>
                     </TableCell>
-                    <TableCell>{getMotivoBadge(ingreso.motivo)}</TableCell>
-                    <TableCell className="font-mono text-sm">{ingreso.placas}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {getMotivoBadge(ingreso.motivo)}
+                        {ingreso.enviadoAOficina && (
+                          <Badge variant="outline" className="text-xs text-primary border-primary">
+                            Oficina
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>{ingreso.fechaHoraIngreso}</TableCell>
                     <TableCell>
                       {ingreso.fechaHoraSalida ? (
@@ -321,6 +295,13 @@ const Ingreso = () => {
             </Table>
           </CardContent>
         </Card>
+
+        {/* Dialog */}
+        <NuevoIngresoDialog 
+          open={dialogOpen} 
+          onOpenChange={setDialogOpen}
+          onSubmit={handleNuevoIngreso}
+        />
       </div>
     </Layout>
   );
