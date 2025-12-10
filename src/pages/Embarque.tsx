@@ -503,7 +503,10 @@ const EmbarquePage = () => {
                     <AnalisisDinamico
                       producto={selectedEmbarque.producto}
                       valores={formData.valoresAnalisis}
-                      onChange={(valores) => setFormData({ ...formData, valoresAnalisis: valores })}
+                      onChange={(nombre, valor) => setFormData({ 
+                        ...formData, 
+                        valoresAnalisis: { ...formData.valoresAnalisis, [nombre]: valor } 
+                      })}
                     />
                   </div>
 
