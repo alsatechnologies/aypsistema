@@ -166,12 +166,12 @@ const EmbarquePage = () => {
     tipoTransporte: 'Camión' | 'Ferroviaria';
     tipoEmbarque: 'Nacional' | 'Exportación';
   }) => {
-    const tipoOperacion: TipoOperacion = data.tipoEmbarque === 'Nacional' ? 'Embarque Nacional' : 'Embarque Exportación';
-    const nuevoFolio = generateNumeroBoleta(tipoOperacion, data.producto, consecutivo);
+    const tipoOperacion: TipoOperacion = data.tipoEmbarque === 'Nacional' ? 'Embarque Nacional' : 'Exportación';
+    const nuevaBoleta = generateNumeroBoleta(tipoOperacion, data.producto, consecutivo);
     
     const nuevoEmbarque: Embarque = {
       id: embarques.length + 1,
-      folio: nuevoFolio,
+      folio: nuevaBoleta,
       producto: data.producto,
       cliente: data.cliente,
       destino: data.destino,

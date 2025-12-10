@@ -17,7 +17,7 @@ import AnalisisDinamico from '@/components/reciba/AnalisisDinamico';
 import DescuentosPanel from '@/components/reciba/DescuentosPanel';
 import SellosSection from '@/components/reciba/SellosSection';
 import NuevaOperacionDialog from '@/components/reciba/NuevaOperacionDialog';
-import { generarFolioReciba } from '@/utils/folioGenerator';
+import { generarBoletaEntradas } from '@/utils/folioGenerator';
 
 interface Recepcion {
   id: number;
@@ -173,11 +173,11 @@ const Reciba = () => {
     tipoTransporte: 'Camión' | 'Ferroviaria';
   }) => {
     const nuevoId = Math.max(...recepciones.map(r => r.id)) + 1;
-    const nuevoFolio = generarFolioReciba(operacion.producto, recepciones.length + 1);
+    const nuevaBoleta = generarBoletaEntradas(operacion.producto, recepciones.length + 1);
     
     const nuevaRecepcion: Recepcion = {
       id: nuevoId,
-      folio: nuevoFolio,
+      folio: nuevaBoleta,
       producto: operacion.producto,
       proveedor: operacion.proveedor,
       chofer: operacion.chofer,

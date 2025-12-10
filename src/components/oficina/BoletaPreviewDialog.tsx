@@ -7,10 +7,10 @@ import { Printer, X } from 'lucide-react';
 
 interface Orden {
   id: number;
-  folio: string;
+  boleta: string;
   producto: string;
   cliente: string;
-  tipoOperacion: 'Reciba' | 'Embarque Nacional' | 'Embarque Exportación';
+  tipoOperacion: 'Entradas' | 'Embarque Nacional' | 'Exportación';
   destino: string;
   nombreChofer: string;
   vehiculo: string;
@@ -39,7 +39,7 @@ const BoletaPreviewDialog: React.FC<BoletaPreviewDialogProps> = ({ open, onOpenC
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Boleta ${orden?.folio}</title>
+          <title>Boleta ${orden?.boleta}</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { font-family: Arial, sans-serif; padding: 20px; }
@@ -93,9 +93,9 @@ const BoletaPreviewDialog: React.FC<BoletaPreviewDialogProps> = ({ open, onOpenC
 
   const getTipoLabel = (tipo: string) => {
     const labels: Record<string, string> = {
-      'Reciba': 'RECEPCIÓN',
+      'Entradas': 'RECEPCIÓN',
       'Embarque Nacional': 'EMBARQUE NACIONAL',
-      'Embarque Exportación': 'EMBARQUE EXPORTACIÓN',
+      'Exportación': 'EXPORTACIÓN',
     };
     return labels[tipo] || tipo;
   };
@@ -135,7 +135,7 @@ const BoletaPreviewDialog: React.FC<BoletaPreviewDialogProps> = ({ open, onOpenC
             {/* Folio Box */}
             <div className="folio-box bg-muted/50 p-4 rounded-lg text-center mb-6">
               <p className="text-sm text-muted-foreground mb-1">Número de Boleta</p>
-              <p className="folio text-3xl font-bold font-mono tracking-wider">{orden.folio}</p>
+              <p className="folio text-3xl font-bold font-mono tracking-wider">{orden.boleta}</p>
             </div>
 
             {/* Info Grid */}
