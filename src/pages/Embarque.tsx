@@ -5,12 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Search, Scale, Truck, Train, Clock, CheckCircle, FileText, Printer, Save, Ship } from 'lucide-react';
+import { Search, Scale, Truck, Train, Clock, CheckCircle, FileText, Printer, Save, Ship, Plus, Eye } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import SellosSection from '@/components/reciba/SellosSection';
+import AnalisisDinamico from '@/components/reciba/AnalisisDinamico';
+import DescuentosPanel from '@/components/reciba/DescuentosPanel';
+import NuevoEmbarqueDialog from '@/components/embarque/NuevoEmbarqueDialog';
+import BoletaEmbarqueDialog from '@/components/embarque/BoletaEmbarqueDialog';
+import { generateNumeroBoleta, TipoOperacion } from '@/utils/folioGenerator';
+import { toast } from 'sonner';
 
 interface Embarque {
   id: number;
@@ -26,14 +33,24 @@ interface Embarque {
   pesoNeto?: number;
   tipoTransporte: 'Camión' | 'Ferroviaria';
   tipoEmbarque: 'Nacional' | 'Exportación';
+  sellos?: {
+    selloEntrada1: string;
+    selloEntrada2: string;
+    selloSalida1: string;
+    selloSalida2: string;
+  };
+  valoresAnalisis?: Record<string, number>;
 }
 
-const Embarque = () => {
+const EmbarquePage = () => {
   const [search, setSearch] = useState('');
   const [selectedEmbarque, setSelectedEmbarque] = useState<Embarque | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isNuevoDialogOpen, setIsNuevoDialogOpen] = useState(false);
+  const [isBoletaDialogOpen, setIsBoletaDialogOpen] = useState(false);
+  const [consecutivo, setConsecutivo] = useState(5);
 
-  const [embarques] = useState<Embarque[]>([
+  const [embarques, setEmbarques] = useState<Embarque[]>([
     { 
       id: 1, 
       folio: '1-01-0001',
@@ -45,7 +62,9 @@ const Embarque = () => {
       estatus: 'Peso Tara',
       pesoTara: 15200,
       tipoTransporte: 'Camión',
-      tipoEmbarque: 'Nacional'
+      tipoEmbarque: 'Nacional',
+      sellos: { selloEntrada1: '', selloEntrada2: '', selloSalida1: '', selloSalida2: '' },
+      valoresAnalisis: {}
     },
     { 
       id: 2, 
@@ -57,7 +76,9 @@ const Embarque = () => {
       fecha: '2024-12-10',
       estatus: 'Pendiente',
       tipoTransporte: 'Camión',
-      tipoEmbarque: 'Nacional'
+      tipoEmbarque: 'Nacional',
+      sellos: { selloEntrada1: '', selloEntrada2: '', selloSalida1: '', selloSalida2: '' },
+      valoresAnalisis: {}
     },
     { 
       id: 3, 
@@ -72,7 +93,9 @@ const Embarque = () => {
       pesoTara: 14200,
       pesoNeto: 34300,
       tipoTransporte: 'Ferroviaria',
-      tipoEmbarque: 'Exportación'
+      tipoEmbarque: 'Exportación',
+      sellos: { selloEntrada1: 'SEL-001', selloEntrada2: 'SEL-002', selloSalida1: 'SEL-003', selloSalida2: 'SEL-004' },
+      valoresAnalisis: {}
     },
     { 
       id: 4, 
@@ -87,9 +110,18 @@ const Embarque = () => {
       pesoTara: 15800,
       pesoNeto: 36300,
       tipoTransporte: 'Camión',
-      tipoEmbarque: 'Nacional'
+      tipoEmbarque: 'Nacional',
+      sellos: { selloEntrada1: 'SEL-005', selloEntrada2: 'SEL-006', selloSalida1: 'SEL-007', selloSalida2: 'SEL-008' },
+      valoresAnalisis: {}
     },
   ]);
+
+  const [formData, setFormData] = useState({
+    sellos: { selloEntrada1: '', selloEntrada2: '', selloSalida1: '', selloSalida2: '' },
+    valoresAnalisis: {} as Record<string, number>,
+    pesoBruto: 0,
+    pesoTara: 0
+  });
 
   const getEstatusBadge = (estatus: string) => {
     const config: Record<string, { className: string; icon: React.ReactNode }> = {
@@ -111,9 +143,76 @@ const Embarque = () => {
     return <Badge className={colors[tipo]}>{tipo}</Badge>;
   };
 
+  const getTransporteIcon = (tipo: string) => {
+    return tipo === 'Camión' ? <Truck className="h-4 w-4 text-muted-foreground" /> : <Train className="h-4 w-4 text-muted-foreground" />;
+  };
+
   const handleRowClick = (embarque: Embarque) => {
     setSelectedEmbarque(embarque);
+    setFormData({
+      sellos: embarque.sellos || { selloEntrada1: '', selloEntrada2: '', selloSalida1: '', selloSalida2: '' },
+      valoresAnalisis: embarque.valoresAnalisis || {},
+      pesoBruto: embarque.pesoBruto || 0,
+      pesoTara: embarque.pesoTara || 0
+    });
     setIsDialogOpen(true);
+  };
+
+  const handleNuevoEmbarque = (data: {
+    producto: string;
+    cliente: string;
+    destino: string;
+    chofer: string;
+    tipoTransporte: 'Camión' | 'Ferroviaria';
+    tipoEmbarque: 'Nacional' | 'Exportación';
+  }) => {
+    const tipoOperacion: TipoOperacion = data.tipoEmbarque === 'Nacional' ? 'Embarque Nacional' : 'Embarque Exportación';
+    const nuevoFolio = generateNumeroBoleta(tipoOperacion, data.producto, consecutivo);
+    
+    const nuevoEmbarque: Embarque = {
+      id: embarques.length + 1,
+      folio: nuevoFolio,
+      producto: data.producto,
+      cliente: data.cliente,
+      destino: data.destino,
+      chofer: data.chofer,
+      fecha: new Date().toISOString().split('T')[0],
+      estatus: 'Pendiente',
+      tipoTransporte: data.tipoTransporte,
+      tipoEmbarque: data.tipoEmbarque,
+      sellos: { selloEntrada1: '', selloEntrada2: '', selloSalida1: '', selloSalida2: '' },
+      valoresAnalisis: {}
+    };
+
+    setEmbarques([nuevoEmbarque, ...embarques]);
+    setConsecutivo(consecutivo + 1);
+  };
+
+  const handlePreviewBoleta = () => {
+    setIsBoletaDialogOpen(true);
+  };
+
+  const handleGuardar = () => {
+    if (!selectedEmbarque) return;
+    
+    const pesoNeto = formData.pesoBruto - formData.pesoTara;
+    
+    setEmbarques(embarques.map(e => 
+      e.id === selectedEmbarque.id 
+        ? { 
+            ...e, 
+            sellos: formData.sellos, 
+            valoresAnalisis: formData.valoresAnalisis,
+            pesoBruto: formData.pesoBruto,
+            pesoTara: formData.pesoTara,
+            pesoNeto: pesoNeto,
+            estatus: 'Completado' as const
+          }
+        : e
+    ));
+    
+    setIsDialogOpen(false);
+    toast.success('Embarque guardado correctamente');
   };
 
   const filteredEmbarques = embarques.filter(e => 
@@ -169,7 +268,7 @@ const Embarque = () => {
           </Card>
         </div>
 
-        {/* Search */}
+        {/* Search and New Button */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div className="relative w-full sm:w-96">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -180,6 +279,10 @@ const Embarque = () => {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          <Button onClick={() => setIsNuevoDialogOpen(true)} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Nuevo Embarque
+          </Button>
         </div>
 
         {/* Table */}
@@ -195,11 +298,12 @@ const Embarque = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Producto</TableHead>
                   <TableHead>Folio</TableHead>
+                  <TableHead>Producto</TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Destino</TableHead>
                   <TableHead>Tipo</TableHead>
+                  <TableHead>Transporte</TableHead>
                   <TableHead>Chofer</TableHead>
                   <TableHead>Fecha</TableHead>
                   <TableHead>Estatus</TableHead>
@@ -212,13 +316,19 @@ const Embarque = () => {
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => handleRowClick(embarque)}
                   >
-                    <TableCell className="font-medium">{embarque.producto}</TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="font-mono">{embarque.folio}</Badge>
+                      <Badge variant="outline" className="font-mono font-bold text-primary">{embarque.folio}</Badge>
                     </TableCell>
+                    <TableCell className="font-medium">{embarque.producto}</TableCell>
                     <TableCell>{embarque.cliente}</TableCell>
                     <TableCell>{embarque.destino}</TableCell>
                     <TableCell>{getTipoEmbarqueBadge(embarque.tipoEmbarque)}</TableCell>
+                    <TableCell>
+                      <span className="flex items-center gap-1">
+                        {getTransporteIcon(embarque.tipoTransporte)}
+                        {embarque.tipoTransporte}
+                      </span>
+                    </TableCell>
                     <TableCell>{embarque.chofer}</TableCell>
                     <TableCell>{embarque.fecha}</TableCell>
                     <TableCell>{getEstatusBadge(embarque.estatus)}</TableCell>
@@ -313,6 +423,17 @@ const Embarque = () => {
 
                   <Separator />
 
+                  {/* Sellos */}
+                  <div className="space-y-4">
+                    <h4 className="font-medium">Sellos de Seguridad</h4>
+                    <SellosSection 
+                      sellos={formData.sellos}
+                      onChange={(sellos) => setFormData({ ...formData, sellos })}
+                    />
+                  </div>
+
+                  <Separator />
+
                   {/* Pesos - TARA → BRUTO → NETO para Embarque */}
                   <div className="space-y-4">
                     <h4 className="font-medium flex items-center gap-2">
@@ -328,7 +449,8 @@ const Embarque = () => {
                           <Input 
                             type="number" 
                             className="text-2xl font-bold text-center h-14"
-                            value={selectedEmbarque.pesoTara || ''}
+                            value={formData.pesoTara || ''}
+                            onChange={(e) => setFormData({ ...formData, pesoTara: Number(e.target.value) })}
                             placeholder="0"
                           />
                           <Button className="w-full mt-2" size="sm">
@@ -345,7 +467,8 @@ const Embarque = () => {
                           <Input 
                             type="number" 
                             className="text-2xl font-bold text-center h-14"
-                            value={selectedEmbarque.pesoBruto || ''}
+                            value={formData.pesoBruto || ''}
+                            onChange={(e) => setFormData({ ...formData, pesoBruto: Number(e.target.value) })}
                             placeholder="0"
                           />
                           <Button className="w-full mt-2" size="sm" variant="outline">
@@ -360,9 +483,8 @@ const Embarque = () => {
                         </CardHeader>
                         <CardContent>
                           <div className="text-2xl font-bold text-center h-14 flex items-center justify-center bg-background rounded-md border">
-                            {selectedEmbarque.pesoNeto ? formatNumber(selectedEmbarque.pesoNeto) : 
-                              (selectedEmbarque.pesoBruto && selectedEmbarque.pesoTara) ? 
-                                formatNumber(selectedEmbarque.pesoBruto - selectedEmbarque.pesoTara) : '0'}
+                            {formData.pesoBruto && formData.pesoTara ? 
+                              formatNumber(formData.pesoBruto - formData.pesoTara) : '0'}
                           </div>
                           <p className="text-xs text-center text-muted-foreground mt-2">Bruto - Tara</p>
                         </CardContent>
@@ -372,33 +494,30 @@ const Embarque = () => {
 
                   <Separator />
 
-                  {/* Análisis dinámicos para Aceite */}
+                  {/* Análisis Dinámico */}
                   <div className="space-y-4">
                     <h4 className="font-medium flex items-center gap-2">
                       <FileText className="h-4 w-4" />
                       Análisis de Calidad
                     </h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="space-y-2">
-                        <Label>Acidez (%)</Label>
-                        <Input type="number" step="0.1" placeholder="0.0" />
-                        <p className="text-xs text-muted-foreground">Rango: 0-3%</p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Humedad (%)</Label>
-                        <Input type="number" step="0.1" placeholder="0.0" />
-                        <p className="text-xs text-muted-foreground">Rango: 0-0.5%</p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Color Rojo</Label>
-                        <Input type="number" step="0.1" placeholder="0.0" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Fosfolípidos (ppm)</Label>
-                        <Input type="number" step="1" placeholder="0" />
-                      </div>
-                    </div>
+                    <AnalisisDinamico
+                      producto={selectedEmbarque.producto}
+                      valores={formData.valoresAnalisis}
+                      onChange={(valores) => setFormData({ ...formData, valoresAnalisis: valores })}
+                    />
                   </div>
+
+                  {/* Descuentos Panel */}
+                  {formData.pesoBruto > 0 && formData.pesoTara > 0 && (
+                    <>
+                      <Separator />
+                      <DescuentosPanel
+                        producto={selectedEmbarque.producto}
+                        valoresAnalisis={formData.valoresAnalisis}
+                        pesoNeto={formData.pesoBruto - formData.pesoTara}
+                      />
+                    </>
+                  )}
 
                   <Separator />
 
@@ -419,7 +538,9 @@ const Embarque = () => {
                       <Separator className="my-3" />
                       <div className="flex justify-between text-lg font-bold">
                         <span>Peso Neto Embarcado:</span>
-                        <span className="text-primary">{formatNumber(selectedEmbarque.pesoNeto || 0)} Kg</span>
+                        <span className="text-primary">
+                          {formatNumber(formData.pesoBruto - formData.pesoTara)} Kg
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -429,11 +550,15 @@ const Embarque = () => {
                   <DialogClose asChild>
                     <Button variant="outline">Cancelar</Button>
                   </DialogClose>
+                  <Button variant="outline" onClick={handlePreviewBoleta} className="flex items-center gap-2">
+                    <Eye className="h-4 w-4" />
+                    Vista Previa
+                  </Button>
                   <Button variant="outline" className="flex items-center gap-2">
                     <Printer className="h-4 w-4" />
                     Imprimir
                   </Button>
-                  <Button className="bg-primary hover:bg-primary/90 flex items-center gap-2">
+                  <Button onClick={handleGuardar} className="bg-primary hover:bg-primary/90 flex items-center gap-2">
                     <Save className="h-4 w-4" />
                     Guardar Boleta
                   </Button>
@@ -442,9 +567,37 @@ const Embarque = () => {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Nuevo Embarque Dialog */}
+        <NuevoEmbarqueDialog
+          open={isNuevoDialogOpen}
+          onOpenChange={setIsNuevoDialogOpen}
+          onCrear={handleNuevoEmbarque}
+        />
+
+        {/* Boleta Preview Dialog */}
+        <BoletaEmbarqueDialog
+          open={isBoletaDialogOpen}
+          onOpenChange={setIsBoletaDialogOpen}
+          embarque={selectedEmbarque ? {
+            folio: selectedEmbarque.folio,
+            producto: selectedEmbarque.producto,
+            cliente: selectedEmbarque.cliente,
+            destino: selectedEmbarque.destino,
+            chofer: selectedEmbarque.chofer,
+            fecha: selectedEmbarque.fecha,
+            tipoTransporte: selectedEmbarque.tipoTransporte,
+            tipoEmbarque: selectedEmbarque.tipoEmbarque,
+            estatus: selectedEmbarque.estatus,
+            pesoBruto: formData.pesoBruto,
+            pesoTara: formData.pesoTara,
+            pesoNeto: formData.pesoBruto - formData.pesoTara,
+            sellos: formData.sellos
+          } : null}
+        />
       </div>
     </Layout>
   );
 };
 
-export default Embarque;
+export default EmbarquePage;
