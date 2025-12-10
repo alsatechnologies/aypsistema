@@ -22,7 +22,6 @@ interface Cliente {
   ciudad: string;
   tipoCliente: 'Nacional' | 'Exportación';
   productos: string[];
-  estatus: 'Activo' | 'Inactivo';
 }
 
 const Clientes = () => {
@@ -43,12 +42,12 @@ const Clientes = () => {
   });
 
   const [clientes, setClientes] = useState<Cliente[]>([
-    { id: 1, empresa: 'Aceites del Pacífico SA de CV', rfc: 'APA950315XYZ', contacto: 'Roberto Méndez', telefono: '33-123-4567', email: 'ventas@aceitespacifico.com', direccion: 'Av. Vallarta 1234', ciudad: 'Guadalajara, JAL', tipoCliente: 'Nacional', productos: ['Aceite Crudo de Soya', 'Aceite Refinado'], estatus: 'Activo' },
-    { id: 2, empresa: 'Alimentos Balanceados MX SA de CV', rfc: 'ABM980520ABC', contacto: 'Laura Sánchez', telefono: '81-234-5678', email: 'compras@alimentosmx.com', direccion: 'Blvd. Fundadores 456', ciudad: 'Monterrey, NL', tipoCliente: 'Nacional', productos: ['Pasta de Soya', 'Cascarilla de Soya'], estatus: 'Activo' },
-    { id: 3, empresa: 'Export Foods Inc.', rfc: 'EFI010715DEF', contacto: 'John Smith', telefono: '+1-713-456-7890', email: 'purchasing@exportfoods.com', direccion: '1234 Industrial Blvd', ciudad: 'Houston, TX', tipoCliente: 'Exportación', productos: ['Aceite Crudo de Soya'], estatus: 'Activo' },
-    { id: 4, empresa: 'Industrias Graseras SA de CV', rfc: 'IGR150320GHI', contacto: 'Fernando López', telefono: '55-567-8901', email: 'compras@graseras.com', direccion: 'Calz. de Tlalpan 789', ciudad: 'CDMX', tipoCliente: 'Nacional', productos: ['Aceite Crudo de Soya', 'Lecitina'], estatus: 'Activo' },
-    { id: 5, empresa: 'Pacific Trading Corp', rfc: 'PTC180610JKL', contacto: 'Michael Johnson', telefono: '+1-310-678-9012', email: 'info@pacifictrading.com', direccion: '5678 Commerce St', ciudad: 'Los Angeles, CA', tipoCliente: 'Exportación', productos: ['Aceite Refinado'], estatus: 'Inactivo' },
-    { id: 6, empresa: 'Forrajes del Norte SA de CV', rfc: 'FNO160815MNO', contacto: 'Patricia Ruiz', telefono: '614-789-0123', email: 'ventas@forrajesnorte.com', direccion: 'Carr. Panamericana Km 15', ciudad: 'Chihuahua, CHIH', tipoCliente: 'Nacional', productos: ['Pasta de Soya', 'Cascarilla de Soya'], estatus: 'Activo' },
+    { id: 1, empresa: 'Aceites del Pacífico SA de CV', rfc: 'APA950315XYZ', contacto: 'Roberto Méndez', telefono: '33-123-4567', email: 'ventas@aceitespacifico.com', direccion: 'Av. Vallarta 1234', ciudad: 'Guadalajara, JAL', tipoCliente: 'Nacional', productos: ['Aceite Crudo de Soya', 'Aceite Refinado'] },
+    { id: 2, empresa: 'Alimentos Balanceados MX SA de CV', rfc: 'ABM980520ABC', contacto: 'Laura Sánchez', telefono: '81-234-5678', email: 'compras@alimentosmx.com', direccion: 'Blvd. Fundadores 456', ciudad: 'Monterrey, NL', tipoCliente: 'Nacional', productos: ['Pasta de Soya', 'Cascarilla de Soya'] },
+    { id: 3, empresa: 'Export Foods Inc.', rfc: 'EFI010715DEF', contacto: 'John Smith', telefono: '+1-713-456-7890', email: 'purchasing@exportfoods.com', direccion: '1234 Industrial Blvd', ciudad: 'Houston, TX', tipoCliente: 'Exportación', productos: ['Aceite Crudo de Soya'] },
+    { id: 4, empresa: 'Industrias Graseras SA de CV', rfc: 'IGR150320GHI', contacto: 'Fernando López', telefono: '55-567-8901', email: 'compras@graseras.com', direccion: 'Calz. de Tlalpan 789', ciudad: 'CDMX', tipoCliente: 'Nacional', productos: ['Aceite Crudo de Soya', 'Lecitina'] },
+    { id: 5, empresa: 'Pacific Trading Corp', rfc: 'PTC180610JKL', contacto: 'Michael Johnson', telefono: '+1-310-678-9012', email: 'info@pacifictrading.com', direccion: '5678 Commerce St', ciudad: 'Los Angeles, CA', tipoCliente: 'Exportación', productos: ['Aceite Refinado'] },
+    { id: 6, empresa: 'Forrajes del Norte SA de CV', rfc: 'FNO160815MNO', contacto: 'Patricia Ruiz', telefono: '614-789-0123', email: 'ventas@forrajesnorte.com', direccion: 'Carr. Panamericana Km 15', ciudad: 'Chihuahua, CHIH', tipoCliente: 'Nacional', productos: ['Pasta de Soya', 'Cascarilla de Soya'] },
   ]);
 
   const filteredClientes = clientes.filter(c =>
@@ -73,8 +72,7 @@ const Clientes = () => {
       direccion: formData.direccion,
       ciudad: formData.ciudad,
       tipoCliente: formData.tipoCliente,
-      productos: [],
-      estatus: 'Activo'
+      productos: []
     };
 
     setClientes([nuevoCliente, ...clientes]);
@@ -89,9 +87,9 @@ const Clientes = () => {
   };
 
   const handleDownload = () => {
-    const headers = ['Empresa', 'RFC', 'Contacto', 'Teléfono', 'Email', 'Ciudad', 'Tipo', 'Estatus'];
+    const headers = ['Empresa', 'RFC', 'Contacto', 'Teléfono', 'Email', 'Ciudad', 'Tipo'];
     const rows = filteredClientes.map(c => [
-      c.empresa, c.rfc, c.contacto, c.telefono, c.email, c.ciudad, c.tipoCliente, c.estatus
+      c.empresa, c.rfc, c.contacto, c.telefono, c.email, c.ciudad, c.tipoCliente
     ]);
 
     const csvContent = [
@@ -112,7 +110,7 @@ const Clientes = () => {
       <Header title="Clientes" subtitle="Gestión de clientes nacionales y de exportación" />
       <div className="p-6">
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Total Clientes</CardTitle>
@@ -138,15 +136,6 @@ const Clientes = () => {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold text-purple-600">{clientes.filter(c => c.tipoCliente === 'Exportación').length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Activos</CardTitle>
-              <Users className="h-5 w-5 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-600">{clientes.filter(c => c.estatus === 'Activo').length}</div>
             </CardContent>
           </Card>
         </div>
@@ -190,7 +179,6 @@ const Clientes = () => {
                   <TableHead>Teléfono</TableHead>
                   <TableHead>Ciudad</TableHead>
                   <TableHead>Tipo</TableHead>
-                  <TableHead>Estatus</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
@@ -215,11 +203,6 @@ const Clientes = () => {
                     <TableCell>
                       <Badge className={cliente.tipoCliente === 'Nacional' ? 'bg-blue-500 text-white' : 'bg-purple-500 text-white'}>
                         {cliente.tipoCliente}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={cliente.estatus === 'Activo' ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}>
-                        {cliente.estatus}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -368,19 +351,13 @@ const Clientes = () => {
                       <p>{selectedCliente.contacto}</p>
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Estatus</Label>
-                      <Badge className={selectedCliente.estatus === 'Activo' ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}>
-                        {selectedCliente.estatus}
-                      </Badge>
-                    </div>
-                    <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Teléfono</Label>
                       <p className="flex items-center gap-1">
                         <Phone className="h-3 w-3" />
                         {selectedCliente.telefono}
                       </p>
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1 col-span-2">
                       <Label className="text-xs text-muted-foreground">Email</Label>
                       <p className="flex items-center gap-1">
                         <Mail className="h-3 w-3" />
