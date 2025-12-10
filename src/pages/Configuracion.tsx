@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit, Trash2, Package, Warehouse, Users, FlaskConical, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Package, Warehouse, Users, FlaskConical, ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -211,6 +211,7 @@ const Configuracion = () => {
 
   // Estado para edición de análisis con descuentos
   const [editingAnalisis, setEditingAnalisis] = useState<{ productoId: number; analisis: Analisis } | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const getRolBadge = (rol: string) => {
     const colors: Record<string, string> = {
@@ -902,12 +903,24 @@ const Configuracion = () => {
             </div>
             <div className="space-y-2">
               <Label>{editingUsuario ? 'Nueva Contraseña (dejar vacío para no cambiar)' : 'Contraseña'}</Label>
-              <Input 
-                type="password" 
-                placeholder="••••••••"
-                value={nuevoUsuario.contrasena}
-                onChange={(e) => setNuevoUsuario(prev => ({ ...prev, contrasena: e.target.value }))}
-              />
+              <div className="relative">
+                <Input 
+                  type={showPassword ? 'text' : 'password'} 
+                  placeholder="••••••••"
+                  value={nuevoUsuario.contrasena}
+                  onChange={(e) => setNuevoUsuario(prev => ({ ...prev, contrasena: e.target.value }))}
+                  className="pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                </Button>
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Rol</Label>
