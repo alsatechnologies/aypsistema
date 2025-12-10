@@ -5,16 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Search, Scale, Truck, Train, Clock, CheckCircle, FileText, Printer, Save, BookmarkPlus } from 'lucide-react';
+import { Search, Scale, Truck, Train, Clock, CheckCircle, FileText, Printer, Save, BookmarkPlus, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
 import AnalisisDinamico from '@/components/reciba/AnalisisDinamico';
 import DescuentosPanel from '@/components/reciba/DescuentosPanel';
 import SellosSection from '@/components/reciba/SellosSection';
+import NuevaOperacionDialog from '@/components/reciba/NuevaOperacionDialog';
+import { generarFolioReciba } from '@/utils/folioGenerator';
 
 interface Recepcion {
   id: number;
@@ -29,6 +32,7 @@ interface Recepcion {
   pesoTara?: number;
   pesoNeto?: number;
   tipoTransporte: 'Camión' | 'Ferroviaria';
+  tipoBascula?: 'Camión' | 'Ferroviaria';
   sellos?: {
     selloEntrada1: string;
     selloEntrada2: string;
@@ -42,7 +46,8 @@ const Reciba = () => {
   const [search, setSearch] = useState('');
   const [selectedRecepcion, setSelectedRecepcion] = useState<Recepcion | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'camion' | 'ferroviaria'>('camion');
+  const [isNuevaOperacionOpen, setIsNuevaOperacionOpen] = useState(false);
+  const [tipoBascula, setTipoBascula] = useState<'Camión' | 'Ferroviaria'>('Camión');
   
   // Estado del formulario
   const [pesoBruto, setPesoBruto] = useState<number>(0);
@@ -67,6 +72,7 @@ const Reciba = () => {
       estatus: 'Peso Bruto',
       pesoBruto: 45200,
       tipoTransporte: 'Camión',
+      tipoBascula: 'Camión',
       sellos: { selloEntrada1: 'AP-001', selloEntrada2: 'AP-002', selloSalida1: '', selloSalida2: '' }
     },
     { 
@@ -93,6 +99,7 @@ const Reciba = () => {
       pesoTara: 14200,
       pesoNeto: 24300,
       tipoTransporte: 'Camión',
+      tipoBascula: 'Camión',
       analisis: { Humedad: 13.5, Impurezas: 1.8, 'Granos Dañados': 2.5 }
     },
     { 
@@ -107,7 +114,8 @@ const Reciba = () => {
       pesoBruto: 52100,
       pesoTara: 15800,
       pesoNeto: 36300,
-      tipoTransporte: 'Camión'
+      tipoTransporte: 'Camión',
+      tipoBascula: 'Camión'
     },
   ]);
 
@@ -123,7 +131,7 @@ const Reciba = () => {
         selloSalida1: '',
         selloSalida2: '',
       });
-      setActiveTab(selectedRecepcion.tipoTransporte === 'Ferroviaria' ? 'ferroviaria' : 'camion');
+      setTipoBascula(selectedRecepcion.tipoBascula || selectedRecepcion.tipoTransporte || 'Camión');
     }
   }, [selectedRecepcion]);
 
@@ -157,6 +165,31 @@ const Reciba = () => {
     setValoresAnalisis(prev => ({ ...prev, [nombre]: valor }));
   };
 
+  const handleCrearOperacion = (operacion: {
+    producto: string;
+    proveedor: string;
+    chofer: string;
+    placas: string;
+    tipoTransporte: 'Camión' | 'Ferroviaria';
+  }) => {
+    const nuevoId = Math.max(...recepciones.map(r => r.id)) + 1;
+    const nuevoFolio = generarFolioReciba(operacion.producto, recepciones.length + 1);
+    
+    const nuevaRecepcion: Recepcion = {
+      id: nuevoId,
+      folio: nuevoFolio,
+      producto: operacion.producto,
+      proveedor: operacion.proveedor,
+      chofer: operacion.chofer,
+      placas: operacion.placas,
+      fecha: new Date().toISOString().split('T')[0],
+      estatus: 'Pendiente',
+      tipoTransporte: operacion.tipoTransporte,
+    };
+
+    setRecepciones(prev => [nuevaRecepcion, ...prev]);
+  };
+
   const handlePreGuardar = () => {
     if (!selectedRecepcion) return;
     
@@ -171,7 +204,8 @@ const Reciba = () => {
         pesoNeto: pesoNeto > 0 ? pesoNeto : undefined,
         sellos,
         analisis: valoresAnalisis,
-        estatus: nuevoEstatus
+        estatus: nuevoEstatus,
+        tipoBascula
       } : r
     ));
     
@@ -198,7 +232,8 @@ const Reciba = () => {
         pesoNeto,
         sellos,
         analisis: valoresAnalisis,
-        estatus: 'Completado'
+        estatus: 'Completado',
+        tipoBascula
       } : r
     ));
     
@@ -214,10 +249,6 @@ const Reciba = () => {
   );
 
   const formatNumber = (num?: number) => num ? num.toLocaleString('es-MX') : '-';
-
-  // Filtrar por tipo de transporte
-  const recepcionesCamion = filteredRecepciones.filter(r => r.tipoTransporte === 'Camión');
-  const recepcionesFerroviaria = filteredRecepciones.filter(r => r.tipoTransporte === 'Ferroviaria');
 
   return (
     <Layout>
@@ -263,7 +294,7 @@ const Reciba = () => {
           </Card>
         </div>
 
-        {/* Search */}
+        {/* Search y Nueva Operación */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div className="relative w-full sm:w-96">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -274,109 +305,67 @@ const Reciba = () => {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          <Button onClick={() => setIsNuevaOperacionOpen(true)} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Nueva Operación
+          </Button>
         </div>
 
-        {/* Tabs por tipo de transporte */}
-        <Tabs defaultValue="camion" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-2 mb-4">
-            <TabsTrigger value="camion" className="flex items-center gap-2">
-              <Truck className="h-4 w-4" />
-              Báscula Camión ({recepcionesCamion.length})
-            </TabsTrigger>
-            <TabsTrigger value="ferroviaria" className="flex items-center gap-2">
-              <Train className="h-4 w-4" />
-              Báscula Ferroviaria ({recepcionesFerroviaria.length})
-            </TabsTrigger>
-          </TabsList>
+        {/* Tabla unificada de recepciones */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Scale className="h-5 w-5" />
+              Recepciones Pendientes
+            </CardTitle>
+            <CardDescription>Haz clic en una fila para abrir el formulario de báscula</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="font-bold">Folio</TableHead>
+                  <TableHead>Producto</TableHead>
+                  <TableHead>Proveedor</TableHead>
+                  <TableHead>Chofer</TableHead>
+                  <TableHead>Placas</TableHead>
+                  <TableHead>Transporte</TableHead>
+                  <TableHead>Estatus</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredRecepciones.length > 0 ? filteredRecepciones.map((recepcion) => (
+                  <TableRow 
+                    key={recepcion.id} 
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleRowClick(recepcion)}
+                  >
+                    <TableCell className="font-mono font-bold text-primary">{recepcion.folio}</TableCell>
+                    <TableCell className="font-medium">{recepcion.producto}</TableCell>
+                    <TableCell>{recepcion.proveedor}</TableCell>
+                    <TableCell>{recepcion.chofer}</TableCell>
+                    <TableCell className="font-mono">{recepcion.placas}</TableCell>
+                    <TableCell>{getTransporteBadge(recepcion.tipoTransporte)}</TableCell>
+                    <TableCell>{getEstatusBadge(recepcion.estatus)}</TableCell>
+                  </TableRow>
+                )) : (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      No hay recepciones pendientes
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
 
-          <TabsContent value="camion">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Truck className="h-5 w-5" />
-                  Recepciones - Camión
-                </CardTitle>
-                <CardDescription>Haz clic en una fila para abrir el formulario de báscula</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="font-bold">Folio</TableHead>
-                      <TableHead>Producto</TableHead>
-                      <TableHead>Proveedor</TableHead>
-                      <TableHead>Chofer</TableHead>
-                      <TableHead>Placas</TableHead>
-                      <TableHead>Estatus</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {recepcionesCamion.map((recepcion) => (
-                      <TableRow 
-                        key={recepcion.id} 
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => handleRowClick(recepcion)}
-                      >
-                        <TableCell className="font-mono font-bold text-primary">{recepcion.folio}</TableCell>
-                        <TableCell className="font-medium">{recepcion.producto}</TableCell>
-                        <TableCell>{recepcion.proveedor}</TableCell>
-                        <TableCell>{recepcion.chofer}</TableCell>
-                        <TableCell className="font-mono">{recepcion.placas}</TableCell>
-                        <TableCell>{getEstatusBadge(recepcion.estatus)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="ferroviaria">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Train className="h-5 w-5" />
-                  Recepciones - Ferroviaria
-                </CardTitle>
-                <CardDescription>Haz clic en una fila para abrir el formulario de báscula</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="font-bold">Folio</TableHead>
-                      <TableHead>Producto</TableHead>
-                      <TableHead>Proveedor</TableHead>
-                      <TableHead>Número de Carro</TableHead>
-                      <TableHead>Estatus</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {recepcionesFerroviaria.length > 0 ? recepcionesFerroviaria.map((recepcion) => (
-                      <TableRow 
-                        key={recepcion.id} 
-                        className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => handleRowClick(recepcion)}
-                      >
-                        <TableCell className="font-mono font-bold text-primary">{recepcion.folio}</TableCell>
-                        <TableCell className="font-medium">{recepcion.producto}</TableCell>
-                        <TableCell>{recepcion.proveedor}</TableCell>
-                        <TableCell className="font-mono">{recepcion.placas || '-'}</TableCell>
-                        <TableCell>{getEstatusBadge(recepcion.estatus)}</TableCell>
-                      </TableRow>
-                    )) : (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                          No hay recepciones ferroviarias pendientes
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        {/* Dialog Nueva Operación */}
+        <NuevaOperacionDialog 
+          open={isNuevaOperacionOpen}
+          onOpenChange={setIsNuevaOperacionOpen}
+          onCrear={handleCrearOperacion}
+        />
 
         {/* Formulario de Báscula Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -417,6 +406,36 @@ const Reciba = () => {
                       <p className="text-sm font-mono text-muted-foreground">{selectedRecepcion.placas}</p>
                     </div>
                   </div>
+
+                  {/* Selección de Báscula */}
+                  <div className="space-y-3">
+                    <h4 className="font-medium flex items-center gap-2">
+                      <Scale className="h-4 w-4" />
+                      Tipo de Báscula
+                    </h4>
+                    <RadioGroup 
+                      value={tipoBascula} 
+                      onValueChange={(v) => setTipoBascula(v as 'Camión' | 'Ferroviaria')}
+                      className="flex gap-6"
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="Camión" id="bascula-camion" />
+                        <Label htmlFor="bascula-camion" className="flex items-center gap-2 cursor-pointer">
+                          <Truck className="h-4 w-4" />
+                          Báscula Camión
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="Ferroviaria" id="bascula-ferroviaria" />
+                        <Label htmlFor="bascula-ferroviaria" className="flex items-center gap-2 cursor-pointer">
+                          <Train className="h-4 w-4" />
+                          Báscula Ferroviaria
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
+                  <Separator />
 
                   {/* Sellos */}
                   <div className="space-y-3">
