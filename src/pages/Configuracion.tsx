@@ -8,27 +8,35 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Search, Edit, Trash2, Package, Warehouse, Users, FlaskConical, ChevronDown, ChevronUp } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Checkbox } from '@/components/ui/checkbox';
+import { toast } from 'sonner';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 // Tipos de análisis disponibles según el PDF
 const tiposAnalisis = [
-  { id: 'humedad', nombre: 'Humedad', generaDescuento: true },
-  { id: 'impurezas', nombre: 'Impurezas', generaDescuento: true },
-  { id: 'granosDanados', nombre: 'Granos Dañados', generaDescuento: true },
-  { id: 'granosQuebrados', nombre: 'Granos Quebrados', generaDescuento: true },
-  { id: 'aflatoxinas', nombre: 'Aflatoxinas', generaDescuento: false },
-  { id: 'proteina', nombre: 'Proteína', generaDescuento: false },
-  { id: 'grasa', nombre: 'Grasa', generaDescuento: false },
-  { id: 'fibra', nombre: 'Fibra', generaDescuento: false },
-  { id: 'cenizas', nombre: 'Cenizas', generaDescuento: false },
-  { id: 'acidez', nombre: 'Acidez', generaDescuento: true },
-  { id: 'colorRojo', nombre: 'Color Rojo', generaDescuento: false },
-  { id: 'colorAmarillo', nombre: 'Color Amarillo', generaDescuento: false },
-  { id: 'fosfolipidos', nombre: 'Fosfolípidos', generaDescuento: false },
-  { id: 'insolubles', nombre: 'Insolubles en Acetona', generaDescuento: false },
+  { id: 'humedad', nombre: 'Humedad' },
+  { id: 'impurezas', nombre: 'Impurezas' },
+  { id: 'impurezasInsolubles', nombre: 'Impurezas Insolubles' },
+  { id: 'granosDanados', nombre: 'Granos Dañados' },
+  { id: 'granosQuebrados', nombre: 'Granos Quebrados' },
+  { id: 'pesoEspecifico', nombre: 'Peso Específico' },
+  { id: 'aflatoxinas', nombre: 'Aflatoxinas' },
+  { id: 'proteina', nombre: 'Proteína' },
+  { id: 'grasa', nombre: 'Grasa' },
+  { id: 'fibra', nombre: 'Fibra' },
+  { id: 'cenizas', nombre: 'Cenizas' },
+  { id: 'acidez', nombre: 'Acidez' },
+  { id: 'acidoOleico', nombre: 'Ácido Oleico' },
+  { id: 'indiceSaponificacion', nombre: 'Índice de Saponificación' },
+  { id: 'indiceYodo', nombre: 'Índice de Yodo' },
+  { id: 'indiceRefraccion', nombre: 'Índice de Refracción' },
+  { id: 'colorRojo', nombre: 'Color Rojo' },
+  { id: 'colorAmarillo', nombre: 'Color Amarillo' },
+  { id: 'fosfolipidos', nombre: 'Fosfolípidos' },
+  { id: 'insolubles', nombre: 'Insolubles en Acetona' },
 ];
 
 // Roles según el PDF
@@ -42,13 +50,16 @@ const rolesDisponibles = [
   'Producción',
 ];
 
+interface RangoDescuento {
+  porcentaje: number;
+  kgDescuentoTon: number;
+}
+
 interface Analisis {
   id: string;
   nombre: string;
   generaDescuento: boolean;
-  rangoMinimo?: number;
-  rangoMaximo?: number;
-  porcentajeDescuento?: number;
+  rangosDescuento?: RangoDescuento[];
 }
 
 interface Producto {
@@ -70,6 +81,7 @@ interface Usuario {
   id: number;
   nombreCompleto: string;
   correo: string;
+  contrasena: string;
   rol: string;
 }
 
@@ -77,12 +89,21 @@ const Configuracion = () => {
   const [productos, setProductos] = useState<Producto[]>([
     { 
       id: 1, 
-      nombre: 'Aceite Crudo de Soya', 
+      nombre: 'Aceite de Soya', 
       codigoFolio: '01',
       analisis: [
-        { id: 'acidez', nombre: 'Acidez', generaDescuento: true, rangoMinimo: 0, rangoMaximo: 3, porcentajeDescuento: 1 },
-        { id: 'humedad', nombre: 'Humedad', generaDescuento: true, rangoMinimo: 0, rangoMaximo: 0.5, porcentajeDescuento: 0.5 },
-        { id: 'fosfolipidos', nombre: 'Fosfolípidos', generaDescuento: false },
+        { id: 'acidez', nombre: 'Acidez', generaDescuento: true, rangosDescuento: [
+          { porcentaje: 0.0, kgDescuentoTon: 0 },
+          { porcentaje: 0.5, kgDescuentoTon: 0 },
+          { porcentaje: 0.6, kgDescuentoTon: 5 },
+          { porcentaje: 1.0, kgDescuentoTon: 10 },
+        ]},
+        { id: 'humedad', nombre: 'Humedad', generaDescuento: true, rangosDescuento: [
+          { porcentaje: 0.0, kgDescuentoTon: 0 },
+          { porcentaje: 0.1, kgDescuentoTon: 0 },
+          { porcentaje: 0.2, kgDescuentoTon: 5 },
+        ]},
+        { id: 'impurezasInsolubles', nombre: 'Impurezas Insolubles', generaDescuento: false },
       ]
     },
     { 
@@ -91,19 +112,36 @@ const Configuracion = () => {
       codigoFolio: '02',
       analisis: [
         { id: 'proteina', nombre: 'Proteína', generaDescuento: false },
-        { id: 'humedad', nombre: 'Humedad', generaDescuento: true, rangoMinimo: 0, rangoMaximo: 12, porcentajeDescuento: 1 },
+        { id: 'humedad', nombre: 'Humedad', generaDescuento: true, rangosDescuento: [
+          { porcentaje: 0.0, kgDescuentoTon: 0 },
+          { porcentaje: 12.0, kgDescuentoTon: 0 },
+          { porcentaje: 12.1, kgDescuentoTon: 10 },
+        ]},
         { id: 'grasa', nombre: 'Grasa', generaDescuento: false },
         { id: 'fibra', nombre: 'Fibra', generaDescuento: false },
       ]
     },
     { 
       id: 3, 
-      nombre: 'Frijol Soya', 
+      nombre: 'Soya', 
       codigoFolio: '03',
       analisis: [
-        { id: 'humedad', nombre: 'Humedad', generaDescuento: true, rangoMinimo: 0, rangoMaximo: 14, porcentajeDescuento: 1 },
-        { id: 'impurezas', nombre: 'Impurezas', generaDescuento: true, rangoMinimo: 0, rangoMaximo: 2, porcentajeDescuento: 1 },
-        { id: 'granosDanados', nombre: 'Granos Dañados', generaDescuento: true, rangoMinimo: 0, rangoMaximo: 5, porcentajeDescuento: 0.5 },
+        { id: 'humedad', nombre: 'Humedad', generaDescuento: true, rangosDescuento: [
+          { porcentaje: 0.0, kgDescuentoTon: 0 },
+          { porcentaje: 13.0, kgDescuentoTon: 0 },
+          { porcentaje: 13.1, kgDescuentoTon: 10 },
+          { porcentaje: 14.1, kgDescuentoTon: 20 },
+        ]},
+        { id: 'impurezas', nombre: 'Impurezas', generaDescuento: true, rangosDescuento: [
+          { porcentaje: 0.0, kgDescuentoTon: 0 },
+          { porcentaje: 2.0, kgDescuentoTon: 0 },
+          { porcentaje: 2.1, kgDescuentoTon: 10 },
+        ]},
+        { id: 'granosDanados', nombre: 'Granos Dañados', generaDescuento: true, rangosDescuento: [
+          { porcentaje: 0.0, kgDescuentoTon: 0 },
+          { porcentaje: 5.0, kgDescuentoTon: 0 },
+          { porcentaje: 5.1, kgDescuentoTon: 5 },
+        ]},
       ]
     },
     { 
@@ -111,9 +149,28 @@ const Configuracion = () => {
       nombre: 'Maíz', 
       codigoFolio: '04',
       analisis: [
-        { id: 'humedad', nombre: 'Humedad', generaDescuento: true, rangoMinimo: 0, rangoMaximo: 14, porcentajeDescuento: 1 },
-        { id: 'impurezas', nombre: 'Impurezas', generaDescuento: true, rangoMinimo: 0, rangoMaximo: 2, porcentajeDescuento: 1 },
-        { id: 'aflatoxinas', nombre: 'Aflatoxinas', generaDescuento: false },
+        { id: 'humedad', nombre: 'Humedad', generaDescuento: true, rangosDescuento: [
+          { porcentaje: 0.0, kgDescuentoTon: 0 },
+          { porcentaje: 14.0, kgDescuentoTon: 0 },
+          { porcentaje: 14.1, kgDescuentoTon: 10 },
+        ]},
+        { id: 'impurezas', nombre: 'Impurezas', generaDescuento: true, rangosDescuento: [
+          { porcentaje: 0.0, kgDescuentoTon: 0 },
+          { porcentaje: 2.0, kgDescuentoTon: 0 },
+          { porcentaje: 2.1, kgDescuentoTon: 10 },
+        ]},
+        { id: 'granosDanados', nombre: 'Granos Dañados', generaDescuento: false },
+        { id: 'granosQuebrados', nombre: 'Granos Quebrados', generaDescuento: false },
+        { id: 'pesoEspecifico', nombre: 'Peso Específico', generaDescuento: false },
+      ]
+    },
+    { 
+      id: 5, 
+      nombre: 'Sorgo', 
+      codigoFolio: '05',
+      analisis: [
+        { id: 'humedad', nombre: 'Humedad', generaDescuento: true, rangosDescuento: [] },
+        { id: 'impurezas', nombre: 'Impurezas', generaDescuento: true, rangosDescuento: [] },
       ]
     },
   ]);
@@ -126,17 +183,34 @@ const Configuracion = () => {
   ]);
 
   const [usuarios, setUsuarios] = useState<Usuario[]>([
-    { id: 1, nombreCompleto: 'Juan Pérez García', correo: 'juan.perez@empresa.com', rol: 'Administrador' },
-    { id: 2, nombreCompleto: 'María López Hernández', correo: 'maria.lopez@empresa.com', rol: 'Oficina' },
-    { id: 3, nombreCompleto: 'Carlos Ramírez Soto', correo: 'carlos.ramirez@empresa.com', rol: 'Portero' },
-    { id: 4, nombreCompleto: 'Ana Martínez Cruz', correo: 'ana.martinez@empresa.com', rol: 'Báscula' },
-    { id: 5, nombreCompleto: 'Roberto Sánchez Díaz', correo: 'roberto.sanchez@empresa.com', rol: 'Laboratorio' },
+    { id: 1, nombreCompleto: 'Juan Pérez García', correo: 'juan.perez@empresa.com', contrasena: '********', rol: 'Administrador' },
+    { id: 2, nombreCompleto: 'María López Hernández', correo: 'maria.lopez@empresa.com', contrasena: '********', rol: 'Oficina' },
+    { id: 3, nombreCompleto: 'Carlos Ramírez Soto', correo: 'carlos.ramirez@empresa.com', contrasena: '********', rol: 'Portero' },
+    { id: 4, nombreCompleto: 'Ana Martínez Cruz', correo: 'ana.martinez@empresa.com', contrasena: '********', rol: 'Báscula' },
+    { id: 5, nombreCompleto: 'Roberto Sánchez Díaz', correo: 'roberto.sanchez@empresa.com', contrasena: '********', rol: 'Laboratorio' },
   ]);
 
   const [expandedProduct, setExpandedProduct] = useState<number | null>(null);
   const [searchProducto, setSearchProducto] = useState('');
   const [searchAlmacen, setSearchAlmacen] = useState('');
   const [searchUsuario, setSearchUsuario] = useState('');
+
+  // Estados para dialogs
+  const [productoDialogOpen, setProductoDialogOpen] = useState(false);
+  const [almacenDialogOpen, setAlmacenDialogOpen] = useState(false);
+  const [usuarioDialogOpen, setUsuarioDialogOpen] = useState(false);
+  const [editingProducto, setEditingProducto] = useState<Producto | null>(null);
+  const [editingAlmacen, setEditingAlmacen] = useState<Almacen | null>(null);
+  const [editingUsuario, setEditingUsuario] = useState<Usuario | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<{ type: 'producto' | 'almacen' | 'usuario'; id: number; nombre: string } | null>(null);
+
+  // Estados para formularios
+  const [nuevoProducto, setNuevoProducto] = useState({ nombre: '', codigoFolio: '', analisis: [] as Analisis[] });
+  const [nuevoAlmacen, setNuevoAlmacen] = useState({ nombre: '', capacidadTotal: '', unidad: '' });
+  const [nuevoUsuario, setNuevoUsuario] = useState({ nombreCompleto: '', correo: '', contrasena: '', rol: '' });
+
+  // Estado para edición de análisis con descuentos
+  const [editingAnalisis, setEditingAnalisis] = useState<{ productoId: number; analisis: Analisis } | null>(null);
 
   const getRolBadge = (rol: string) => {
     const colors: Record<string, string> = {
@@ -149,10 +223,6 @@ const Configuracion = () => {
       'Producción': 'bg-cyan-500 text-white',
     };
     return <Badge className={colors[rol] || 'bg-muted text-muted-foreground'}>{rol}</Badge>;
-  };
-
-  const getCapacidadPorcentaje = (actual: number, total: number) => {
-    return Math.round((actual / total) * 100);
   };
 
   const formatNumber = (num: number) => {
@@ -172,6 +242,246 @@ const Configuracion = () => {
     u.nombreCompleto.toLowerCase().includes(searchUsuario.toLowerCase()) ||
     u.correo.toLowerCase().includes(searchUsuario.toLowerCase())
   );
+
+  // CRUD Productos
+  const handleSaveProducto = () => {
+    if (!nuevoProducto.nombre || !nuevoProducto.codigoFolio) {
+      toast.error('Complete todos los campos requeridos');
+      return;
+    }
+
+    if (editingProducto) {
+      setProductos(prev => prev.map(p => 
+        p.id === editingProducto.id 
+          ? { ...p, nombre: nuevoProducto.nombre, codigoFolio: nuevoProducto.codigoFolio }
+          : p
+      ));
+      toast.success('Producto actualizado correctamente');
+    } else {
+      const newId = Math.max(...productos.map(p => p.id), 0) + 1;
+      setProductos(prev => [...prev, { id: newId, nombre: nuevoProducto.nombre, codigoFolio: nuevoProducto.codigoFolio, analisis: [] }]);
+      toast.success('Producto creado correctamente');
+    }
+
+    setNuevoProducto({ nombre: '', codigoFolio: '', analisis: [] });
+    setEditingProducto(null);
+    setProductoDialogOpen(false);
+  };
+
+  const handleEditProducto = (producto: Producto) => {
+    setEditingProducto(producto);
+    setNuevoProducto({ nombre: producto.nombre, codigoFolio: producto.codigoFolio, analisis: producto.analisis });
+    setProductoDialogOpen(true);
+  };
+
+  // CRUD Almacenes
+  const handleSaveAlmacen = () => {
+    if (!nuevoAlmacen.nombre || !nuevoAlmacen.capacidadTotal || !nuevoAlmacen.unidad) {
+      toast.error('Complete todos los campos requeridos');
+      return;
+    }
+
+    if (editingAlmacen) {
+      setAlmacenes(prev => prev.map(a => 
+        a.id === editingAlmacen.id 
+          ? { ...a, nombre: nuevoAlmacen.nombre, capacidadTotal: Number(nuevoAlmacen.capacidadTotal), unidad: nuevoAlmacen.unidad }
+          : a
+      ));
+      toast.success('Almacén actualizado correctamente');
+    } else {
+      const newId = Math.max(...almacenes.map(a => a.id), 0) + 1;
+      setAlmacenes(prev => [...prev, { 
+        id: newId, 
+        nombre: nuevoAlmacen.nombre, 
+        capacidadTotal: Number(nuevoAlmacen.capacidadTotal), 
+        capacidadActual: 0, 
+        unidad: nuevoAlmacen.unidad 
+      }]);
+      toast.success('Almacén creado correctamente');
+    }
+
+    setNuevoAlmacen({ nombre: '', capacidadTotal: '', unidad: '' });
+    setEditingAlmacen(null);
+    setAlmacenDialogOpen(false);
+  };
+
+  const handleEditAlmacen = (almacen: Almacen) => {
+    setEditingAlmacen(almacen);
+    setNuevoAlmacen({ nombre: almacen.nombre, capacidadTotal: almacen.capacidadTotal.toString(), unidad: almacen.unidad });
+    setAlmacenDialogOpen(true);
+  };
+
+  // CRUD Usuarios
+  const handleSaveUsuario = () => {
+    if (!nuevoUsuario.nombreCompleto || !nuevoUsuario.correo || !nuevoUsuario.rol) {
+      toast.error('Complete todos los campos requeridos');
+      return;
+    }
+    if (!editingUsuario && !nuevoUsuario.contrasena) {
+      toast.error('La contraseña es requerida');
+      return;
+    }
+
+    if (editingUsuario) {
+      setUsuarios(prev => prev.map(u => 
+        u.id === editingUsuario.id 
+          ? { ...u, nombreCompleto: nuevoUsuario.nombreCompleto, correo: nuevoUsuario.correo, rol: nuevoUsuario.rol, contrasena: nuevoUsuario.contrasena || u.contrasena }
+          : u
+      ));
+      toast.success('Usuario actualizado correctamente');
+    } else {
+      const newId = Math.max(...usuarios.map(u => u.id), 0) + 1;
+      setUsuarios(prev => [...prev, { 
+        id: newId, 
+        nombreCompleto: nuevoUsuario.nombreCompleto, 
+        correo: nuevoUsuario.correo,
+        contrasena: '********',
+        rol: nuevoUsuario.rol 
+      }]);
+      toast.success('Usuario creado correctamente');
+    }
+
+    setNuevoUsuario({ nombreCompleto: '', correo: '', contrasena: '', rol: '' });
+    setEditingUsuario(null);
+    setUsuarioDialogOpen(false);
+  };
+
+  const handleEditUsuario = (usuario: Usuario) => {
+    setEditingUsuario(usuario);
+    setNuevoUsuario({ nombreCompleto: usuario.nombreCompleto, correo: usuario.correo, contrasena: '', rol: usuario.rol });
+    setUsuarioDialogOpen(true);
+  };
+
+  // Delete handler
+  const handleDelete = () => {
+    if (!deleteDialog) return;
+
+    if (deleteDialog.type === 'producto') {
+      setProductos(prev => prev.filter(p => p.id !== deleteDialog.id));
+    } else if (deleteDialog.type === 'almacen') {
+      setAlmacenes(prev => prev.filter(a => a.id !== deleteDialog.id));
+    } else if (deleteDialog.type === 'usuario') {
+      setUsuarios(prev => prev.filter(u => u.id !== deleteDialog.id));
+    }
+
+    toast.success(`${deleteDialog.type === 'producto' ? 'Producto' : deleteDialog.type === 'almacen' ? 'Almacén' : 'Usuario'} eliminado correctamente`);
+    setDeleteDialog(null);
+  };
+
+  // Agregar análisis a producto
+  const handleAddAnalisis = (productoId: number, analisisId: string) => {
+    const tipoAnalisis = tiposAnalisis.find(t => t.id === analisisId);
+    if (!tipoAnalisis) return;
+
+    setProductos(prev => prev.map(p => {
+      if (p.id === productoId) {
+        if (p.analisis.some(a => a.id === analisisId)) {
+          toast.error('Este análisis ya está agregado');
+          return p;
+        }
+        return {
+          ...p,
+          analisis: [...p.analisis, { id: analisisId, nombre: tipoAnalisis.nombre, generaDescuento: false, rangosDescuento: [] }]
+        };
+      }
+      return p;
+    }));
+    toast.success('Análisis agregado');
+  };
+
+  // Eliminar análisis de producto
+  const handleRemoveAnalisis = (productoId: number, analisisId: string) => {
+    setProductos(prev => prev.map(p => {
+      if (p.id === productoId) {
+        return {
+          ...p,
+          analisis: p.analisis.filter(a => a.id !== analisisId)
+        };
+      }
+      return p;
+    }));
+    toast.success('Análisis eliminado');
+  };
+
+  // Toggle genera descuento
+  const handleToggleDescuento = (productoId: number, analisisId: string) => {
+    setProductos(prev => prev.map(p => {
+      if (p.id === productoId) {
+        return {
+          ...p,
+          analisis: p.analisis.map(a => {
+            if (a.id === analisisId) {
+              return { ...a, generaDescuento: !a.generaDescuento, rangosDescuento: !a.generaDescuento ? [] : a.rangosDescuento };
+            }
+            return a;
+          })
+        };
+      }
+      return p;
+    }));
+  };
+
+  // Editar rangos de descuento
+  const handleEditRangos = (productoId: number, analisis: Analisis) => {
+    setEditingAnalisis({ productoId, analisis: { ...analisis, rangosDescuento: analisis.rangosDescuento ? [...analisis.rangosDescuento] : [] } });
+  };
+
+  const handleSaveRangos = () => {
+    if (!editingAnalisis) return;
+
+    setProductos(prev => prev.map(p => {
+      if (p.id === editingAnalisis.productoId) {
+        return {
+          ...p,
+          analisis: p.analisis.map(a => {
+            if (a.id === editingAnalisis.analisis.id) {
+              return editingAnalisis.analisis;
+            }
+            return a;
+          })
+        };
+      }
+      return p;
+    }));
+
+    toast.success('Rangos de descuento actualizados');
+    setEditingAnalisis(null);
+  };
+
+  const handleAddRango = () => {
+    if (!editingAnalisis) return;
+    setEditingAnalisis({
+      ...editingAnalisis,
+      analisis: {
+        ...editingAnalisis.analisis,
+        rangosDescuento: [...(editingAnalisis.analisis.rangosDescuento || []), { porcentaje: 0, kgDescuentoTon: 0 }]
+      }
+    });
+  };
+
+  const handleRemoveRango = (index: number) => {
+    if (!editingAnalisis) return;
+    setEditingAnalisis({
+      ...editingAnalisis,
+      analisis: {
+        ...editingAnalisis.analisis,
+        rangosDescuento: editingAnalisis.analisis.rangosDescuento?.filter((_, i) => i !== index) || []
+      }
+    });
+  };
+
+  const handleUpdateRango = (index: number, field: 'porcentaje' | 'kgDescuentoTon', value: number) => {
+    if (!editingAnalisis) return;
+    setEditingAnalisis({
+      ...editingAnalisis,
+      analisis: {
+        ...editingAnalisis.analisis,
+        rangosDescuento: editingAnalisis.analisis.rangosDescuento?.map((r, i) => 
+          i === index ? { ...r, [field]: value } : r
+        ) || []
+      }
+    });
+  };
 
   return (
     <Layout>
@@ -205,41 +515,14 @@ const Configuracion = () => {
                   onChange={(e) => setSearchProducto(e.target.value)}
                 />
               </div>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button className="bg-primary hover:bg-primary/90">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Nuevo Producto
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Agregar Producto</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label>Nombre del Producto</Label>
-                      <Input placeholder="Ej: Aceite Crudo de Soya" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Código Folio (2 dígitos)</Label>
-                      <Input placeholder="Ej: 01" maxLength={2} />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Análisis Aplicables</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Después de crear el producto, podrás configurar los análisis y sus rangos de descuento.
-                      </p>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <DialogClose asChild>
-                      <Button variant="outline">Cancelar</Button>
-                    </DialogClose>
-                    <Button className="bg-primary hover:bg-primary/90">Guardar</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              <Button className="bg-primary hover:bg-primary/90" onClick={() => {
+                setEditingProducto(null);
+                setNuevoProducto({ nombre: '', codigoFolio: '', analisis: [] });
+                setProductoDialogOpen(true);
+              }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nuevo Producto
+              </Button>
             </div>
 
             <Card>
@@ -298,10 +581,10 @@ const Configuracion = () => {
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); handleEditProducto(producto); }}>
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); setDeleteDialog({ type: 'producto', id: producto.id, nombre: producto.nombre }); }}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </TableCell>
@@ -315,10 +598,16 @@ const Configuracion = () => {
                                     <FlaskConical className="h-4 w-4" />
                                     Configuración de Análisis
                                   </h4>
-                                  <Button size="sm" variant="outline">
-                                    <Plus className="h-3 w-3 mr-1" />
-                                    Agregar Análisis
-                                  </Button>
+                                  <Select onValueChange={(value) => handleAddAnalisis(producto.id, value)}>
+                                    <SelectTrigger className="w-48">
+                                      <SelectValue placeholder="Agregar análisis" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {tiposAnalisis.filter(t => !producto.analisis.some(a => a.id === t.id)).map((tipo) => (
+                                        <SelectItem key={tipo.id} value={tipo.id}>{tipo.nombre}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
                                 </div>
                                 <div className="grid gap-2">
                                   {producto.analisis.map((analisis) => (
@@ -328,23 +617,39 @@ const Configuracion = () => {
                                     >
                                       <div className="flex items-center gap-3">
                                         <span className="font-medium">{analisis.nombre}</span>
+                                        <div className="flex items-center gap-2">
+                                          <Checkbox 
+                                            id={`descuento-${producto.id}-${analisis.id}`}
+                                            checked={analisis.generaDescuento}
+                                            onCheckedChange={() => handleToggleDescuento(producto.id, analisis.id)}
+                                          />
+                                          <Label htmlFor={`descuento-${producto.id}-${analisis.id}`} className="text-sm text-muted-foreground cursor-pointer">
+                                            Genera Descuento
+                                          </Label>
+                                        </div>
                                         {analisis.generaDescuento && (
                                           <Badge className="bg-orange-100 text-orange-700 border-orange-300">
-                                            Genera Descuento
+                                            {analisis.rangosDescuento?.length || 0} rangos
                                           </Badge>
                                         )}
                                       </div>
-                                      {analisis.generaDescuento && analisis.rangoMinimo !== undefined && (
-                                        <div className="text-sm text-muted-foreground">
-                                          Rango: {analisis.rangoMinimo}% - {analisis.rangoMaximo}% | 
-                                          Descuento: {analisis.porcentajeDescuento}% por cada % excedido
-                                        </div>
-                                      )}
-                                      <Button variant="ghost" size="icon" className="h-7 w-7">
-                                        <Edit className="h-3 w-3" />
-                                      </Button>
+                                      <div className="flex items-center gap-2">
+                                        {analisis.generaDescuento && (
+                                          <Button variant="outline" size="sm" onClick={() => handleEditRangos(producto.id, analisis)}>
+                                            Configurar Rangos
+                                          </Button>
+                                        )}
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleRemoveAnalisis(producto.id, analisis.id)}>
+                                          <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                      </div>
                                     </div>
                                   ))}
+                                  {producto.analisis.length === 0 && (
+                                    <p className="text-sm text-muted-foreground text-center py-4">
+                                      No hay análisis configurados. Use el selector de arriba para agregar.
+                                    </p>
+                                  )}
                                 </div>
                               </div>
                             </TableCell>
@@ -370,48 +675,14 @@ const Configuracion = () => {
                   onChange={(e) => setSearchAlmacen(e.target.value)}
                 />
               </div>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button className="bg-primary hover:bg-primary/90">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Nuevo Almacén
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Agregar Almacén</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label>Nombre del Almacén</Label>
-                      <Input placeholder="Ej: Tanque Aceite 1" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Capacidad Total</Label>
-                      <Input type="number" placeholder="Ej: 500000" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Unidad de Medida</Label>
-                      <Select>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar unidad" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="litros">Litros</SelectItem>
-                          <SelectItem value="kg">Kilogramos</SelectItem>
-                          <SelectItem value="toneladas">Toneladas</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <DialogClose asChild>
-                      <Button variant="outline">Cancelar</Button>
-                    </DialogClose>
-                    <Button className="bg-primary hover:bg-primary/90">Guardar</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              <Button className="bg-primary hover:bg-primary/90" onClick={() => {
+                setEditingAlmacen(null);
+                setNuevoAlmacen({ nombre: '', capacidadTotal: '', unidad: '' });
+                setAlmacenDialogOpen(true);
+              }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nuevo Almacén
+              </Button>
             </div>
 
             <Card>
@@ -431,43 +702,25 @@ const Configuracion = () => {
                       <TableHead>Nombre</TableHead>
                       <TableHead>Capacidad Total</TableHead>
                       <TableHead>Capacidad Actual</TableHead>
-                      <TableHead>Ocupación</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredAlmacenes.map((almacen) => {
-                      const porcentaje = getCapacidadPorcentaje(almacen.capacidadActual, almacen.capacidadTotal);
-                      return (
-                        <TableRow key={almacen.id} className="cursor-pointer hover:bg-muted/50">
-                          <TableCell className="font-medium">{almacen.nombre}</TableCell>
-                          <TableCell>{formatNumber(almacen.capacidadTotal)} {almacen.unidad}</TableCell>
-                          <TableCell>{formatNumber(almacen.capacidadActual)} {almacen.unidad}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
-                                <div 
-                                  className={`h-full rounded-full ${
-                                    porcentaje > 90 ? 'bg-destructive' : 
-                                    porcentaje > 70 ? 'bg-orange-500' : 'bg-green-500'
-                                  }`}
-                                  style={{ width: `${porcentaje}%` }}
-                                />
-                              </div>
-                              <span className="text-sm font-medium">{porcentaje}%</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                    {filteredAlmacenes.map((almacen) => (
+                      <TableRow key={almacen.id} className="cursor-pointer hover:bg-muted/50">
+                        <TableCell className="font-medium">{almacen.nombre}</TableCell>
+                        <TableCell>{formatNumber(almacen.capacidadTotal)} {almacen.unidad}</TableCell>
+                        <TableCell>{formatNumber(almacen.capacidadActual)} {almacen.unidad}</TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditAlmacen(almacen)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteDialog({ type: 'almacen', id: almacen.id, nombre: almacen.nombre })}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </CardContent>
@@ -486,50 +739,14 @@ const Configuracion = () => {
                   onChange={(e) => setSearchUsuario(e.target.value)}
                 />
               </div>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button className="bg-primary hover:bg-primary/90">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Nuevo Usuario
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Agregar Usuario</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label>Nombre Completo</Label>
-                      <Input placeholder="Ej: Juan Pérez García" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Correo Electrónico</Label>
-                      <Input type="email" placeholder="correo@empresa.com" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Rol</Label>
-                      <Select>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar rol" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {rolesDisponibles.map((rol) => (
-                            <SelectItem key={rol} value={rol.toLowerCase()}>
-                              {rol}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <DialogClose asChild>
-                      <Button variant="outline">Cancelar</Button>
-                    </DialogClose>
-                    <Button className="bg-primary hover:bg-primary/90">Guardar</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              <Button className="bg-primary hover:bg-primary/90" onClick={() => {
+                setEditingUsuario(null);
+                setNuevoUsuario({ nombreCompleto: '', correo: '', contrasena: '', rol: '' });
+                setUsuarioDialogOpen(true);
+              }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nuevo Usuario
+              </Button>
             </div>
 
             <Card>
@@ -559,10 +776,10 @@ const Configuracion = () => {
                         <TableCell>{usuario.correo}</TableCell>
                         <TableCell>{getRolBadge(usuario.rol)}</TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditUsuario(usuario)}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteDialog({ type: 'usuario', id: usuario.id, nombre: usuario.nombreCompleto })}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </TableCell>
@@ -575,6 +792,223 @@ const Configuracion = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Dialog Producto */}
+      <Dialog open={productoDialogOpen} onOpenChange={setProductoDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingProducto ? 'Editar Producto' : 'Agregar Producto'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nombre del Producto</Label>
+              <Input 
+                placeholder="Ej: Aceite Crudo de Soya" 
+                value={nuevoProducto.nombre}
+                onChange={(e) => setNuevoProducto(prev => ({ ...prev, nombre: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Código Folio (2 dígitos)</Label>
+              <Input 
+                placeholder="Ej: 01" 
+                maxLength={2}
+                value={nuevoProducto.codigoFolio}
+                onChange={(e) => setNuevoProducto(prev => ({ ...prev, codigoFolio: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Análisis Aplicables</Label>
+              <p className="text-sm text-muted-foreground">
+                Después de guardar el producto, podrás configurar los análisis expandiendo la fila en la tabla.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProductoDialogOpen(false)}>Cancelar</Button>
+            <Button className="bg-primary hover:bg-primary/90" onClick={handleSaveProducto}>Guardar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Almacen */}
+      <Dialog open={almacenDialogOpen} onOpenChange={setAlmacenDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingAlmacen ? 'Editar Almacén' : 'Agregar Almacén'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nombre del Almacén</Label>
+              <Input 
+                placeholder="Ej: Tanque Aceite 1"
+                value={nuevoAlmacen.nombre}
+                onChange={(e) => setNuevoAlmacen(prev => ({ ...prev, nombre: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Capacidad Total</Label>
+              <Input 
+                type="number" 
+                placeholder="Ej: 500000"
+                value={nuevoAlmacen.capacidadTotal}
+                onChange={(e) => setNuevoAlmacen(prev => ({ ...prev, capacidadTotal: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Unidad de Medida</Label>
+              <Select value={nuevoAlmacen.unidad} onValueChange={(value) => setNuevoAlmacen(prev => ({ ...prev, unidad: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar unidad" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Litros">Litros</SelectItem>
+                  <SelectItem value="Kg">Kilogramos</SelectItem>
+                  <SelectItem value="Toneladas">Toneladas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAlmacenDialogOpen(false)}>Cancelar</Button>
+            <Button className="bg-primary hover:bg-primary/90" onClick={handleSaveAlmacen}>Guardar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Usuario */}
+      <Dialog open={usuarioDialogOpen} onOpenChange={setUsuarioDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingUsuario ? 'Editar Usuario' : 'Agregar Usuario'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nombre Completo</Label>
+              <Input 
+                placeholder="Ej: Juan Pérez García"
+                value={nuevoUsuario.nombreCompleto}
+                onChange={(e) => setNuevoUsuario(prev => ({ ...prev, nombreCompleto: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Correo Electrónico</Label>
+              <Input 
+                type="email" 
+                placeholder="correo@empresa.com"
+                value={nuevoUsuario.correo}
+                onChange={(e) => setNuevoUsuario(prev => ({ ...prev, correo: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{editingUsuario ? 'Nueva Contraseña (dejar vacío para no cambiar)' : 'Contraseña'}</Label>
+              <Input 
+                type="password" 
+                placeholder="••••••••"
+                value={nuevoUsuario.contrasena}
+                onChange={(e) => setNuevoUsuario(prev => ({ ...prev, contrasena: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Rol</Label>
+              <Select value={nuevoUsuario.rol} onValueChange={(value) => setNuevoUsuario(prev => ({ ...prev, rol: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar rol" />
+                </SelectTrigger>
+                <SelectContent>
+                  {rolesDisponibles.map((rol) => (
+                    <SelectItem key={rol} value={rol}>
+                      {rol}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUsuarioDialogOpen(false)}>Cancelar</Button>
+            <Button className="bg-primary hover:bg-primary/90" onClick={handleSaveUsuario}>Guardar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Editar Rangos de Descuento */}
+      <Dialog open={!!editingAnalisis} onOpenChange={() => setEditingAnalisis(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Configurar Rangos de Descuento - {editingAnalisis?.analisis.nombre}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-muted-foreground">
+              Configure los rangos de porcentaje y el descuento en Kg por tonelada correspondiente.
+            </p>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Porcentaje %</TableHead>
+                  <TableHead>Kg. Dscto x Ton</TableHead>
+                  <TableHead className="w-12"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {editingAnalisis?.analisis.rangosDescuento?.map((rango, index) => (
+                  <TableRow key={index}>
+                    <TableCell>
+                      <Input 
+                        type="number" 
+                        step="0.1"
+                        value={rango.porcentaje}
+                        onChange={(e) => handleUpdateRango(index, 'porcentaje', parseFloat(e.target.value) || 0)}
+                        className="w-24"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input 
+                        type="number" 
+                        step="0.001"
+                        value={rango.kgDescuentoTon}
+                        onChange={(e) => handleUpdateRango(index, 'kgDescuentoTon', parseFloat(e.target.value) || 0)}
+                        className="w-24"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleRemoveRango(index)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <Button variant="outline" size="sm" onClick={handleAddRango} className="w-full">
+              <Plus className="h-4 w-4 mr-2" />
+              Agregar Fila
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingAnalisis(null)}>Cancelar</Button>
+            <Button className="bg-primary hover:bg-primary/90" onClick={handleSaveRangos}>Guardar Rangos</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Alert Dialog para eliminación */}
+      <AlertDialog open={!!deleteDialog} onOpenChange={() => setDeleteDialog(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará "{deleteDialog?.nombre}" permanentemente. Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Layout>
   );
 };
