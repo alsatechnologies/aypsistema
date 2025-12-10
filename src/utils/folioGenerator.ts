@@ -93,3 +93,10 @@ export const getTipoOperacionFromCode = (code: string): TipoOperacion | null => 
   const found = entries.find(([_, c]) => c === code);
   return found ? found[0] as TipoOperacion : null;
 };
+
+/**
+ * Genera un folio para reciba basado en el producto
+ */
+export const generarFolioReciba = (producto: string, consecutivo: number): string => {
+  return generateNumeroBoleta('Reciba', producto, consecutivo);
+};
