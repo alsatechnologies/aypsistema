@@ -293,7 +293,11 @@ const Laboratorio = () => {
               </TableHeader>
               <TableBody>
                 {filteredReportes.map((reporte) => (
-                  <TableRow key={reporte.id} className="cursor-pointer hover:bg-muted/50">
+                  <TableRow 
+                    key={reporte.id} 
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => handleVerDetalle(reporte)}
+                  >
                     <TableCell className="font-medium">{reporte.fecha}</TableCell>
                     <TableCell>{reporte.responsable}</TableCell>
                     <TableCell>
@@ -301,9 +305,7 @@ const Laboratorio = () => {
                     </TableCell>
                     <TableCell>{getEstatusBadge(reporte.estatus)}</TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm" onClick={() => handleVerDetalle(reporte)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      <Eye className="h-4 w-4 text-muted-foreground" />
                     </TableCell>
                   </TableRow>
                 ))}
