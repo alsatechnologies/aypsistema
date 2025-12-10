@@ -16,7 +16,7 @@ import { generateNumeroBoleta, TipoOperacion } from '@/utils/folioGenerator';
 
 interface Orden {
   id: number;
-  folio: string;
+  boleta: string;
   producto: string;
   cliente: string;
   tipoOperacion: TipoOperacion;
@@ -35,7 +35,7 @@ const Oficina = () => {
   const [ordenes, setOrdenes] = useState<Orden[]>([
     { 
       id: 1, 
-      folio: generateNumeroBoleta('Embarque Nacional', 'Aceite Crudo de Soya', 1),
+      boleta: generateNumeroBoleta('Embarque Nacional', 'Aceite Crudo de Soya', 1),
       producto: 'Aceite Crudo de Soya', 
       cliente: 'Aceites del Pacífico SA',
       tipoOperacion: 'Embarque Nacional',
@@ -48,10 +48,10 @@ const Oficina = () => {
     },
     { 
       id: 2, 
-      folio: generateNumeroBoleta('Reciba', 'Frijol Soya', 2),
+      boleta: generateNumeroBoleta('Entradas', 'Frijol Soya', 2),
       producto: 'Frijol Soya', 
       cliente: 'Granos Selectos',
-      tipoOperacion: 'Reciba',
+      tipoOperacion: 'Entradas',
       destino: 'Planta AP',
       nombreChofer: 'Pedro Ramírez López',
       vehiculo: 'Tractocamión',
@@ -61,7 +61,7 @@ const Oficina = () => {
     },
     { 
       id: 3, 
-      folio: generateNumeroBoleta('Embarque Nacional', 'Pasta de Soya', 3),
+      boleta: generateNumeroBoleta('Embarque Nacional', 'Pasta de Soya', 3),
       producto: 'Pasta de Soya', 
       cliente: 'Alimentos Balanceados MX',
       tipoOperacion: 'Embarque Nacional',
@@ -74,10 +74,10 @@ const Oficina = () => {
     },
     { 
       id: 4, 
-      folio: generateNumeroBoleta('Embarque Exportación', 'Aceite Crudo de Soya', 4),
+      boleta: generateNumeroBoleta('Exportación', 'Aceite Crudo de Soya', 4),
       producto: 'Aceite Crudo de Soya', 
       cliente: 'Export Foods Inc.',
-      tipoOperacion: 'Embarque Exportación',
+      tipoOperacion: 'Exportación',
       destino: 'Houston, TX',
       nombreChofer: 'Roberto Sánchez',
       vehiculo: 'Contenedor',
@@ -115,7 +115,7 @@ const Oficina = () => {
   const filteredOrdenes = ordenes.filter(o => 
     o.producto.toLowerCase().includes(search.toLowerCase()) ||
     o.cliente.toLowerCase().includes(search.toLowerCase()) ||
-    o.folio.includes(search) ||
+    o.boleta.includes(search) ||
     o.nombreChofer.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -396,7 +396,7 @@ const Oficina = () => {
               <TableBody>
                 {filteredOrdenes.map((orden) => (
                   <TableRow key={orden.id} className="cursor-pointer hover:bg-muted/50">
-                    <TableCell className="font-mono font-bold text-primary">{orden.folio}</TableCell>
+                    <TableCell className="font-mono font-bold text-primary">{orden.boleta}</TableCell>
                     <TableCell className="font-medium">{orden.producto}</TableCell>
                     <TableCell>{orden.cliente}</TableCell>
                     <TableCell>{getTipoOperacionBadge(orden.tipoOperacion)}</TableCell>
