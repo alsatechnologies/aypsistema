@@ -11,13 +11,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import BoletaPreviewDialog from '@/components/oficina/BoletaPreviewDialog';
+import { generateNumeroBoleta, TipoOperacion } from '@/utils/folioGenerator';
 
 interface Orden {
   id: number;
   folio: string;
   producto: string;
   cliente: string;
-  tipoOperacion: 'Reciba' | 'Embarque Nacional' | 'Embarque Exportación';
+  tipoOperacion: TipoOperacion;
   destino: string;
   nombreChofer: string;
   vehiculo: string;
@@ -28,10 +30,12 @@ interface Orden {
 
 const Oficina = () => {
   const [search, setSearch] = useState('');
+  const [selectedOrden, setSelectedOrden] = useState<Orden | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
   const [ordenes, setOrdenes] = useState<Orden[]>([
     { 
       id: 1, 
-      folio: '1-01-0001',
+      folio: generateNumeroBoleta('Embarque Nacional', 'Aceite Crudo de Soya', 1),
       producto: 'Aceite Crudo de Soya', 
       cliente: 'Aceites del Pacífico SA',
       tipoOperacion: 'Embarque Nacional',
@@ -44,7 +48,7 @@ const Oficina = () => {
     },
     { 
       id: 2, 
-      folio: '0-03-0002',
+      folio: generateNumeroBoleta('Reciba', 'Frijol Soya', 2),
       producto: 'Frijol Soya', 
       cliente: 'Granos Selectos',
       tipoOperacion: 'Reciba',
@@ -57,7 +61,7 @@ const Oficina = () => {
     },
     { 
       id: 3, 
-      folio: '1-02-0003',
+      folio: generateNumeroBoleta('Embarque Nacional', 'Pasta de Soya', 3),
       producto: 'Pasta de Soya', 
       cliente: 'Alimentos Balanceados MX',
       tipoOperacion: 'Embarque Nacional',
@@ -70,7 +74,7 @@ const Oficina = () => {
     },
     { 
       id: 4, 
-      folio: '2-01-0004',
+      folio: generateNumeroBoleta('Embarque Exportación', 'Aceite Crudo de Soya', 4),
       producto: 'Aceite Crudo de Soya', 
       cliente: 'Export Foods Inc.',
       tipoOperacion: 'Embarque Exportación',
@@ -82,6 +86,11 @@ const Oficina = () => {
       estatus: 'En Proceso'
     },
   ]);
+
+  const handleViewBoleta = (orden: Orden) => {
+    setSelectedOrden(orden);
+    setShowPreview(true);
+  };
 
   const getEstatusBadge = (estatus: string) => {
     const config: Record<string, { className: string; icon: React.ReactNode }> = {
@@ -115,7 +124,6 @@ const Oficina = () => {
     enProceso: ordenes.filter(o => o.estatus === 'En Báscula' || o.estatus === 'En Proceso').length,
     completados: ordenes.filter(o => o.estatus === 'Completado').length,
   };
-
   return (
     <Layout>
       <Header title="Oficina" subtitle="Gestión de órdenes y documentación" />
@@ -373,14 +381,14 @@ const Oficina = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="font-bold">Folio</TableHead>
                   <TableHead>Producto</TableHead>
-                  <TableHead>Cliente</TableHead>
+                  <TableHead>Cliente/Proveedor</TableHead>
                   <TableHead>Tipo</TableHead>
-                  <TableHead>Destino</TableHead>
+                  <TableHead>Destino/Origen</TableHead>
                   <TableHead>Chofer</TableHead>
-                  <TableHead>Vehículo</TableHead>
                   <TableHead>Placas</TableHead>
-                  <TableHead>Fecha/Hora</TableHead>
+                  <TableHead>Ingreso</TableHead>
                   <TableHead>Estatus</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
@@ -388,20 +396,32 @@ const Oficina = () => {
               <TableBody>
                 {filteredOrdenes.map((orden) => (
                   <TableRow key={orden.id} className="cursor-pointer hover:bg-muted/50">
+                    <TableCell className="font-mono font-bold text-primary">{orden.folio}</TableCell>
                     <TableCell className="font-medium">{orden.producto}</TableCell>
                     <TableCell>{orden.cliente}</TableCell>
                     <TableCell>{getTipoOperacionBadge(orden.tipoOperacion)}</TableCell>
                     <TableCell>{orden.destino}</TableCell>
                     <TableCell>{orden.nombreChofer}</TableCell>
-                    <TableCell>{orden.vehiculo}</TableCell>
                     <TableCell className="font-mono text-sm">{orden.placas}</TableCell>
                     <TableCell>{orden.fechaHoraIngreso}</TableCell>
                     <TableCell>{getEstatusBadge(orden.estatus)}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        onClick={() => handleViewBoleta(orden)}
+                        title="Ver boleta"
+                      >
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
+                        onClick={() => handleViewBoleta(orden)}
+                        title="Imprimir boleta"
+                      >
                         <Printer className="h-4 w-4" />
                       </Button>
                     </TableCell>
@@ -411,6 +431,13 @@ const Oficina = () => {
             </Table>
           </CardContent>
         </Card>
+
+        {/* Boleta Preview Dialog */}
+        <BoletaPreviewDialog 
+          open={showPreview} 
+          onOpenChange={setShowPreview} 
+          orden={selectedOrden} 
+        />
       </div>
     </Layout>
   );
