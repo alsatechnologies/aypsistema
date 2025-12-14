@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import Header from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -8,26 +8,34 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Search, Plus, Download, Users, MapPin, Phone, Mail, Building2, Edit, Eye, Ship } from 'lucide-react';
+import { Search, Plus, Download, Users, MapPin, Phone, Mail, Building2, Edit, Eye, Ship, X } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
+import { useClientes } from '@/services/hooks/useClientes';
+import { useProductos } from '@/services/hooks/useProductos';
+import type { Cliente as ClienteDB } from '@/services/supabase/clientes';
 
 interface Cliente {
   id: number;
   empresa: string;
   rfc: string;
-  contacto: string;
-  telefono: string;
-  email: string;
-  direccion: string;
-  ciudad: string;
+  contacto?: string | null;
+  telefono?: string | null;
+  email?: string | null;
+  direccion?: string | null;
+  ciudad?: string | null;
   tipoCliente: 'Nacional' | 'Exportación';
-  productos: string[];
+  productos: number[]; // IDs de productos
 }
 
 const Clientes = () => {
+  const { clientes: clientesDB, loading, addCliente, updateCliente, loadClientes } = useClientes();
+  const { productos: productosDB } = useProductos();
+  
   const [search, setSearch] = useState('');
   const [isNuevoDialogOpen, setIsNuevoDialogOpen] = useState(false);
   const [isDetalleDialogOpen, setIsDetalleDialogOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
   
   const [formData, setFormData] = useState({
@@ -38,17 +46,23 @@ const Clientes = () => {
     email: '',
     direccion: '',
     ciudad: '',
-    tipoCliente: 'Nacional' as 'Nacional' | 'Exportación'
+    tipoCliente: 'Nacional' as 'Nacional' | 'Exportación',
+    productos: [] as number[]
   });
 
-  const [clientes, setClientes] = useState<Cliente[]>([
-    { id: 1, empresa: 'Aceites del Pacífico SA de CV', rfc: 'APA950315XYZ', contacto: 'Roberto Méndez', telefono: '33-123-4567', email: 'ventas@aceitespacifico.com', direccion: 'Av. Vallarta 1234', ciudad: 'Guadalajara, JAL', tipoCliente: 'Nacional', productos: ['Aceite Crudo de Soya', 'Aceite Refinado'] },
-    { id: 2, empresa: 'Alimentos Balanceados MX SA de CV', rfc: 'ABM980520ABC', contacto: 'Laura Sánchez', telefono: '81-234-5678', email: 'compras@alimentosmx.com', direccion: 'Blvd. Fundadores 456', ciudad: 'Monterrey, NL', tipoCliente: 'Nacional', productos: ['Pasta de Soya', 'Cascarilla de Soya'] },
-    { id: 3, empresa: 'Export Foods Inc.', rfc: 'EFI010715DEF', contacto: 'John Smith', telefono: '+1-713-456-7890', email: 'purchasing@exportfoods.com', direccion: '1234 Industrial Blvd', ciudad: 'Houston, TX', tipoCliente: 'Exportación', productos: ['Aceite Crudo de Soya'] },
-    { id: 4, empresa: 'Industrias Graseras SA de CV', rfc: 'IGR150320GHI', contacto: 'Fernando López', telefono: '55-567-8901', email: 'compras@graseras.com', direccion: 'Calz. de Tlalpan 789', ciudad: 'CDMX', tipoCliente: 'Nacional', productos: ['Aceite Crudo de Soya', 'Lecitina'] },
-    { id: 5, empresa: 'Pacific Trading Corp', rfc: 'PTC180610JKL', contacto: 'Michael Johnson', telefono: '+1-310-678-9012', email: 'info@pacifictrading.com', direccion: '5678 Commerce St', ciudad: 'Los Angeles, CA', tipoCliente: 'Exportación', productos: ['Aceite Refinado'] },
-    { id: 6, empresa: 'Forrajes del Norte SA de CV', rfc: 'FNO160815MNO', contacto: 'Patricia Ruiz', telefono: '614-789-0123', email: 'ventas@forrajesnorte.com', direccion: 'Carr. Panamericana Km 15', ciudad: 'Chihuahua, CHIH', tipoCliente: 'Nacional', productos: ['Pasta de Soya', 'Cascarilla de Soya'] },
-  ]);
+  // Mapear clientes de DB a formato local
+  const clientes: Cliente[] = clientesDB.map(c => ({
+    id: c.id,
+    empresa: c.empresa,
+    rfc: c.rfc,
+    contacto: c.contacto || '',
+    telefono: c.telefono || '',
+    email: c.email || '',
+    direccion: c.direccion || '',
+    ciudad: c.ciudad || '',
+    tipoCliente: c.tipo_cliente as 'Nacional' | 'Exportación',
+    productos: c.productos || []
+  }));
 
   const filteredClientes = clientes.filter(c =>
     c.empresa.toLowerCase().includes(search.toLowerCase()) ||
@@ -56,29 +70,93 @@ const Clientes = () => {
     c.ciudad.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleNuevoCliente = () => {
+  const resetForm = () => {
+    setFormData({ 
+      empresa: '', 
+      rfc: '', 
+      contacto: '', 
+      telefono: '', 
+      email: '', 
+      direccion: '', 
+      ciudad: '', 
+      tipoCliente: 'Nacional',
+      productos: [] as number[]
+    });
+    setIsEditMode(false);
+    setSelectedCliente(null);
+  };
+
+  const handleNuevoCliente = async () => {
     if (!formData.empresa || !formData.rfc || !formData.contacto) {
       toast.error('Complete los campos obligatorios');
       return;
     }
 
-    const nuevoCliente: Cliente = {
-      id: clientes.length + 1,
-      empresa: formData.empresa,
-      rfc: formData.rfc.toUpperCase(),
-      contacto: formData.contacto,
-      telefono: formData.telefono,
-      email: formData.email,
-      direccion: formData.direccion,
-      ciudad: formData.ciudad,
-      tipoCliente: formData.tipoCliente,
-      productos: []
-    };
+    try {
+      if (isEditMode && selectedCliente) {
+        // Modo edición
+        await updateCliente(selectedCliente.id, {
+          empresa: formData.empresa,
+          rfc: formData.rfc.toUpperCase(),
+          contacto: formData.contacto || null,
+          telefono: formData.telefono || null,
+          email: formData.email || null,
+          direccion: formData.direccion || null,
+          ciudad: formData.ciudad || null,
+          tipo_cliente: formData.tipoCliente
+        }, formData.productos);
+        await loadClientes();
+        toast.success('Cliente actualizado correctamente');
+        setIsDetalleDialogOpen(false);
+      } else {
+        // Modo nuevo
+        await addCliente({
+          empresa: formData.empresa,
+          rfc: formData.rfc.toUpperCase(),
+          contacto: formData.contacto || null,
+          telefono: formData.telefono || null,
+          email: formData.email || null,
+          direccion: formData.direccion || null,
+          ciudad: formData.ciudad || null,
+          tipo_cliente: formData.tipoCliente
+        }, formData.productos);
+        await loadClientes();
+        toast.success('Cliente agregado correctamente');
+        setIsNuevoDialogOpen(false);
+      }
+      
+      resetForm();
+    } catch (error) {
+      console.error('Error saving cliente:', error);
+      toast.error('Error al guardar cliente');
+    }
+  };
 
-    setClientes([nuevoCliente, ...clientes]);
-    setFormData({ empresa: '', rfc: '', contacto: '', telefono: '', email: '', direccion: '', ciudad: '', tipoCliente: 'Nacional' });
-    setIsNuevoDialogOpen(false);
-    toast.success('Cliente agregado correctamente');
+  const handleEditar = (cliente: Cliente) => {
+    setSelectedCliente(cliente);
+    setFormData({
+      empresa: cliente.empresa,
+      rfc: cliente.rfc,
+      contacto: cliente.contacto || '',
+      telefono: cliente.telefono || '',
+      email: cliente.email || '',
+      direccion: cliente.direccion || '',
+      ciudad: cliente.ciudad || '',
+      tipoCliente: cliente.tipoCliente,
+      productos: [...cliente.productos]
+    });
+    setIsEditMode(true);
+    setIsDetalleDialogOpen(false);
+    setIsNuevoDialogOpen(true);
+  };
+
+  const handleToggleProducto = (productoId: number) => {
+    setFormData(prev => ({
+      ...prev,
+      productos: prev.productos.includes(productoId)
+        ? prev.productos.filter(p => p !== productoId)
+        : [...prev.productos, productoId]
+    }));
   };
 
   const handleVerDetalle = (cliente: Cliente) => {
@@ -156,7 +234,10 @@ const Clientes = () => {
               <Download className="h-4 w-4 mr-2" />
               Exportar
             </Button>
-            <Button onClick={() => setIsNuevoDialogOpen(true)}>
+            <Button onClick={() => {
+              resetForm();
+              setIsNuevoDialogOpen(true);
+            }}>
               <Plus className="h-4 w-4 mr-2" />
               Nuevo Cliente
             </Button>
@@ -218,12 +299,15 @@ const Clientes = () => {
         </Card>
 
         {/* Nuevo Cliente Dialog */}
-        <Dialog open={isNuevoDialogOpen} onOpenChange={setIsNuevoDialogOpen}>
-          <DialogContent className="max-w-lg">
+        <Dialog open={isNuevoDialogOpen} onOpenChange={(open) => {
+          setIsNuevoDialogOpen(open);
+          if (!open) resetForm();
+        }}>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5" />
-                Nuevo Cliente
+                {isEditMode ? 'Editar Cliente' : 'Nuevo Cliente'}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -309,15 +393,60 @@ const Clientes = () => {
                     placeholder="Ciudad, Estado"
                   />
                 </div>
+                <div className="space-y-2 col-span-2">
+                  <Label>Productos</Label>
+                  <div className="border rounded-md p-4 space-y-2 max-h-48 overflow-y-auto">
+                    {productosDB.map((producto) => (
+                      <div key={producto.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`producto-${producto.id}`}
+                          checked={formData.productos.includes(producto.id)}
+                          onCheckedChange={() => handleToggleProducto(producto.id)}
+                        />
+                        <label
+                          htmlFor={`producto-${producto.id}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
+                          {producto.nombre}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  {formData.productos.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {formData.productos.map((prodId) => {
+                        const producto = productosDB.find(p => p.id === prodId);
+                        return producto ? (
+                          <Badge key={prodId} variant="outline" className="flex items-center gap-1">
+                            {producto.nombre}
+                            <X 
+                              className="h-3 w-3 cursor-pointer" 
+                              onClick={() => handleToggleProducto(prodId)}
+                            />
+                          </Badge>
+                        ) : null;
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             <DialogFooter>
               <DialogClose asChild>
-                <Button variant="outline">Cancelar</Button>
+                <Button variant="outline" onClick={resetForm}>Cancelar</Button>
               </DialogClose>
               <Button onClick={handleNuevoCliente}>
-                <Plus className="h-4 w-4 mr-2" />
-                Agregar Cliente
+                {isEditMode ? (
+                  <>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Guardar Cambios
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Agregar Cliente
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -374,9 +503,12 @@ const Clientes = () => {
                     <div className="space-y-1 col-span-2">
                       <Label className="text-xs text-muted-foreground">Productos</Label>
                       <div className="flex gap-1 flex-wrap">
-                        {selectedCliente.productos.map((prod, idx) => (
-                          <Badge key={idx} variant="outline">{prod}</Badge>
-                        ))}
+                        {selectedCliente.productos.map((prodId) => {
+                          const producto = productosDB.find(p => p.id === prodId);
+                          return producto ? (
+                            <Badge key={prodId} variant="outline">{producto.nombre}</Badge>
+                          ) : null;
+                        })}
                       </div>
                     </div>
                   </div>
@@ -385,7 +517,7 @@ const Clientes = () => {
                   <DialogClose asChild>
                     <Button variant="outline">Cerrar</Button>
                   </DialogClose>
-                  <Button variant="outline">
+                  <Button variant="outline" onClick={() => handleEditar(selectedCliente)}>
                     <Edit className="h-4 w-4 mr-2" />
                     Editar
                   </Button>

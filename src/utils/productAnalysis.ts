@@ -14,7 +14,7 @@ export interface AnalisisConfig {
 
 export interface ProductoAnalisis {
   producto: string;
-  folioCode: string;
+  boletaCode: string;
   analisis: AnalisisConfig[];
 }
 
@@ -22,7 +22,7 @@ export interface ProductoAnalisis {
 export const PRODUCTOS_ANALISIS: ProductoAnalisis[] = [
   {
     producto: 'Frijol Soya',
-    folioCode: '03',
+    boletaCode: '03',
     analisis: [
       { nombre: 'Humedad', unidad: '%', rangoMin: 0, rangoMax: 14, descuento: true, tolerancia: 13 },
       { nombre: 'Impurezas', unidad: '%', rangoMin: 0, rangoMax: 3, descuento: true, tolerancia: 1 },
@@ -34,7 +34,7 @@ export const PRODUCTOS_ANALISIS: ProductoAnalisis[] = [
   },
   {
     producto: 'Maíz',
-    folioCode: '06',
+    boletaCode: '06',
     analisis: [
       { nombre: 'Humedad', unidad: '%', rangoMin: 0, rangoMax: 14, descuento: true, tolerancia: 14 },
       { nombre: 'Impurezas', unidad: '%', rangoMin: 0, rangoMax: 3, descuento: true, tolerancia: 2 },
@@ -44,7 +44,7 @@ export const PRODUCTOS_ANALISIS: ProductoAnalisis[] = [
   },
   {
     producto: 'Sorgo',
-    folioCode: '07',
+    boletaCode: '07',
     analisis: [
       { nombre: 'Humedad', unidad: '%', rangoMin: 0, rangoMax: 14, descuento: true, tolerancia: 14 },
       { nombre: 'Impurezas', unidad: '%', rangoMin: 0, rangoMax: 3, descuento: true, tolerancia: 2 },
@@ -54,7 +54,7 @@ export const PRODUCTOS_ANALISIS: ProductoAnalisis[] = [
   },
   {
     producto: 'Aceite Crudo de Soya',
-    folioCode: '01',
+    boletaCode: '01',
     analisis: [
       { nombre: 'Acidez', unidad: '%', rangoMin: 0, rangoMax: 3, descuento: true, tolerancia: 0.5 },
       { nombre: 'Humedad', unidad: '%', rangoMin: 0, rangoMax: 0.5, descuento: true, tolerancia: 0.1 },
@@ -64,7 +64,7 @@ export const PRODUCTOS_ANALISIS: ProductoAnalisis[] = [
   },
   {
     producto: 'Pasta de Soya',
-    folioCode: '02',
+    boletaCode: '02',
     analisis: [
       { nombre: 'Humedad', unidad: '%', rangoMin: 0, rangoMax: 12, descuento: true, tolerancia: 12 },
       { nombre: 'Proteína', unidad: '%', rangoMin: 44, rangoMax: 48, descuento: false },
@@ -74,7 +74,7 @@ export const PRODUCTOS_ANALISIS: ProductoAnalisis[] = [
   },
   {
     producto: 'Cascarilla de Soya',
-    folioCode: '05',
+    boletaCode: '05',
     analisis: [
       { nombre: 'Humedad', unidad: '%', rangoMin: 0, rangoMax: 12, descuento: true, tolerancia: 12 },
       { nombre: 'Proteína', unidad: '%', rangoMin: 10, rangoMax: 14, descuento: false },

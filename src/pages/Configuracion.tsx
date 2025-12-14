@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import Header from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -14,30 +14,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-
-// Tipos de análisis disponibles según el PDF
-const tiposAnalisis = [
-  { id: 'humedad', nombre: 'Humedad' },
-  { id: 'impurezas', nombre: 'Impurezas' },
-  { id: 'impurezasInsolubles', nombre: 'Impurezas Insolubles' },
-  { id: 'granosDanados', nombre: 'Granos Dañados' },
-  { id: 'granosQuebrados', nombre: 'Granos Quebrados' },
-  { id: 'pesoEspecifico', nombre: 'Peso Específico' },
-  { id: 'aflatoxinas', nombre: 'Aflatoxinas' },
-  { id: 'proteina', nombre: 'Proteína' },
-  { id: 'grasa', nombre: 'Grasa' },
-  { id: 'fibra', nombre: 'Fibra' },
-  { id: 'cenizas', nombre: 'Cenizas' },
-  { id: 'acidez', nombre: 'Acidez' },
-  { id: 'acidoOleico', nombre: 'Ácido Oleico' },
-  { id: 'indiceSaponificacion', nombre: 'Índice de Saponificación' },
-  { id: 'indiceYodo', nombre: 'Índice de Yodo' },
-  { id: 'indiceRefraccion', nombre: 'Índice de Refracción' },
-  { id: 'colorRojo', nombre: 'Color Rojo' },
-  { id: 'colorAmarillo', nombre: 'Color Amarillo' },
-  { id: 'fosfolipidos', nombre: 'Fosfolípidos' },
-  { id: 'insolubles', nombre: 'Insolubles en Acetona' },
-];
+import { useProductos } from '@/services/hooks/useProductos';
+import { useAlmacenes } from '@/services/hooks/useAlmacenes';
+import { useUsuarios } from '@/services/hooks/useUsuarios';
+import { useAuth } from '@/contexts/AuthContext';
+import * as productosService from '@/services/supabase/productos';
+import type { Producto as ProductoDB } from '@/services/supabase/productos';
+import type { Almacen as AlmacenDB } from '@/services/supabase/almacenes';
+import type { Usuario as UsuarioDB } from '@/services/supabase/usuarios';
 
 // Roles según el PDF
 const rolesDisponibles = [
@@ -65,130 +49,81 @@ interface Analisis {
 interface Producto {
   id: number;
   nombre: string;
-  codigoFolio: string;
+  codigoBoleta: string;
   analisis: Analisis[];
 }
 
-interface Almacen {
-  id: number;
-  nombre: string;
-  capacidadTotal: number;
-  capacidadActual: number;
-  unidad: string;
-}
-
-interface Usuario {
-  id: number;
-  nombreCompleto: string;
-  correo: string;
-  contrasena: string;
-  rol: string;
-}
-
 const Configuracion = () => {
-  const [productos, setProductos] = useState<Producto[]>([
-    { 
-      id: 1, 
-      nombre: 'Aceite de Soya', 
-      codigoFolio: '01',
-      analisis: [
-        { id: 'acidez', nombre: 'Acidez', generaDescuento: true, rangosDescuento: [
-          { porcentaje: 0.0, kgDescuentoTon: 0 },
-          { porcentaje: 0.5, kgDescuentoTon: 0 },
-          { porcentaje: 0.6, kgDescuentoTon: 5 },
-          { porcentaje: 1.0, kgDescuentoTon: 10 },
-        ]},
-        { id: 'humedad', nombre: 'Humedad', generaDescuento: true, rangosDescuento: [
-          { porcentaje: 0.0, kgDescuentoTon: 0 },
-          { porcentaje: 0.1, kgDescuentoTon: 0 },
-          { porcentaje: 0.2, kgDescuentoTon: 5 },
-        ]},
-        { id: 'impurezasInsolubles', nombre: 'Impurezas Insolubles', generaDescuento: false },
-      ]
-    },
-    { 
-      id: 2, 
-      nombre: 'Pasta de Soya', 
-      codigoFolio: '02',
-      analisis: [
-        { id: 'proteina', nombre: 'Proteína', generaDescuento: false },
-        { id: 'humedad', nombre: 'Humedad', generaDescuento: true, rangosDescuento: [
-          { porcentaje: 0.0, kgDescuentoTon: 0 },
-          { porcentaje: 12.0, kgDescuentoTon: 0 },
-          { porcentaje: 12.1, kgDescuentoTon: 10 },
-        ]},
-        { id: 'grasa', nombre: 'Grasa', generaDescuento: false },
-        { id: 'fibra', nombre: 'Fibra', generaDescuento: false },
-      ]
-    },
-    { 
-      id: 3, 
-      nombre: 'Soya', 
-      codigoFolio: '03',
-      analisis: [
-        { id: 'humedad', nombre: 'Humedad', generaDescuento: true, rangosDescuento: [
-          { porcentaje: 0.0, kgDescuentoTon: 0 },
-          { porcentaje: 13.0, kgDescuentoTon: 0 },
-          { porcentaje: 13.1, kgDescuentoTon: 10 },
-          { porcentaje: 14.1, kgDescuentoTon: 20 },
-        ]},
-        { id: 'impurezas', nombre: 'Impurezas', generaDescuento: true, rangosDescuento: [
-          { porcentaje: 0.0, kgDescuentoTon: 0 },
-          { porcentaje: 2.0, kgDescuentoTon: 0 },
-          { porcentaje: 2.1, kgDescuentoTon: 10 },
-        ]},
-        { id: 'granosDanados', nombre: 'Granos Dañados', generaDescuento: true, rangosDescuento: [
-          { porcentaje: 0.0, kgDescuentoTon: 0 },
-          { porcentaje: 5.0, kgDescuentoTon: 0 },
-          { porcentaje: 5.1, kgDescuentoTon: 5 },
-        ]},
-      ]
-    },
-    { 
-      id: 4, 
-      nombre: 'Maíz', 
-      codigoFolio: '04',
-      analisis: [
-        { id: 'humedad', nombre: 'Humedad', generaDescuento: true, rangosDescuento: [
-          { porcentaje: 0.0, kgDescuentoTon: 0 },
-          { porcentaje: 14.0, kgDescuentoTon: 0 },
-          { porcentaje: 14.1, kgDescuentoTon: 10 },
-        ]},
-        { id: 'impurezas', nombre: 'Impurezas', generaDescuento: true, rangosDescuento: [
-          { porcentaje: 0.0, kgDescuentoTon: 0 },
-          { porcentaje: 2.0, kgDescuentoTon: 0 },
-          { porcentaje: 2.1, kgDescuentoTon: 10 },
-        ]},
-        { id: 'granosDanados', nombre: 'Granos Dañados', generaDescuento: false },
-        { id: 'granosQuebrados', nombre: 'Granos Quebrados', generaDescuento: false },
-        { id: 'pesoEspecifico', nombre: 'Peso Específico', generaDescuento: false },
-      ]
-    },
-    { 
-      id: 5, 
-      nombre: 'Sorgo', 
-      codigoFolio: '05',
-      analisis: [
-        { id: 'humedad', nombre: 'Humedad', generaDescuento: true, rangosDescuento: [] },
-        { id: 'impurezas', nombre: 'Impurezas', generaDescuento: true, rangosDescuento: [] },
-      ]
-    },
-  ]);
+  const { esAdministrador } = useAuth();
+  
+  // Hooks de Supabase
+  const { 
+    productos: productosDB, 
+    tiposAnalisis: tiposAnalisisDisponibles, 
+    loading: productosLoading,
+    addProducto: addProductoDB,
+    updateProducto: updateProductoDB,
+    deleteProducto: deleteProductoDB,
+    addTipoAnalisis,
+    removeTipoAnalisis,
+    loadProductos,
+    loadTiposAnalisis
+  } = useProductos();
+  
+  const { 
+    almacenes: almacenesDB, 
+    loading: almacenesLoading,
+    addAlmacen: addAlmacenDB,
+    updateAlmacen: updateAlmacenDB,
+    deleteAlmacen: deleteAlmacenDB
+  } = useAlmacenes();
+  
+  const { 
+    usuarios: usuariosDB, 
+    loading: usuariosLoading,
+    addUsuario: addUsuarioDB,
+    updateUsuario: updateUsuarioDB,
+    deleteUsuario: deleteUsuarioDB
+  } = useUsuarios();
 
-  const [almacenes, setAlmacenes] = useState<Almacen[]>([
-    { id: 1, nombre: 'Tanque Aceite 1', capacidadTotal: 500000, capacidadActual: 320000, unidad: 'Litros' },
-    { id: 2, nombre: 'Tanque Aceite 2', capacidadTotal: 500000, capacidadActual: 180000, unidad: 'Litros' },
-    { id: 3, nombre: 'Silo Pasta 1', capacidadTotal: 1000000, capacidadActual: 750000, unidad: 'Kg' },
-    { id: 4, nombre: 'Bodega Grano', capacidadTotal: 2000000, capacidadActual: 1200000, unidad: 'Kg' },
-  ]);
+  // Estado local para productos con análisis cargados
+  const [productos, setProductos] = useState<Producto[]>([]);
+  const [productosConAnalisis, setProductosConAnalisis] = useState<Record<number, Analisis[]>>({});
 
-  const [usuarios, setUsuarios] = useState<Usuario[]>([
-    { id: 1, nombreCompleto: 'Juan Pérez García', correo: 'juan.perez@empresa.com', contrasena: '********', rol: 'Administrador' },
-    { id: 2, nombreCompleto: 'María López Hernández', correo: 'maria.lopez@empresa.com', contrasena: '********', rol: 'Oficina' },
-    { id: 3, nombreCompleto: 'Carlos Ramírez Soto', correo: 'carlos.ramirez@empresa.com', contrasena: '********', rol: 'Portero' },
-    { id: 4, nombreCompleto: 'Ana Martínez Cruz', correo: 'ana.martinez@empresa.com', contrasena: '********', rol: 'Báscula' },
-    { id: 5, nombreCompleto: 'Roberto Sánchez Díaz', correo: 'roberto.sanchez@empresa.com', contrasena: '********', rol: 'Laboratorio' },
-  ]);
+  // Cargar productos cuando cambie productosDB
+  useEffect(() => {
+    if (productosDB) {
+      setProductos(productosDB.map(p => ({
+        id: p.id,
+        nombre: p.nombre,
+        codigoBoleta: p.codigo_boleta,
+        analisis: productosConAnalisis[p.id] || []
+      })));
+    }
+  }, [productosDB]);
+
+  // Cargar análisis cuando se expande un producto
+  const loadAnalisisForProducto = async (productoId: number, forceReload: boolean = false) => {
+    if (!forceReload && productosConAnalisis[productoId]) return; // Ya cargado, a menos que se fuerce recarga
+    
+    try {
+      const productoConAnalisis = await productosService.getProductoConAnalisis(productoId);
+      const analisis: Analisis[] = (productoConAnalisis.analisis || []).map((a: any) => ({
+        id: a.id,
+        nombre: a.nombre,
+        generaDescuento: a.generaDescuento || false,
+        rangosDescuento: a.rangosDescuento || []
+      }));
+      
+      setProductosConAnalisis(prev => ({ ...prev, [productoId]: analisis }));
+      setProductos(prev => prev.map(p => 
+        p.id === productoId ? { ...p, analisis } : p
+      ));
+    } catch (error) {
+      console.error('Error loading analisis:', error);
+      toast.error('Error al cargar análisis del producto');
+    }
+  };
 
   const [expandedProduct, setExpandedProduct] = useState<number | null>(null);
   const [searchProducto, setSearchProducto] = useState('');
@@ -200,14 +135,14 @@ const Configuracion = () => {
   const [almacenDialogOpen, setAlmacenDialogOpen] = useState(false);
   const [usuarioDialogOpen, setUsuarioDialogOpen] = useState(false);
   const [editingProducto, setEditingProducto] = useState<Producto | null>(null);
-  const [editingAlmacen, setEditingAlmacen] = useState<Almacen | null>(null);
-  const [editingUsuario, setEditingUsuario] = useState<Usuario | null>(null);
+  const [editingAlmacen, setEditingAlmacen] = useState<{ id: number; nombre: string; capacidadTotal: number; capacidadActual: number; unidad: string } | null>(null);
+  const [editingUsuario, setEditingUsuario] = useState<{ id: number; nombreCompleto: string; nombreUsuario?: string; correo: string; contrasena: string; rol: string } | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{ type: 'producto' | 'almacen' | 'usuario'; id: number; nombre: string } | null>(null);
 
   // Estados para formularios
-  const [nuevoProducto, setNuevoProducto] = useState({ nombre: '', codigoFolio: '', analisis: [] as Analisis[] });
+  const [nuevoProducto, setNuevoProducto] = useState({ nombre: '', codigoBoleta: '', analisis: [] as Analisis[] });
   const [nuevoAlmacen, setNuevoAlmacen] = useState({ nombre: '', capacidadTotal: '', unidad: '' });
-  const [nuevoUsuario, setNuevoUsuario] = useState({ nombreCompleto: '', correo: '', contrasena: '', rol: '' });
+  const [nuevoUsuario, setNuevoUsuario] = useState({ nombreCompleto: '', nombreUsuario: '', correo: '', contrasena: '', rol: '' });
 
   // Estado para edición de análisis con descuentos
   const [editingAnalisis, setEditingAnalisis] = useState<{ productoId: number; analisis: Analisis } | null>(null);
@@ -232,88 +167,109 @@ const Configuracion = () => {
 
   const filteredProductos = productos.filter(p => 
     p.nombre.toLowerCase().includes(searchProducto.toLowerCase()) ||
-    p.codigoFolio.includes(searchProducto)
+    p.codigoBoleta.includes(searchProducto)
   );
 
-  const filteredAlmacenes = almacenes.filter(a => 
+  const filteredAlmacenes = almacenesDB.filter(a => 
     a.nombre.toLowerCase().includes(searchAlmacen.toLowerCase())
   );
 
-  const filteredUsuarios = usuarios.filter(u => 
-    u.nombreCompleto.toLowerCase().includes(searchUsuario.toLowerCase()) ||
-    u.correo.toLowerCase().includes(searchUsuario.toLowerCase())
+  const filteredUsuarios = usuariosDB.filter(u => 
+    u.nombre_completo.toLowerCase().includes(searchUsuario.toLowerCase()) ||
+    u.correo.toLowerCase().includes(searchUsuario.toLowerCase()) ||
+    (u.nombre_usuario && u.nombre_usuario.toLowerCase().includes(searchUsuario.toLowerCase()))
   );
 
   // CRUD Productos
-  const handleSaveProducto = () => {
-    if (!nuevoProducto.nombre || !nuevoProducto.codigoFolio) {
+  const handleSaveProducto = async () => {
+    if (!nuevoProducto.nombre || !nuevoProducto.codigoBoleta) {
       toast.error('Complete todos los campos requeridos');
       return;
     }
 
-    if (editingProducto) {
-      setProductos(prev => prev.map(p => 
-        p.id === editingProducto.id 
-          ? { ...p, nombre: nuevoProducto.nombre, codigoFolio: nuevoProducto.codigoFolio }
-          : p
-      ));
-      toast.success('Producto actualizado correctamente');
-    } else {
-      const newId = Math.max(...productos.map(p => p.id), 0) + 1;
-      setProductos(prev => [...prev, { id: newId, nombre: nuevoProducto.nombre, codigoFolio: nuevoProducto.codigoFolio, analisis: [] }]);
-      toast.success('Producto creado correctamente');
-    }
+    try {
+      if (editingProducto) {
+        await updateProductoDB(editingProducto.id, {
+          nombre: nuevoProducto.nombre,
+          codigo_boleta: nuevoProducto.codigoBoleta
+        });
+        await loadProductos();
+        toast.success('Producto actualizado correctamente');
+      } else {
+        await addProductoDB({
+          nombre: nuevoProducto.nombre,
+          codigo_boleta: nuevoProducto.codigoBoleta
+        });
+        await loadProductos();
+        toast.success('Producto creado correctamente');
+      }
 
-    setNuevoProducto({ nombre: '', codigoFolio: '', analisis: [] });
-    setEditingProducto(null);
-    setProductoDialogOpen(false);
+      setNuevoProducto({ nombre: '', codigoBoleta: '', analisis: [] });
+      setEditingProducto(null);
+      setProductoDialogOpen(false);
+    } catch (error) {
+      console.error('Error saving producto:', error);
+      toast.error('Error al guardar producto');
+    }
   };
 
   const handleEditProducto = (producto: Producto) => {
     setEditingProducto(producto);
-    setNuevoProducto({ nombre: producto.nombre, codigoFolio: producto.codigoFolio, analisis: producto.analisis });
+    setNuevoProducto({ nombre: producto.nombre, codigoBoleta: producto.codigoBoleta, analisis: producto.analisis });
     setProductoDialogOpen(true);
   };
 
+  const handleExpandProduct = async (productoId: number) => {
+    if (expandedProduct === productoId) {
+      setExpandedProduct(null);
+    } else {
+      setExpandedProduct(productoId);
+      await loadAnalisisForProducto(productoId);
+    }
+  };
+
   // CRUD Almacenes
-  const handleSaveAlmacen = () => {
+  const handleSaveAlmacen = async () => {
     if (!nuevoAlmacen.nombre || !nuevoAlmacen.capacidadTotal || !nuevoAlmacen.unidad) {
       toast.error('Complete todos los campos requeridos');
       return;
     }
 
-    if (editingAlmacen) {
-      setAlmacenes(prev => prev.map(a => 
-        a.id === editingAlmacen.id 
-          ? { ...a, nombre: nuevoAlmacen.nombre, capacidadTotal: Number(nuevoAlmacen.capacidadTotal), unidad: nuevoAlmacen.unidad }
-          : a
-      ));
-      toast.success('Almacén actualizado correctamente');
-    } else {
-      const newId = Math.max(...almacenes.map(a => a.id), 0) + 1;
-      setAlmacenes(prev => [...prev, { 
-        id: newId, 
-        nombre: nuevoAlmacen.nombre, 
-        capacidadTotal: Number(nuevoAlmacen.capacidadTotal), 
-        capacidadActual: 0, 
-        unidad: nuevoAlmacen.unidad 
-      }]);
-      toast.success('Almacén creado correctamente');
-    }
+    try {
+      if (editingAlmacen) {
+        await updateAlmacenDB(editingAlmacen.id, {
+          nombre: nuevoAlmacen.nombre,
+          capacidad_total: Number(nuevoAlmacen.capacidadTotal),
+          unidad: nuevoAlmacen.unidad
+        });
+        toast.success('Almacén actualizado correctamente');
+      } else {
+        await addAlmacenDB({
+          nombre: nuevoAlmacen.nombre,
+          capacidad_total: Number(nuevoAlmacen.capacidadTotal),
+          capacidad_actual: 0,
+          unidad: nuevoAlmacen.unidad
+        });
+        toast.success('Almacén creado correctamente');
+      }
 
-    setNuevoAlmacen({ nombre: '', capacidadTotal: '', unidad: '' });
-    setEditingAlmacen(null);
-    setAlmacenDialogOpen(false);
+      setNuevoAlmacen({ nombre: '', capacidadTotal: '', unidad: '' });
+      setEditingAlmacen(null);
+      setAlmacenDialogOpen(false);
+    } catch (error) {
+      console.error('Error saving almacen:', error);
+      toast.error('Error al guardar almacén');
+    }
   };
 
-  const handleEditAlmacen = (almacen: Almacen) => {
-    setEditingAlmacen(almacen);
-    setNuevoAlmacen({ nombre: almacen.nombre, capacidadTotal: almacen.capacidadTotal.toString(), unidad: almacen.unidad });
+  const handleEditAlmacen = (almacen: AlmacenDB) => {
+    setEditingAlmacen({ id: almacen.id, nombre: almacen.nombre, capacidadTotal: almacen.capacidad_total, capacidadActual: almacen.capacidad_actual, unidad: almacen.unidad });
+    setNuevoAlmacen({ nombre: almacen.nombre, capacidadTotal: almacen.capacidad_total.toString(), unidad: almacen.unidad });
     setAlmacenDialogOpen(true);
   };
 
   // CRUD Usuarios
-  const handleSaveUsuario = () => {
+  const handleSaveUsuario = async () => {
     if (!nuevoUsuario.nombreCompleto || !nuevoUsuario.correo || !nuevoUsuario.rol) {
       toast.error('Complete todos los campos requeridos');
       return;
@@ -323,103 +279,190 @@ const Configuracion = () => {
       return;
     }
 
-    if (editingUsuario) {
-      setUsuarios(prev => prev.map(u => 
-        u.id === editingUsuario.id 
-          ? { ...u, nombreCompleto: nuevoUsuario.nombreCompleto, correo: nuevoUsuario.correo, rol: nuevoUsuario.rol, contrasena: nuevoUsuario.contrasena || u.contrasena }
-          : u
-      ));
-      toast.success('Usuario actualizado correctamente');
-    } else {
-      const newId = Math.max(...usuarios.map(u => u.id), 0) + 1;
-      setUsuarios(prev => [...prev, { 
-        id: newId, 
-        nombreCompleto: nuevoUsuario.nombreCompleto, 
-        correo: nuevoUsuario.correo,
-        contrasena: '********',
-        rol: nuevoUsuario.rol 
-      }]);
-      toast.success('Usuario creado correctamente');
-    }
+    try {
+      // En producción, deberías hashear la contraseña aquí
+      const contrasenaHash = nuevoUsuario.contrasena || '********';
+      
+      if (editingUsuario) {
+        const updateData: any = {
+          nombre_completo: nuevoUsuario.nombreCompleto,
+          nombre_usuario: nuevoUsuario.nombreUsuario || null,
+          correo: nuevoUsuario.correo,
+          rol: nuevoUsuario.rol
+        };
+        if (nuevoUsuario.contrasena) {
+          updateData.contrasena_hash = contrasenaHash;
+        }
+        await updateUsuarioDB(editingUsuario.id, updateData);
+        toast.success('Usuario actualizado correctamente');
+      } else {
+        await addUsuarioDB({
+          nombre_completo: nuevoUsuario.nombreCompleto,
+          nombre_usuario: nuevoUsuario.nombreUsuario || null,
+          correo: nuevoUsuario.correo,
+          contrasena_hash: contrasenaHash,
+          rol: nuevoUsuario.rol,
+          activo: true
+        });
+        toast.success('Usuario creado correctamente');
+      }
 
-    setNuevoUsuario({ nombreCompleto: '', correo: '', contrasena: '', rol: '' });
-    setEditingUsuario(null);
-    setUsuarioDialogOpen(false);
+      setNuevoUsuario({ nombreCompleto: '', nombreUsuario: '', correo: '', contrasena: '', rol: '' });
+      setEditingUsuario(null);
+      setUsuarioDialogOpen(false);
+    } catch (error) {
+      console.error('Error saving usuario:', error);
+      toast.error('Error al guardar usuario');
+    }
   };
 
-  const handleEditUsuario = (usuario: Usuario) => {
-    setEditingUsuario(usuario);
-    setNuevoUsuario({ nombreCompleto: usuario.nombreCompleto, correo: usuario.correo, contrasena: '', rol: usuario.rol });
+  const handleEditUsuario = (usuario: UsuarioDB) => {
+    setEditingUsuario({ 
+      id: usuario.id, 
+      nombreCompleto: usuario.nombre_completo, 
+      nombreUsuario: usuario.nombre_usuario || '',
+      correo: usuario.correo, 
+      contrasena: '', 
+      rol: usuario.rol 
+    });
+    setNuevoUsuario({ 
+      nombreCompleto: usuario.nombre_completo, 
+      nombreUsuario: usuario.nombre_usuario || '',
+      correo: usuario.correo, 
+      contrasena: '', 
+      rol: usuario.rol 
+    });
     setUsuarioDialogOpen(true);
   };
 
   // Delete handler
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteDialog) return;
 
-    if (deleteDialog.type === 'producto') {
-      setProductos(prev => prev.filter(p => p.id !== deleteDialog.id));
-    } else if (deleteDialog.type === 'almacen') {
-      setAlmacenes(prev => prev.filter(a => a.id !== deleteDialog.id));
-    } else if (deleteDialog.type === 'usuario') {
-      setUsuarios(prev => prev.filter(u => u.id !== deleteDialog.id));
+    try {
+      if (deleteDialog.type === 'producto') {
+        await deleteProductoDB(deleteDialog.id);
+        await loadProductos();
+      } else if (deleteDialog.type === 'almacen') {
+        await deleteAlmacenDB(deleteDialog.id);
+      } else if (deleteDialog.type === 'usuario') {
+        await deleteUsuarioDB(deleteDialog.id);
+      }
+
+      toast.success(`${deleteDialog.type === 'producto' ? 'Producto' : deleteDialog.type === 'almacen' ? 'Almacén' : 'Usuario'} eliminado correctamente`);
+      setDeleteDialog(null);
+    } catch (error) {
+      console.error('Error deleting:', error);
+      toast.error('Error al eliminar');
+    }
+  };
+
+  // Estados para gestión de tipos de análisis
+  const [tiposAnalisisDialogOpen, setTiposAnalisisDialogOpen] = useState(false);
+  const [nuevoTipoAnalisis, setNuevoTipoAnalisis] = useState({ nombre: '' });
+
+  // Crear nuevo tipo de análisis
+  const handleCrearTipoAnalisis = async () => {
+    if (!nuevoTipoAnalisis.nombre.trim()) {
+      toast.error('El nombre del análisis es requerido');
+      return;
     }
 
-    toast.success(`${deleteDialog.type === 'producto' ? 'Producto' : deleteDialog.type === 'almacen' ? 'Almacén' : 'Usuario'} eliminado correctamente`);
-    setDeleteDialog(null);
+    try {
+      await addTipoAnalisis(nuevoTipoAnalisis.nombre.trim());
+      // Recargar tipos de análisis para actualizar el dropdown inmediatamente
+      await loadTiposAnalisis();
+      setNuevoTipoAnalisis({ nombre: '' });
+      setTiposAnalisisDialogOpen(false);
+      toast.success('Tipo de análisis creado');
+    } catch (error) {
+      console.error('Error creating tipo analisis:', error);
+      toast.error('Error al crear tipo de análisis');
+    }
+  };
+
+  // Eliminar tipo de análisis
+  const handleEliminarTipoAnalisis = async (analisisId: string) => {
+    // Verificar si está en uso
+    const enUso = productos.some(p => p.analisis.some(a => a.id === analisisId));
+    if (enUso) {
+      toast.error('No se puede eliminar: este análisis está asignado a uno o más productos');
+      return;
+    }
+
+    try {
+      await removeTipoAnalisis(analisisId);
+      toast.success('Tipo de análisis eliminado');
+    } catch (error) {
+      console.error('Error deleting tipo analisis:', error);
+      toast.error('Error al eliminar tipo de análisis');
+    }
   };
 
   // Agregar análisis a producto
-  const handleAddAnalisis = (productoId: number, analisisId: string) => {
-    const tipoAnalisis = tiposAnalisis.find(t => t.id === analisisId);
+  const handleAddAnalisis = async (productoId: number, analisisId: string) => {
+    const tipoAnalisis = tiposAnalisisDisponibles.find(t => t.id === analisisId);
     if (!tipoAnalisis) return;
 
-    setProductos(prev => prev.map(p => {
-      if (p.id === productoId) {
-        if (p.analisis.some(a => a.id === analisisId)) {
-          toast.error('Este análisis ya está agregado');
-          return p;
-        }
-        return {
-          ...p,
-          analisis: [...p.analisis, { id: analisisId, nombre: tipoAnalisis.nombre, generaDescuento: false, rangosDescuento: [] }]
-        };
-      }
-      return p;
-    }));
-    toast.success('Análisis agregado');
+    const producto = productos.find(p => p.id === productoId);
+    if (producto?.analisis.some(a => a.id === analisisId)) {
+      toast.error('Este análisis ya está agregado');
+      return;
+    }
+
+    try {
+      await productosService.addAnalisisToProducto(productoId, analisisId, false);
+      // Forzar recarga para actualizar el estado inmediatamente
+      await loadAnalisisForProducto(productoId, true);
+      toast.success('Análisis agregado');
+    } catch (error) {
+      console.error('Error adding analisis:', error);
+      toast.error('Error al agregar análisis');
+    }
   };
 
   // Eliminar análisis de producto
-  const handleRemoveAnalisis = (productoId: number, analisisId: string) => {
-    setProductos(prev => prev.map(p => {
-      if (p.id === productoId) {
-        return {
-          ...p,
-          analisis: p.analisis.filter(a => a.id !== analisisId)
-        };
-      }
-      return p;
-    }));
-    toast.success('Análisis eliminado');
+  const handleRemoveAnalisis = async (productoId: number, analisisId: string) => {
+    try {
+      await productosService.removeAnalisisFromProducto(productoId, analisisId);
+      // Forzar recarga para actualizar el estado inmediatamente
+      await loadAnalisisForProducto(productoId, true);
+      toast.success('Análisis eliminado');
+    } catch (error) {
+      console.error('Error removing analisis:', error);
+      toast.error('Error al eliminar análisis');
+    }
   };
 
   // Toggle genera descuento
-  const handleToggleDescuento = (productoId: number, analisisId: string) => {
-    setProductos(prev => prev.map(p => {
-      if (p.id === productoId) {
-        return {
-          ...p,
-          analisis: p.analisis.map(a => {
-            if (a.id === analisisId) {
-              return { ...a, generaDescuento: !a.generaDescuento, rangosDescuento: !a.generaDescuento ? [] : a.rangosDescuento };
-            }
-            return a;
-          })
-        };
+  const handleToggleDescuento = async (productoId: number, analisisId: string) => {
+    const producto = productos.find(p => p.id === productoId);
+    const analisis = producto?.analisis.find(a => a.id === analisisId);
+    if (!analisis) return;
+
+    const nuevoEstado = !analisis.generaDescuento;
+    
+    try {
+      // Obtener producto_analisis_id
+      const productoConAnalisis = await productosService.getProductoConAnalisis(productoId);
+      const productoAnalisis = (productoConAnalisis.analisis || []).find((a: any) => a.id === analisisId);
+      
+      if (productoAnalisis && productoAnalisis.productoAnalisisId) {
+        await productosService.updateGeneraDescuento(productoAnalisis.productoAnalisisId, nuevoEstado);
+        
+        // Si se desactiva, eliminar rangos
+        if (!nuevoEstado) {
+          await productosService.updateRangosDescuento(productoAnalisis.productoAnalisisId, []);
+        }
+        
+        // Forzar recarga para actualizar el estado inmediatamente
+        await loadAnalisisForProducto(productoId, true);
+        toast.success('Descuento actualizado');
       }
-      return p;
-    }));
+    } catch (error) {
+      console.error('Error toggling descuento:', error);
+      toast.error('Error al actualizar descuento');
+    }
   };
 
   // Editar rangos de descuento
@@ -427,26 +470,30 @@ const Configuracion = () => {
     setEditingAnalisis({ productoId, analisis: { ...analisis, rangosDescuento: analisis.rangosDescuento ? [...analisis.rangosDescuento] : [] } });
   };
 
-  const handleSaveRangos = () => {
+  const handleSaveRangos = async () => {
     if (!editingAnalisis) return;
 
-    setProductos(prev => prev.map(p => {
-      if (p.id === editingAnalisis.productoId) {
-        return {
-          ...p,
-          analisis: p.analisis.map(a => {
-            if (a.id === editingAnalisis.analisis.id) {
-              return editingAnalisis.analisis;
-            }
-            return a;
-          })
-        };
+    try {
+      // Obtener producto_analisis_id
+      const productoConAnalisis = await productosService.getProductoConAnalisis(editingAnalisis.productoId);
+      const productoAnalisis = (productoConAnalisis.analisis || []).find((a: any) => a.id === editingAnalisis.analisis.id);
+      
+      if (productoAnalisis && productoAnalisis.productoAnalisisId) {
+        const rangos = editingAnalisis.analisis.rangosDescuento || [];
+        await productosService.updateRangosDescuento(
+          productoAnalisis.productoAnalisisId,
+          rangos.map(r => ({ porcentaje: r.porcentaje, kgDescuentoTon: r.kgDescuentoTon }))
+        );
+        
+        // Forzar recarga para actualizar el estado inmediatamente
+        await loadAnalisisForProducto(editingAnalisis.productoId, true);
+        toast.success('Rangos de descuento actualizados');
+        setEditingAnalisis(null);
       }
-      return p;
-    }));
-
-    toast.success('Rangos de descuento actualizados');
-    setEditingAnalisis(null);
+    } catch (error) {
+      console.error('Error saving rangos:', error);
+      toast.error('Error al guardar rangos de descuento');
+    }
   };
 
   const handleAddRango = () => {
@@ -498,10 +545,12 @@ const Configuracion = () => {
               <Warehouse className="h-4 w-4" />
               Almacenes
             </TabsTrigger>
-            <TabsTrigger value="usuarios" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Usuarios
-            </TabsTrigger>
+            {esAdministrador() && (
+              <TabsTrigger value="usuarios" className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Usuarios
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* TAB PRODUCTOS */}
@@ -518,7 +567,7 @@ const Configuracion = () => {
               </div>
               <Button className="bg-primary hover:bg-primary/90" onClick={() => {
                 setEditingProducto(null);
-                setNuevoProducto({ nombre: '', codigoFolio: '', analisis: [] });
+                setNuevoProducto({ nombre: '', codigoBoleta: '', analisis: [] });
                 setProductoDialogOpen(true);
               }}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -533,7 +582,7 @@ const Configuracion = () => {
                   Catálogo de Productos
                 </CardTitle>
                 <CardDescription>
-                  Productos con sus códigos de folio y análisis dinámicos configurables
+                  Productos con sus códigos de boleta y análisis dinámicos configurables
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -542,7 +591,7 @@ const Configuracion = () => {
                     <TableRow>
                       <TableHead className="w-12"></TableHead>
                       <TableHead>Nombre</TableHead>
-                      <TableHead>Código Folio</TableHead>
+                      <TableHead>Código Boleta</TableHead>
                       <TableHead>Análisis Configurados</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
@@ -552,7 +601,7 @@ const Configuracion = () => {
                       <React.Fragment key={producto.id}>
                         <TableRow 
                           className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => setExpandedProduct(expandedProduct === producto.id ? null : producto.id)}
+                          onClick={() => handleExpandProduct(producto.id)}
                         >
                           <TableCell>
                             {expandedProduct === producto.id ? (
@@ -563,7 +612,7 @@ const Configuracion = () => {
                           </TableCell>
                           <TableCell className="font-medium">{producto.nombre}</TableCell>
                           <TableCell>
-                            <Badge variant="outline" className="font-mono">{producto.codigoFolio}</Badge>
+                            <Badge variant="outline" className="font-mono">{producto.codigoBoleta}</Badge>
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-1 flex-wrap">
@@ -594,7 +643,7 @@ const Configuracion = () => {
                           <TableRow className="bg-muted/30">
                             <TableCell colSpan={5} className="p-4">
                               <div className="space-y-3">
-                                <div className="flex items-center justify-between">
+                                <div className="flex items-center justify-between px-2">
                                   <h4 className="font-medium flex items-center gap-2">
                                     <FlaskConical className="h-4 w-4" />
                                     Configuración de Análisis
@@ -604,7 +653,7 @@ const Configuracion = () => {
                                       <SelectValue placeholder="Agregar análisis" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {tiposAnalisis.filter(t => !producto.analisis.some(a => a.id === t.id)).map((tipo) => (
+                                      {tiposAnalisisDisponibles.filter(t => !producto.analisis.some(a => a.id === t.id)).map((tipo) => (
                                         <SelectItem key={tipo.id} value={tipo.id}>{tipo.nombre}</SelectItem>
                                       ))}
                                     </SelectContent>
@@ -614,7 +663,7 @@ const Configuracion = () => {
                                   {producto.analisis.map((analisis) => (
                                     <div 
                                       key={analisis.id}
-                                      className="flex items-center justify-between p-3 rounded-lg border bg-background"
+                                      className="flex items-center justify-between p-3 px-4 rounded-lg border bg-background"
                                     >
                                       <div className="flex items-center gap-3">
                                         <span className="font-medium">{analisis.nombre}</span>
@@ -634,7 +683,7 @@ const Configuracion = () => {
                                           </Badge>
                                         )}
                                       </div>
-                                      <div className="flex items-center gap-2">
+                                      <div className="flex items-center gap-2 pr-2">
                                         {analisis.generaDescuento && (
                                           <Button variant="outline" size="sm" onClick={() => handleEditRangos(producto.id, analisis)}>
                                             Configurar Rangos
@@ -660,6 +709,56 @@ const Configuracion = () => {
                     ))}
                   </TableBody>
                 </Table>
+              </CardContent>
+            </Card>
+            {/* Gestión de Tipos de Análisis */}
+            <Card className="mt-6">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <FlaskConical className="h-5 w-5" />
+                      Tipos de Análisis Disponibles
+                    </CardTitle>
+                    <CardDescription>
+                      Gestiona los tipos de análisis que pueden asignarse a los productos
+                    </CardDescription>
+                  </div>
+                  <Button onClick={() => setTiposAnalisisDialogOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nuevo Tipo de Análisis
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {tiposAnalisisDisponibles.map((tipo) => {
+                    const enUso = productos.some(p => p.analisis.some(a => a.id === tipo.id));
+                    return (
+                      <div 
+                        key={tipo.id}
+                        className="flex items-center justify-between p-3 rounded-lg border bg-background"
+                      >
+                        <span className="font-medium">{tipo.nombre}</span>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-7 w-7 text-destructive"
+                          onClick={() => handleEliminarTipoAnalisis(tipo.id)}
+                          disabled={enUso}
+                          title={enUso ? 'Este análisis está en uso y no puede eliminarse' : 'Eliminar'}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+                {tiposAnalisisDisponibles.length === 0 && (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No hay tipos de análisis disponibles. Crea uno nuevo para comenzar.
+                  </p>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -710,8 +809,8 @@ const Configuracion = () => {
                     {filteredAlmacenes.map((almacen) => (
                       <TableRow key={almacen.id} className="cursor-pointer hover:bg-muted/50">
                         <TableCell className="font-medium">{almacen.nombre}</TableCell>
-                        <TableCell>{formatNumber(almacen.capacidadTotal)} {almacen.unidad}</TableCell>
-                        <TableCell>{formatNumber(almacen.capacidadActual)} {almacen.unidad}</TableCell>
+                        <TableCell>{formatNumber(almacen.capacidad_total)} {almacen.unidad}</TableCell>
+                        <TableCell>{formatNumber(almacen.capacidad_actual)} {almacen.unidad}</TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditAlmacen(almacen)}>
                             <Edit className="h-4 w-4" />
@@ -734,7 +833,7 @@ const Configuracion = () => {
               <div className="relative w-full sm:w-80">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input 
-                  placeholder="Buscar por nombre o correo..." 
+                  placeholder="Buscar por nombre, usuario o correo..." 
                   className="pl-10"
                   value={searchUsuario}
                   onChange={(e) => setSearchUsuario(e.target.value)}
@@ -742,7 +841,7 @@ const Configuracion = () => {
               </div>
               <Button className="bg-primary hover:bg-primary/90" onClick={() => {
                 setEditingUsuario(null);
-                setNuevoUsuario({ nombreCompleto: '', correo: '', contrasena: '', rol: '' });
+                setNuevoUsuario({ nombreCompleto: '', nombreUsuario: '', correo: '', contrasena: '', rol: '' });
                 setUsuarioDialogOpen(true);
               }}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -765,6 +864,7 @@ const Configuracion = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nombre Completo</TableHead>
+                      <TableHead>Usuario</TableHead>
                       <TableHead>Correo</TableHead>
                       <TableHead>Rol</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
@@ -773,14 +873,15 @@ const Configuracion = () => {
                   <TableBody>
                     {filteredUsuarios.map((usuario) => (
                       <TableRow key={usuario.id} className="cursor-pointer hover:bg-muted/50">
-                        <TableCell className="font-medium">{usuario.nombreCompleto}</TableCell>
+                        <TableCell className="font-medium">{usuario.nombre_completo}</TableCell>
+                        <TableCell>{usuario.nombre_usuario || '-'}</TableCell>
                         <TableCell>{usuario.correo}</TableCell>
                         <TableCell>{getRolBadge(usuario.rol)}</TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEditUsuario(usuario)}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteDialog({ type: 'usuario', id: usuario.id, nombre: usuario.nombreCompleto })}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteDialog({ type: 'usuario', id: usuario.id, nombre: usuario.nombre_completo })}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </TableCell>
@@ -810,12 +911,12 @@ const Configuracion = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label>Código Folio (2 dígitos)</Label>
+              <Label>Código Boleta (2 dígitos)</Label>
               <Input 
                 placeholder="Ej: 01" 
                 maxLength={2}
-                value={nuevoProducto.codigoFolio}
-                onChange={(e) => setNuevoProducto(prev => ({ ...prev, codigoFolio: e.target.value }))}
+                value={nuevoProducto.codigoBoleta}
+                onChange={(e) => setNuevoProducto(prev => ({ ...prev, codigoBoleta: e.target.value }))}
               />
             </div>
             <div className="space-y-2">
@@ -885,7 +986,7 @@ const Configuracion = () => {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>Nombre Completo</Label>
+              <Label>Nombre Completo *</Label>
               <Input 
                 placeholder="Ej: Juan Pérez García"
                 value={nuevoUsuario.nombreCompleto}
@@ -893,7 +994,16 @@ const Configuracion = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label>Correo Electrónico</Label>
+              <Label>Nombre de Usuario (opcional)</Label>
+              <Input 
+                placeholder="Ej: jperez"
+                value={nuevoUsuario.nombreUsuario}
+                onChange={(e) => setNuevoUsuario(prev => ({ ...prev, nombreUsuario: e.target.value }))}
+              />
+              <p className="text-xs text-gray-500">Si no se especifica, se puede usar el correo para iniciar sesión</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Correo Electrónico *</Label>
               <Input 
                 type="email" 
                 placeholder="correo@empresa.com"
@@ -947,58 +1057,66 @@ const Configuracion = () => {
 
       {/* Dialog Editar Rangos de Descuento */}
       <Dialog open={!!editingAnalisis} onOpenChange={() => setEditingAnalisis(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
+        <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Configurar Rangos de Descuento - {editingAnalisis?.analisis.nombre}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <p className="text-sm text-muted-foreground">
+          <div className="space-y-4 py-4 flex-1 flex flex-col min-h-0 overflow-hidden">
+            <p className="text-sm text-muted-foreground flex-shrink-0">
               Configure los rangos de porcentaje y el descuento en Kg por tonelada correspondiente.
             </p>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Porcentaje %</TableHead>
-                  <TableHead>Kg. Dscto x Ton</TableHead>
-                  <TableHead className="w-12"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {editingAnalisis?.analisis.rangosDescuento?.map((rango, index) => (
-                  <TableRow key={index}>
-                    <TableCell>
-                      <Input 
-                        type="number" 
-                        step="0.1"
-                        value={rango.porcentaje}
-                        onChange={(e) => handleUpdateRango(index, 'porcentaje', parseFloat(e.target.value) || 0)}
-                        className="w-24"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input 
-                        type="number" 
-                        step="0.001"
-                        value={rango.kgDescuentoTon}
-                        onChange={(e) => handleUpdateRango(index, 'kgDescuentoTon', parseFloat(e.target.value) || 0)}
-                        className="w-24"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleRemoveRango(index)}>
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <Button variant="outline" size="sm" onClick={handleAddRango} className="w-full">
-              <Plus className="h-4 w-4 mr-2" />
-              Agregar Fila
-            </Button>
+            <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+              <div className="border rounded-lg overflow-hidden flex-1 flex flex-col">
+                <div className="overflow-y-auto flex-1" style={{ maxHeight: 'calc(6 * 3.5rem)' }}>
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-background z-10">
+                      <TableRow>
+                        <TableHead>Porcentaje %</TableHead>
+                        <TableHead>Kg. Dscto x Ton</TableHead>
+                        <TableHead className="w-12"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {editingAnalisis?.analisis.rangosDescuento?.map((rango, index) => (
+                        <TableRow key={index}>
+                          <TableCell>
+                            <Input 
+                              type="number" 
+                              step="0.1"
+                              value={rango.porcentaje}
+                              onChange={(e) => handleUpdateRango(index, 'porcentaje', parseFloat(e.target.value) || 0)}
+                              className="w-24"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input 
+                              type="number" 
+                              step="0.001"
+                              value={rango.kgDescuentoTon}
+                              onChange={(e) => handleUpdateRango(index, 'kgDescuentoTon', parseFloat(e.target.value) || 0)}
+                              className="w-24"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleRemoveRango(index)}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+              <div className="mt-4 flex-shrink-0">
+                <Button variant="outline" size="sm" onClick={handleAddRango} className="w-full">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Agregar Fila
+                </Button>
+              </div>
+            </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-shrink-0">
             <Button variant="outline" onClick={() => setEditingAnalisis(null)}>Cancelar</Button>
             <Button className="bg-primary hover:bg-primary/90" onClick={handleSaveRangos}>Guardar Rangos</Button>
           </DialogFooter>
@@ -1022,6 +1140,46 @@ const Configuracion = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dialog para crear nuevo tipo de análisis */}
+      <Dialog open={tiposAnalisisDialogOpen} onOpenChange={setTiposAnalisisDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FlaskConical className="h-5 w-5" />
+              Nuevo Tipo de Análisis
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Nombre del Análisis *</Label>
+              <Input 
+                placeholder="Ej: Peróxidos, Índice de Yodo, etc."
+                value={nuevoTipoAnalisis.nombre}
+                onChange={(e) => setNuevoTipoAnalisis({ nombre: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleCrearTipoAnalisis();
+                  }
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                El ID se generará automáticamente a partir del nombre
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancelar</Button>
+            </DialogClose>
+            <Button onClick={handleCrearTipoAnalisis}>
+              <Plus className="h-4 w-4 mr-2" />
+              Crear Análisis
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };

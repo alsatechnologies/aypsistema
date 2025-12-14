@@ -12,7 +12,7 @@ interface PrintTemplateProps {
     pesoBruto: number;
     tara: number;
     pesoNeto: number;
-    folio: string;
+    boleta: string;
     destino: string;
     ordenEntrega: string;
     observaciones: string;
@@ -33,7 +33,7 @@ const PrintTemplate: React.FC<PrintTemplateProps> = ({ data, currentDate }) => {
             <p className="text-sm">Fecha: {formattedDate}</p>
           </div>
           <div className="text-right">
-            <p className="text-sm font-bold">Folio: {data.folio}</p>
+            <p className="text-sm font-bold">Boleta: {data.boleta}</p>
           </div>
         </div>
       </div>

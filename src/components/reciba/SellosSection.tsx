@@ -14,13 +14,55 @@ interface SellosSectionProps {
   sellos: SellosData;
   onChange: (sellos: SellosData) => void;
   readOnlyEntrada?: boolean;
+  simple?: boolean; // Si es true, muestra solo 4 campos simples sin grupos
 }
 
-const SellosSection: React.FC<SellosSectionProps> = ({ sellos, onChange, readOnlyEntrada = false }) => {
+const SellosSection: React.FC<SellosSectionProps> = ({ sellos, onChange, readOnlyEntrada = false, simple = false }) => {
   const handleChange = (field: keyof SellosData, value: string) => {
     onChange({ ...sellos, [field]: value.toUpperCase() });
   };
 
+  // Modo simple: solo 4 campos numerados en una fila
+  if (simple) {
+    return (
+      <div className="grid grid-cols-4 gap-4">
+        <div className="space-y-1">
+          <Label className="text-xs">Sello 1</Label>
+          <Input 
+            placeholder="XXX-000" 
+            value={sellos.selloEntrada1}
+            onChange={(e) => handleChange('selloEntrada1', e.target.value)}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Sello 2</Label>
+          <Input 
+            placeholder="XXX-000" 
+            value={sellos.selloEntrada2}
+            onChange={(e) => handleChange('selloEntrada2', e.target.value)}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Sello 3</Label>
+          <Input 
+            placeholder="XXX-000" 
+            value={sellos.selloSalida1}
+            onChange={(e) => handleChange('selloSalida1', e.target.value)}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Sello 4</Label>
+          <Input 
+            placeholder="XXX-000" 
+            value={sellos.selloSalida2}
+            onChange={(e) => handleChange('selloSalida2', e.target.value)}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Modo normal: con grupos de entrada/salida
   return (
     <div className="grid grid-cols-2 gap-6">
       {/* Sellos de Entrada */}

@@ -29,7 +29,7 @@ const NuevaRecepcion = () => {
     descuentoTotal: 0,
     descuentoKg: 0,
     pesoNetoLiquidar: 0,
-    folio: '00146',
+    boleta: '00146',
     procedencia: '',
     residencia: '',
     recibo: '',
@@ -80,7 +80,7 @@ const NuevaRecepcion = () => {
           <div>
             <div className="text-sm text-gray-500">Fecha {formattedDate}</div>
           </div>
-          <div className="text-sm text-gray-500">Folio: {formData.folio}</div>
+          <div className="text-sm text-gray-500">Boleta: {formData.boleta}</div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

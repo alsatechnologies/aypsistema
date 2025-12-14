@@ -7,40 +7,41 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Truck, Train, Plus, Ship } from 'lucide-react';
 import { toast } from 'sonner';
+import type { Producto } from '@/services/supabase/productos';
+import type { Cliente } from '@/services/supabase/clientes';
 
 interface NuevoEmbarqueDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCrear: (embarque: {
-    producto: string;
-    cliente: string;
+    productoId: number;
+    clienteId: number;
     destino: string;
     chofer: string;
     tipoTransporte: 'Camión' | 'Ferroviaria';
     tipoEmbarque: 'Nacional' | 'Exportación';
   }) => void;
+  productos: Producto[];
+  clientes: Cliente[];
 }
 
-const NuevoEmbarqueDialog = ({ open, onOpenChange, onCrear }: NuevoEmbarqueDialogProps) => {
+const NuevoEmbarqueDialog = ({ open, onOpenChange, onCrear, productos, clientes }: NuevoEmbarqueDialogProps) => {
   const [tipoTransporte, setTipoTransporte] = useState<'Camión' | 'Ferroviaria'>('Camión');
   const [tipoEmbarque, setTipoEmbarque] = useState<'Nacional' | 'Exportación'>('Nacional');
-  const [producto, setProducto] = useState('');
-  const [cliente, setCliente] = useState('');
+  const [productoId, setProductoId] = useState<string>('');
+  const [clienteId, setClienteId] = useState<string>('');
   const [destino, setDestino] = useState('');
   const [chofer, setChofer] = useState('');
 
-  const productos = ['Aceite Crudo de Soya', 'Pasta de Soya', 'Cascarilla de Soya', 'Aceite Refinado'];
-  const clientes = ['Aceites del Pacífico SA', 'Alimentos Balanceados MX', 'Industrias Graseras', 'Export Foods Inc.'];
-
   const handleCrear = () => {
-    if (!producto || !cliente || !destino || !chofer) {
+    if (!productoId || !clienteId || !destino || !chofer) {
       toast.error('Todos los campos son requeridos');
       return;
     }
 
     onCrear({
-      producto,
-      cliente,
+      productoId: parseInt(productoId),
+      clienteId: parseInt(clienteId),
       destino,
       chofer,
       tipoTransporte,
@@ -48,14 +49,13 @@ const NuevoEmbarqueDialog = ({ open, onOpenChange, onCrear }: NuevoEmbarqueDialo
     });
 
     // Reset form
-    setProducto('');
-    setCliente('');
+    setProductoId('');
+    setClienteId('');
     setDestino('');
     setChofer('');
     setTipoTransporte('Camión');
     setTipoEmbarque('Nacional');
     onOpenChange(false);
-    toast.success('Embarque creado correctamente');
   };
 
   return (
@@ -116,13 +116,13 @@ const NuevoEmbarqueDialog = ({ open, onOpenChange, onCrear }: NuevoEmbarqueDialo
           {/* Producto */}
           <div className="space-y-2">
             <Label>Producto</Label>
-            <Select value={producto} onValueChange={setProducto}>
+            <Select value={productoId} onValueChange={setProductoId}>
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar producto" />
               </SelectTrigger>
               <SelectContent>
                 {productos.map(p => (
-                  <SelectItem key={p} value={p}>{p}</SelectItem>
+                  <SelectItem key={p.id} value={String(p.id)}>{p.nombre}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -131,13 +131,13 @@ const NuevoEmbarqueDialog = ({ open, onOpenChange, onCrear }: NuevoEmbarqueDialo
           {/* Cliente */}
           <div className="space-y-2">
             <Label>Cliente</Label>
-            <Select value={cliente} onValueChange={setCliente}>
+            <Select value={clienteId} onValueChange={setClienteId}>
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar cliente" />
               </SelectTrigger>
               <SelectContent>
                 {clientes.map(c => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                  <SelectItem key={c.id} value={String(c.id)}>{c.empresa}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Layout from '@/components/Layout';
 import Header from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -15,21 +15,23 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import DetalleMovimientoDialog from '@/components/movimientos/DetalleMovimientoDialog';
 import { toast } from 'sonner';
+import { useMovimientos } from '@/services/hooks/useMovimientos';
+import type { Movimiento as MovimientoDB } from '@/services/supabase/movimientos';
 
 interface Movimiento {
   id: number;
-  folio: string;
+  boleta: string;
   producto: string;
-  clienteProveedor: string;
+  clienteProveedor?: string | null;
   tipo: 'Entrada' | 'Salida';
-  transporte: 'Camión' | 'Ferroviaria';
+  transporte?: string | null;
   fecha: string;
-  ubicacion: string;
-  pesoNeto: number;
-  pesoBruto?: number;
-  pesoTara?: number;
-  chofer?: string;
-  placas?: string;
+  ubicacion?: string | null;
+  pesoNeto?: number | null;
+  pesoBruto?: number | null;
+  pesoTara?: number | null;
+  chofer?: string | null;
+  placas?: string | null;
 }
 
 const Movimientos = () => {
@@ -39,94 +41,34 @@ const Movimientos = () => {
   const [filtroTransporte, setFiltroTransporte] = useState<string>('todos');
   const [fechaDesde, setFechaDesde] = useState<Date | undefined>();
   const [fechaHasta, setFechaHasta] = useState<Date | undefined>();
+  
+  const filters = useMemo(() => ({
+    fechaDesde: fechaDesde ? format(fechaDesde, 'yyyy-MM-dd') : undefined,
+    fechaHasta: fechaHasta ? format(fechaHasta, 'yyyy-MM-dd') : undefined,
+    tipo: filtroTipo !== 'todos' ? filtroTipo : undefined,
+    producto_id: filtroProducto !== 'todos' ? parseInt(filtroProducto) : undefined
+  }), [fechaDesde, fechaHasta, filtroTipo, filtroProducto]);
+  
+  const { movimientos: movimientosDB, loading, loadMovimientos } = useMovimientos(filters);
   const [selectedMovimiento, setSelectedMovimiento] = useState<Movimiento | null>(null);
   const [isDetalleOpen, setIsDetalleOpen] = useState(false);
 
-  const [movimientos] = useState<Movimiento[]>([
-    { 
-      id: 1, 
-      folio: '0-03-0001',
-      producto: 'Frijol Soya', 
-      clienteProveedor: 'Oleaginosas del Bajío',
-      tipo: 'Entrada',
-      transporte: 'Camión',
-      fecha: '2024-12-10',
-      ubicacion: 'Silo 1',
-      pesoNeto: 24300,
-      pesoBruto: 39500,
-      pesoTara: 15200,
-      chofer: 'Juan Pérez',
-      placas: 'ABC-123'
-    },
-    { 
-      id: 2, 
-      folio: '1-01-0001',
-      producto: 'Aceite Crudo de Soya', 
-      clienteProveedor: 'Aceites del Pacífico SA',
-      tipo: 'Salida',
-      transporte: 'Camión',
-      fecha: '2024-12-10',
-      ubicacion: 'Tanque A1',
-      pesoNeto: 34300,
-      pesoBruto: 48500,
-      pesoTara: 14200,
-      chofer: 'Miguel Torres'
-    },
-    { 
-      id: 3, 
-      folio: '0-04-0002',
-      producto: 'Maíz', 
-      clienteProveedor: 'Agrícola del Centro',
-      tipo: 'Entrada',
-      transporte: 'Ferroviaria',
-      fecha: '2024-12-10',
-      ubicacion: 'Silo 3',
-      pesoNeto: 52100,
-      pesoBruto: 67300,
-      pesoTara: 15200
-    },
-    { 
-      id: 4, 
-      folio: '1-02-0002',
-      producto: 'Pasta de Soya', 
-      clienteProveedor: 'Alimentos Balanceados MX',
-      tipo: 'Salida',
-      transporte: 'Camión',
-      fecha: '2024-12-09',
-      ubicacion: 'Bodega 2',
-      pesoNeto: 18500,
-      pesoBruto: 33700,
-      pesoTara: 15200,
-      chofer: 'Roberto Sánchez'
-    },
-    { 
-      id: 5, 
-      folio: '2-01-0003',
-      producto: 'Aceite Crudo de Soya', 
-      clienteProveedor: 'Export Foods Inc.',
-      tipo: 'Salida',
-      transporte: 'Ferroviaria',
-      fecha: '2024-12-09',
-      ubicacion: 'Tanque A2',
-      pesoNeto: 45200,
-      pesoBruto: 60400,
-      pesoTara: 15200
-    },
-    { 
-      id: 6, 
-      folio: '0-03-0003',
-      producto: 'Frijol Soya', 
-      clienteProveedor: 'Granos del Norte',
-      tipo: 'Entrada',
-      transporte: 'Camión',
-      fecha: '2024-12-08',
-      ubicacion: 'Silo 2',
-      pesoNeto: 36300,
-      pesoBruto: 51500,
-      pesoTara: 15200,
-      chofer: 'Carlos López'
-    },
-  ]);
+  // Mapear movimientos de DB a formato local
+  const movimientos: Movimiento[] = movimientosDB.map(m => ({
+    id: m.id,
+    boleta: m.boleta,
+    producto: m.producto?.nombre || '',
+    clienteProveedor: m.cliente_proveedor,
+    tipo: m.tipo as 'Entrada' | 'Salida',
+    transporte: m.transporte,
+    fecha: m.fecha,
+    ubicacion: m.ubicacion,
+    pesoNeto: m.peso_neto,
+    pesoBruto: m.peso_bruto,
+    pesoTara: m.peso_tara,
+    chofer: m.chofer,
+    placas: m.placas
+  }));
 
   const productos = [...new Set(movimientos.map(m => m.producto))];
 
@@ -165,13 +107,14 @@ const Movimientos = () => {
   };
 
   const filteredMovimientos = movimientos.filter(m => {
-    const matchSearch = m.producto.toLowerCase().includes(search.toLowerCase()) ||
-      m.clienteProveedor.toLowerCase().includes(search.toLowerCase()) ||
-      m.folio.includes(search);
+    const matchSearch = !search || 
+      m.producto?.toLowerCase().includes(search.toLowerCase()) ||
+      (m.clienteProveedor && m.clienteProveedor.toLowerCase().includes(search.toLowerCase())) ||
+      m.boleta.includes(search);
     
     const matchTipo = filtroTipo === 'todos' || m.tipo === filtroTipo;
     const matchProducto = filtroProducto === 'todos' || m.producto === filtroProducto;
-    const matchTransporte = filtroTransporte === 'todos' || m.transporte === filtroTransporte;
+    const matchTransporte = filtroTransporte === 'todos' || (m.transporte && m.transporte === filtroTransporte);
     
     const matchFechaDesde = !fechaDesde || new Date(m.fecha) >= fechaDesde;
     const matchFechaHasta = !fechaHasta || new Date(m.fecha) <= fechaHasta;
@@ -182,9 +125,9 @@ const Movimientos = () => {
   const formatNumber = (num: number) => num.toLocaleString('es-MX');
 
   const handleDownload = () => {
-    const headers = ['Folio', 'Producto', 'Cliente/Proveedor', 'Tipo', 'Transporte', 'Fecha', 'Ubicación', 'Peso Neto (Kg)'];
+    const headers = ['Boleta', 'Producto', 'Cliente/Proveedor', 'Tipo', 'Transporte', 'Fecha', 'Ubicación', 'Peso Neto (Kg)'];
     const rows = filteredMovimientos.map(m => [
-      m.folio,
+      m.boleta,
       m.producto,
       m.clienteProveedor,
       m.tipo,
@@ -222,8 +165,8 @@ const Movimientos = () => {
     setSearch('');
   };
 
-  const totalEntradas = filteredMovimientos.filter(m => m.tipo === 'Entrada').reduce((acc, m) => acc + m.pesoNeto, 0);
-  const totalSalidas = filteredMovimientos.filter(m => m.tipo === 'Salida').reduce((acc, m) => acc + m.pesoNeto, 0);
+  const totalEntradas = filteredMovimientos.filter(m => m.tipo === 'Entrada').reduce((acc, m) => acc + (m.pesoNeto || 0), 0);
+  const totalSalidas = filteredMovimientos.filter(m => m.tipo === 'Salida').reduce((acc, m) => acc + (m.pesoNeto || 0), 0);
 
   return (
     <Layout>
@@ -271,7 +214,7 @@ const Movimientos = () => {
             <div className="relative w-full sm:w-96">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input 
-                placeholder="Buscar por folio, producto o cliente/proveedor..." 
+                placeholder="Buscar por boleta, producto o cliente/proveedor..." 
                 className="pl-10"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -392,7 +335,7 @@ const Movimientos = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Folio</TableHead>
+                  <TableHead>Boleta</TableHead>
                   <TableHead>Producto</TableHead>
                   <TableHead>Cliente/Proveedor</TableHead>
                   <TableHead>Tipo</TableHead>
@@ -409,9 +352,7 @@ const Movimientos = () => {
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => handleRowClick(movimiento)}
                   >
-                    <TableCell>
-                      <Badge variant="outline" className="font-mono font-bold text-primary">{movimiento.folio}</Badge>
-                    </TableCell>
+                    <TableCell className="font-mono font-bold text-primary">{movimiento.boleta}</TableCell>
                     <TableCell className="font-medium">{movimiento.producto}</TableCell>
                     <TableCell>{movimiento.clienteProveedor}</TableCell>
                     <TableCell>{getTipoBadge(movimiento.tipo)}</TableCell>
@@ -424,7 +365,7 @@ const Movimientos = () => {
                       </span>
                     </TableCell>
                     <TableCell className={`text-right font-medium ${movimiento.tipo === 'Entrada' ? 'text-green-600' : 'text-blue-600'}`}>
-                      {movimiento.tipo === 'Entrada' ? '+' : '-'}{formatNumber(movimiento.pesoNeto)} Kg
+                      {movimiento.tipo === 'Entrada' ? '+' : '-'}{formatNumber(movimiento.pesoNeto || 0)} Kg
                     </TableCell>
                   </TableRow>
                 ))}

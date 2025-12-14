@@ -6,9 +6,9 @@
  *   2 = Embarque Nacional
  *   3 = Exportación
  * 
- * YY = Folio del producto (configurable por producto)
+ * YY = Boleta del producto (configurable por producto)
  * 
- * ZZZZ = Número consecutivo reiniciado mensualmente
+ * ZZZZ = Número consecutivo reiniciado anualmente
  */
 
 export type TipoOperacion = 'Entradas' | 'Embarque Nacional' | 'Exportación';
@@ -20,8 +20,8 @@ const TIPO_OPERACION_CODES: Record<TipoOperacion, string> = {
   'Exportación': '3',
 };
 
-// Folios de productos (temporal - debería venir de la base de datos)
-const PRODUCTO_FOLIOS: Record<string, string> = {
+// Boletas de productos (temporal - debería venir de la base de datos)
+const PRODUCTO_BOLETAS: Record<string, string> = {
   'Aceite Crudo de Soya': '01',
   'Pasta de Soya': '02',
   'Frijol Soya': '03',
@@ -39,10 +39,10 @@ export const getTipoOperacionCode = (tipo: TipoOperacion): string => {
 };
 
 /**
- * Obtiene el folio del producto
+ * Obtiene la boleta del producto
  */
-export const getProductoFolio = (producto: string): string => {
-  return PRODUCTO_FOLIOS[producto] || '00';
+export const getProductoBoleta = (producto: string): string => {
+  return PRODUCTO_BOLETAS[producto] || '00';
 };
 
 /**
@@ -54,17 +54,21 @@ export const formatConsecutivo = (num: number): string => {
 
 /**
  * Genera el número de boleta completo (sin guiones)
+ * @param tipoOperacion - Tipo de operación
+ * @param codigoBoleta - Código de boleta del producto (2 dígitos) o nombre del producto (para retrocompatibilidad)
+ * @param consecutivo - Número consecutivo
  */
 export const generateNumeroBoleta = (
   tipoOperacion: TipoOperacion,
-  producto: string,
+  codigoBoleta: string,
   consecutivo: number
 ): string => {
   const tipoCode = getTipoOperacionCode(tipoOperacion);
-  const productoFolio = getProductoFolio(producto);
+  // Si codigoBoleta tiene 2 dígitos, usarlo directamente; si no, buscar en el mapeo (retrocompatibilidad)
+  const productoBoleta = codigoBoleta.length === 2 ? codigoBoleta : getProductoBoleta(codigoBoleta);
   const consecutivoStr = formatConsecutivo(consecutivo);
   
-  return `${tipoCode}${productoFolio}${consecutivoStr}`;
+  return `${tipoCode}${productoBoleta}${consecutivoStr}`;
 };
 
 /**
@@ -72,14 +76,14 @@ export const generateNumeroBoleta = (
  */
 export const parseNumeroBoleta = (boleta: string): {
   tipoCode: string;
-  productoFolio: string;
+  productoBoleta: string;
   consecutivo: number;
 } | null => {
   if (boleta.length !== 7) return null;
   
   return {
     tipoCode: boleta.substring(0, 1),
-    productoFolio: boleta.substring(1, 3),
+    productoBoleta: boleta.substring(1, 3),
     consecutivo: parseInt(boleta.substring(3, 7), 10),
   };
 };
@@ -95,9 +99,11 @@ export const getTipoOperacionFromCode = (code: string): TipoOperacion | null => 
 
 /**
  * Genera una boleta para entradas basado en el producto
+ * @param codigoBoleta - Código de boleta del producto (2 dígitos) o nombre del producto (para retrocompatibilidad)
+ * @param consecutivo - Número consecutivo
  */
-export const generarBoletaEntradas = (producto: string, consecutivo: number): string => {
-  return generateNumeroBoleta('Entradas', producto, consecutivo);
+export const generarBoletaEntradas = (codigoBoleta: string, consecutivo: number): string => {
+  return generateNumeroBoleta('Entradas', codigoBoleta, consecutivo);
 };
 
 /**

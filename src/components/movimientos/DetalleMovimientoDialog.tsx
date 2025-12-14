@@ -7,7 +7,7 @@ import { ArrowDown, ArrowUp, Truck, Train, MapPin, Calendar, Scale, Printer, X }
 
 interface Movimiento {
   id: number;
-  folio: string;
+  boleta: string;
   producto: string;
   clienteProveedor: string;
   tipo: 'Entrada' | 'Salida';
@@ -54,8 +54,8 @@ const DetalleMovimientoDialog: React.FC<DetalleMovimientoDialogProps> = ({ open,
           {/* Header Info */}
           <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
             <div>
-              <p className="text-sm text-muted-foreground">Folio</p>
-              <p className="text-2xl font-bold font-mono">{movimiento.folio}</p>
+              <p className="text-sm text-muted-foreground">Boleta</p>
+              <p className="text-2xl font-bold font-mono">{movimiento.boleta}</p>
             </div>
             <Badge className={movimiento.tipo === 'Entrada' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}>
               {movimiento.tipo === 'Entrada' ? <ArrowDown className="h-3 w-3 mr-1" /> : <ArrowUp className="h-3 w-3 mr-1" />}

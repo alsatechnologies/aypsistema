@@ -3,6 +3,7 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Building2, PackageSearch, Truck, ArrowUpDown, Users, FileBarChart, LogIn, ClipboardCheck, FlaskConical, Settings, LogOut } from 'lucide-react';
 import Logo from './Logo';
+import { useAuth } from '@/contexts/AuthContext';
 
 const NavItem = ({
   icon: Icon,
@@ -29,73 +30,92 @@ const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const pathname = location.pathname;
+  const { usuario, tienePermiso, esAdministrador, logout } = useAuth();
   
-  const navItems = [
+  const allNavItems = [
     {
       icon: Building2,
       label: 'Oficina',
-      path: '/oficina'
+      path: '/oficina',
+      module: 'oficina'
     },
     {
       icon: PackageSearch,
       label: 'Reciba',
-      path: '/reciba'
+      path: '/reciba',
+      module: 'reciba'
     }, 
     {
       icon: Truck,
       label: 'Embarque',
-      path: '/embarque'
+      path: '/embarque',
+      module: 'embarque'
     }, 
     {
       icon: ArrowUpDown,
       label: 'Movimientos',
-      path: '/movimientos'
+      path: '/movimientos',
+      module: 'movimientos'
     }, 
     {
       icon: Users,
       label: 'Proveedores',
-      path: '/proveedores'
+      path: '/proveedores',
+      module: 'proveedores'
     }, 
     {
       icon: Users,
       label: 'Clientes',
-      path: '/clientes'
+      path: '/clientes',
+      module: 'clientes'
     }, 
     {
       icon: FileBarChart,
       label: 'Reportes',
-      path: '/reportes'
+      path: '/reportes',
+      module: 'reportes'
     },
     {
       icon: LogIn,
       label: 'Ingreso',
-      path: '/ingreso'
+      path: '/ingreso',
+      module: 'ingreso'
     },
     {
       icon: ClipboardCheck,
       label: 'Control de Calidad',
-      path: '/control-calidad'
+      path: '/control-calidad',
+      module: 'control-calidad'
     },
     {
       icon: FlaskConical,
       label: 'Laboratorio',
-      path: '/laboratorio'
+      path: '/laboratorio',
+      module: 'laboratorio'
     },
     {
       icon: Settings,
       label: 'Configuración',
-      path: '/configuracion'
+      path: '/configuracion',
+      module: 'configuracion'
     }
   ];
 
+  // Filtrar items según permisos del usuario
+  const navItems = allNavItems.filter(item => {
+    if (esAdministrador()) return true;
+    return tienePermiso(item.module);
+  });
+
   const handleLogout = () => {
+    logout();
     navigate('/login');
   };
 
   return (
     <div className="w-64 h-screen flex flex-col border-r bg-background">
-      <div className="flex items-center p-4 border-b h-16">
-        <Logo />
+      <div className="flex items-center justify-center px-4 py-2 border-b h-20">
+        <Logo size="medium" centered />
       </div>
       <div className="flex-grow p-4 space-y-1 overflow-y-auto">
         {navItems.map(item => (

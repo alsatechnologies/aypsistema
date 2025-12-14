@@ -7,7 +7,7 @@ import { Printer, X, Ship } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface Embarque {
-  folio: string;
+  boleta: string;
   producto: string;
   cliente: string;
   destino: string;
@@ -21,6 +21,7 @@ interface Embarque {
   pesoNeto?: number;
   placas?: string;
   numeroCarro?: string;
+  codigoLote?: string;
   sellos?: {
     selloEntrada1?: string;
     selloEntrada2?: string;
@@ -49,7 +50,7 @@ const BoletaEmbarqueDialog: React.FC<BoletaEmbarqueDialogProps> = ({ open, onOpe
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Boleta Embarque ${embarque?.folio}</title>
+          <title>Boleta Embarque ${embarque?.boleta}</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { font-family: Arial, sans-serif; padding: 20px; }
@@ -62,8 +63,8 @@ const BoletaEmbarqueDialog: React.FC<BoletaEmbarqueDialogProps> = ({ open, onOpe
             .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
             .info-row { display: flex; margin-bottom: 8px; }
             .info-label { font-weight: 600; width: 140px; }
-            .folio-box { background: #f5f5f5; padding: 12px; border-radius: 8px; text-align: center; margin: 16px 0; }
-            .folio-box .folio { font-size: 28px; font-weight: bold; font-family: monospace; }
+            .boleta-box { background: #f5f5f5; padding: 12px; border-radius: 8px; text-align: center; margin: 16px 0; }
+            .boleta-box .boleta { font-size: 28px; font-weight: bold; font-family: monospace; }
             .pesos-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 16px 0; }
             .peso-card { padding: 16px; border-radius: 8px; text-align: center; }
             .peso-tara { background: #ffedd5; border: 2px solid #fed7aa; }
@@ -120,10 +121,16 @@ const BoletaEmbarqueDialog: React.FC<BoletaEmbarqueDialogProps> = ({ open, onOpe
               </p>
             </div>
 
-            {/* Folio Box */}
-            <div className="folio-box bg-muted/50 p-4 rounded-lg text-center mb-6">
+            {/* Boleta Box */}
+            <div className="boleta-box bg-muted/50 p-4 rounded-lg text-center mb-6">
               <p className="text-sm text-muted-foreground mb-1">Número de Boleta</p>
-              <p className="folio text-3xl font-bold font-mono tracking-wider">{embarque.folio}</p>
+              <p className="boleta text-3xl font-bold font-mono tracking-wider">{embarque.boleta}</p>
+              {embarque.codigoLote && (
+                <div className="mt-3 pt-3 border-t border-foreground/10">
+                  <p className="text-sm text-muted-foreground mb-1">Código de Lote</p>
+                  <p className="text-xl font-bold font-mono text-primary">{embarque.codigoLote}</p>
+                </div>
+              )}
             </div>
 
             {/* Info Grid */}

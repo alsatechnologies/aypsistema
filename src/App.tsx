@@ -3,6 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import Proveedores from "./pages/Proveedores";
 import NuevoProveedor from "./pages/NuevoProveedor";
 import Clientes from "./pages/Clientes";
@@ -23,32 +25,141 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Navigate to="/login" />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/oficina" element={<Oficina />} />
-          <Route path="/reciba" element={<Reciba />} />
-          <Route path="/reciba/nuevo" element={<Reciba />} />
-          <Route path="/embarque" element={<Embarque />} />
-          <Route path="/embarque/nuevo" element={<Embarque />} />
-          <Route path="/movimientos" element={<Movimientos />} />
-          <Route path="/proveedores" element={<Proveedores />} />
-          <Route path="/proveedores/nuevo" element={<NuevoProveedor />} />
-          <Route path="/clientes" element={<Clientes />} />
-          <Route path="/clientes/nuevo" element={<NuevoCliente />} />
-          <Route path="/reportes" element={<Reportes />} />
-          <Route path="/ingreso" element={<Ingreso />} />
-          <Route path="/control-calidad" element={<ControlCalidad />} />
-          <Route path="/laboratorio" element={<Laboratorio />} />
-          <Route path="/configuracion" element={<Configuracion />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Navigate to="/login" />} />
+            <Route path="/login" element={<Login />} />
+            
+            {/* Rutas protegidas */}
+            <Route 
+              path="/oficina" 
+              element={
+                <ProtectedRoute requiredModule="oficina">
+                  <Oficina />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/reciba" 
+              element={
+                <ProtectedRoute requiredModule="reciba">
+                  <Reciba />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/reciba/nuevo" 
+              element={
+                <ProtectedRoute requiredModule="reciba">
+                  <Reciba />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/embarque" 
+              element={
+                <ProtectedRoute requiredModule="embarque">
+                  <Embarque />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/embarque/nuevo" 
+              element={
+                <ProtectedRoute requiredModule="embarque">
+                  <Embarque />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/movimientos" 
+              element={
+                <ProtectedRoute requiredModule="movimientos">
+                  <Movimientos />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/proveedores" 
+              element={
+                <ProtectedRoute requiredModule="proveedores">
+                  <Proveedores />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/proveedores/nuevo" 
+              element={
+                <ProtectedRoute requiredModule="proveedores">
+                  <NuevoProveedor />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/clientes" 
+              element={
+                <ProtectedRoute requiredModule="clientes">
+                  <Clientes />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/clientes/nuevo" 
+              element={
+                <ProtectedRoute requiredModule="clientes">
+                  <NuevoCliente />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/reportes" 
+              element={
+                <ProtectedRoute requiredModule="reportes">
+                  <Reportes />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/ingreso" 
+              element={
+                <ProtectedRoute requiredModule="ingreso">
+                  <Ingreso />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/control-calidad" 
+              element={
+                <ProtectedRoute requiredModule="control-calidad">
+                  <ControlCalidad />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/laboratorio" 
+              element={
+                <ProtectedRoute requiredModule="laboratorio">
+                  <Laboratorio />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/configuracion" 
+              element={
+                <ProtectedRoute requiredModule="configuracion">
+                  <Configuracion />
+                </ProtectedRoute>
+              } 
+            />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

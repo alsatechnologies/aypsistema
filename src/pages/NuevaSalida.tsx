@@ -19,7 +19,7 @@ const NuevaSalida = () => {
     pesoBruto: 0,
     tara: 0,
     pesoNeto: 0,
-    folio: '00133',
+    boleta: '00133',
     destino: '',
     ordenEntrega: '',
     observaciones: ''
@@ -75,7 +75,7 @@ const NuevaSalida = () => {
           <div>
             <div className="text-sm text-gray-500">Fecha {formattedDate}</div>
           </div>
-          <div className="text-sm text-gray-500">Folio: {formData.folio}</div>
+          <div className="text-sm text-gray-500">Boleta: {formData.boleta}</div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

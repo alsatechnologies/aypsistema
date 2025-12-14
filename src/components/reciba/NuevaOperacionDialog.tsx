@@ -7,51 +7,51 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Truck, Train, Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import type { Producto } from '@/services/supabase/productos';
+import type { Proveedor } from '@/services/supabase/proveedores';
 
 interface NuevaOperacionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCrear: (operacion: {
-    producto: string;
-    proveedor: string;
+    productoId: number;
+    proveedorId: number;
     chofer: string;
     placas: string;
     tipoTransporte: 'Camión' | 'Ferroviaria';
   }) => void;
+  productos: Producto[];
+  proveedores: Proveedor[];
 }
 
-const NuevaOperacionDialog = ({ open, onOpenChange, onCrear }: NuevaOperacionDialogProps) => {
+const NuevaOperacionDialog = ({ open, onOpenChange, onCrear, productos, proveedores }: NuevaOperacionDialogProps) => {
   const [tipoTransporte, setTipoTransporte] = useState<'Camión' | 'Ferroviaria'>('Camión');
-  const [producto, setProducto] = useState('');
-  const [proveedor, setProveedor] = useState('');
+  const [productoId, setProductoId] = useState<string>('');
+  const [proveedorId, setProveedorId] = useState<string>('');
   const [chofer, setChofer] = useState('');
   const [placas, setPlacas] = useState('');
 
-  const productos = ['Frijol Soya', 'Maíz', 'Trigo', 'Sorgo', 'Canola', 'Girasol'];
-  const proveedores = ['Oleaginosas del Bajío', 'Granos del Norte', 'Agrícola del Centro', 'Exportadora de Granos'];
-
   const handleCrear = () => {
-    if (!producto || !proveedor || !chofer || !placas) {
+    if (!productoId || !proveedorId || !chofer || !placas) {
       toast.error('Todos los campos son requeridos');
       return;
     }
 
     onCrear({
-      producto,
-      proveedor,
+      productoId: parseInt(productoId),
+      proveedorId: parseInt(proveedorId),
       chofer,
       placas,
       tipoTransporte
     });
 
     // Reset form
-    setProducto('');
-    setProveedor('');
+    setProductoId('');
+    setProveedorId('');
     setChofer('');
     setPlacas('');
     setTipoTransporte('Camión');
     onOpenChange(false);
-    toast.success('Operación creada correctamente');
   };
 
   return (
@@ -93,13 +93,13 @@ const NuevaOperacionDialog = ({ open, onOpenChange, onCrear }: NuevaOperacionDia
           {/* Producto */}
           <div className="space-y-2">
             <Label>Producto</Label>
-            <Select value={producto} onValueChange={setProducto}>
+            <Select value={productoId} onValueChange={setProductoId}>
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar producto" />
               </SelectTrigger>
               <SelectContent>
                 {productos.map(p => (
-                  <SelectItem key={p} value={p}>{p}</SelectItem>
+                  <SelectItem key={p.id} value={String(p.id)}>{p.nombre}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -108,13 +108,13 @@ const NuevaOperacionDialog = ({ open, onOpenChange, onCrear }: NuevaOperacionDia
           {/* Proveedor */}
           <div className="space-y-2">
             <Label>Proveedor</Label>
-            <Select value={proveedor} onValueChange={setProveedor}>
+            <Select value={proveedorId} onValueChange={setProveedorId}>
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar proveedor" />
               </SelectTrigger>
               <SelectContent>
                 {proveedores.map(p => (
-                  <SelectItem key={p} value={p}>{p}</SelectItem>
+                  <SelectItem key={p.id} value={String(p.id)}>{p.empresa}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

@@ -12,37 +12,50 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import AnalisisDinamico from '@/components/reciba/AnalisisDinamico';
 import DescuentosPanel from '@/components/reciba/DescuentosPanel';
-import SellosSection from '@/components/reciba/SellosSection';
 import NuevaOperacionDialog from '@/components/reciba/NuevaOperacionDialog';
 import { generarBoletaEntradas } from '@/utils/folioGenerator';
+import { generarCodigoLoteParaOperacion } from '@/services/supabase/lotes';
+import { useRecepciones } from '@/services/hooks/useRecepciones';
+import { useProductos } from '@/services/hooks/useProductos';
+import { useProveedores } from '@/services/hooks/useProveedores';
+import { useAlmacenes } from '@/services/hooks/useAlmacenes';
+import { getProductoConAnalisis } from '@/services/supabase/productos';
+import { createMovimiento } from '@/services/supabase/movimientos';
+import type { Recepcion as RecepcionDB } from '@/services/supabase/recepciones';
+import { formatDateTimeMST } from '@/utils/dateUtils';
+import { getCurrentDateTimeMST } from '@/utils/dateUtils';
 
 interface Recepcion {
   id: number;
-  folio: string;
+  boleta: string;
   producto: string;
   proveedor: string;
-  chofer: string;
-  placas: string;
+  chofer?: string | null;
+  placas?: string | null;
   fecha: string;
+  created_at?: string;
   estatus: 'Pendiente' | 'Peso Bruto' | 'En Descarga' | 'Peso Tara' | 'Completado';
-  pesoBruto?: number;
-  pesoTara?: number;
-  pesoNeto?: number;
-  tipoTransporte: 'Camión' | 'Ferroviaria';
-  tipoBascula?: 'Camión' | 'Ferroviaria';
-  sellos?: {
-    selloEntrada1: string;
-    selloEntrada2: string;
-    selloSalida1: string;
-    selloSalida2: string;
-  };
-  analisis?: Record<string, number>;
+  pesoBruto?: number | null;
+  pesoTara?: number | null;
+  pesoNeto?: number | null;
+  tipoTransporte?: string | null;
+  tipoBascula?: string | null;
+  analisis?: Record<string, number> | null;
+  codigoLote?: string | null;
+  proveedorId?: number | null;
+  productoId?: number | null;
 }
 
 const Reciba = () => {
+  const { recepciones: recepcionesDB, loading, addRecepcion, updateRecepcion, loadRecepciones } = useRecepciones();
+  const { productos: productosDB } = useProductos();
+  const { proveedores: proveedoresDB, addProveedor } = useProveedores();
+  const { almacenes: almacenesDB } = useAlmacenes();
+  
   const [search, setSearch] = useState('');
   const [selectedRecepcion, setSelectedRecepcion] = useState<Recepcion | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -50,92 +63,89 @@ const Reciba = () => {
   const [tipoBascula, setTipoBascula] = useState<'Camión' | 'Ferroviaria'>('Camión');
   
   // Estado del formulario
+  const [productoSeleccionado, setProductoSeleccionado] = useState<number | null>(null);
+  const [proveedorSeleccionado, setProveedorSeleccionado] = useState<number | null>(null);
+  const [proveedorPersonalizado, setProveedorPersonalizado] = useState<string>('');
+  const [mostrarProveedorPersonalizado, setMostrarProveedorPersonalizado] = useState(false);
   const [pesoBruto, setPesoBruto] = useState<number>(0);
   const [pesoTara, setPesoTara] = useState<number>(0);
+  const [horaPesoBruto, setHoraPesoBruto] = useState<string | null>(null);
+  const [horaPesoTara, setHoraPesoTara] = useState<string | null>(null);
+  const [horaPesoNeto, setHoraPesoNeto] = useState<string | null>(null);
   const [valoresAnalisis, setValoresAnalisis] = useState<Record<string, number>>({});
-  const [sellos, setSellos] = useState({
-    selloEntrada1: '',
-    selloEntrada2: '',
-    selloSalida1: '',
-    selloSalida2: '',
-  });
+  const [analisisProducto, setAnalisisProducto] = useState<any[]>([]);
+  const [almacenSeleccionado, setAlmacenSeleccionado] = useState<number | null>(null);
 
-  const [recepciones, setRecepciones] = useState<Recepcion[]>([
-    { 
-      id: 1, 
-      folio: '0-03-0001',
-      producto: 'Frijol Soya', 
-      proveedor: 'Oleaginosas del Bajío',
-      chofer: 'Juan Carlos Mendoza',
-      placas: 'ABC-123-A',
-      fecha: '2024-12-10',
-      estatus: 'Peso Bruto',
-      pesoBruto: 45200,
-      tipoTransporte: 'Camión',
-      tipoBascula: 'Camión',
-      sellos: { selloEntrada1: 'AP-001', selloEntrada2: 'AP-002', selloSalida1: '', selloSalida2: '' }
-    },
-    { 
-      id: 2, 
-      folio: '0-03-0002',
-      producto: 'Frijol Soya', 
-      proveedor: 'Granos del Norte',
-      chofer: 'Pedro Ramírez',
-      placas: 'XYZ-789-B',
-      fecha: '2024-12-10',
-      estatus: 'Pendiente',
-      tipoTransporte: 'Ferroviaria'
-    },
-    { 
-      id: 3, 
-      folio: '0-06-0003',
-      producto: 'Maíz', 
-      proveedor: 'Agrícola del Centro',
-      chofer: 'Miguel Torres',
-      placas: 'DEF-456-C',
-      fecha: '2024-12-10',
-      estatus: 'Completado',
-      pesoBruto: 38500,
-      pesoTara: 14200,
-      pesoNeto: 24300,
-      tipoTransporte: 'Camión',
-      tipoBascula: 'Camión',
-      analisis: { Humedad: 13.5, Impurezas: 1.8, 'Granos Dañados': 2.5 }
-    },
-    { 
-      id: 4, 
-      folio: '0-03-0004',
-      producto: 'Frijol Soya', 
-      proveedor: 'Exportadora de Granos',
-      chofer: 'Roberto Sánchez',
-      placas: 'GHI-321-D',
-      fecha: '2024-12-09',
-      estatus: 'Completado',
-      pesoBruto: 52100,
-      pesoTara: 15800,
-      pesoNeto: 36300,
-      tipoTransporte: 'Camión',
-      tipoBascula: 'Camión'
-    },
-  ]);
+  // Mapear recepciones de DB a formato local
+  const recepciones: Recepcion[] = recepcionesDB.map(r => ({
+    id: r.id,
+    boleta: r.boleta,
+    producto: r.producto?.nombre || '',
+    proveedor: r.proveedor?.empresa || '',
+    chofer: r.chofer,
+    placas: r.placas,
+    fecha: r.fecha,
+    created_at: r.created_at,
+    estatus: r.estatus as any,
+    pesoBruto: r.peso_bruto,
+    pesoTara: r.peso_tara,
+    pesoNeto: r.peso_neto,
+    tipoTransporte: r.tipo_transporte as any,
+    tipoBascula: r.tipo_bascula as any,
+    analisis: r.analisis as Record<string, number> | null,
+    codigoLote: r.codigo_lote,
+    proveedorId: r.proveedor_id,
+    productoId: r.producto_id
+  }));
+
+  // Cargar análisis cuando se selecciona un producto
+  useEffect(() => {
+    const cargarAnalisis = async () => {
+      if (productoSeleccionado) {
+        try {
+          console.log('Cargando análisis para producto:', productoSeleccionado);
+          const productoCompleto = await getProductoConAnalisis(productoSeleccionado);
+          console.log('Producto completo recibido:', productoCompleto);
+          console.log('Análisis recibidos:', productoCompleto.analisis);
+          setAnalisisProducto(productoCompleto.analisis || []);
+        } catch (error) {
+          console.error('Error loading analisis:', error);
+          setAnalisisProducto([]);
+        }
+      } else {
+        console.log('No hay producto seleccionado, limpiando análisis');
+        setAnalisisProducto([]);
+      }
+    };
+    cargarAnalisis();
+  }, [productoSeleccionado]);
 
   // Sincronizar estado del formulario cuando se selecciona una recepción
   useEffect(() => {
     if (selectedRecepcion) {
+      setProductoSeleccionado(selectedRecepcion.productoId || null);
+      setProveedorSeleccionado(selectedRecepcion.proveedorId || null);
+      setProveedorPersonalizado(selectedRecepcion.proveedorId ? '' : selectedRecepcion.proveedor || '');
+      setMostrarProveedorPersonalizado(!selectedRecepcion.proveedorId && selectedRecepcion.proveedor !== '');
       setPesoBruto(selectedRecepcion.pesoBruto || 0);
       setPesoTara(selectedRecepcion.pesoTara || 0);
       setValoresAnalisis(selectedRecepcion.analisis || {});
-      setSellos(selectedRecepcion.sellos || {
-        selloEntrada1: '',
-        selloEntrada2: '',
-        selloSalida1: '',
-        selloSalida2: '',
-      });
-      setTipoBascula(selectedRecepcion.tipoBascula || selectedRecepcion.tipoTransporte || 'Camión');
+      setTipoBascula((selectedRecepcion.tipoBascula || selectedRecepcion.tipoTransporte || 'Camión') as 'Camión' | 'Ferroviaria');
+      // Resetear horas de captura
+      setHoraPesoBruto(null);
+      setHoraPesoTara(null);
+      setHoraPesoNeto(null);
     }
   }, [selectedRecepcion]);
 
   const pesoNeto = pesoBruto - pesoTara;
+  
+  // Actualizar hora de peso neto cuando se calcula
+  useEffect(() => {
+    if (pesoBruto > 0 && pesoTara > 0 && pesoNeto > 0 && !horaPesoNeto) {
+      setHoraPesoNeto(getCurrentDateTimeMST());
+    }
+  }, [pesoBruto, pesoTara, pesoNeto, horaPesoNeto]);
 
   const getEstatusBadge = (estatus: string) => {
     const config: Record<string, { className: string; icon: React.ReactNode }> = {
@@ -149,11 +159,8 @@ const Reciba = () => {
     return <Badge className={`flex items-center w-fit ${className}`}>{icon}{estatus}</Badge>;
   };
 
-  const getTransporteBadge = (tipo: string) => {
-    if (tipo === 'Ferroviaria') {
-      return <Badge variant="outline" className="flex items-center gap-1"><Train className="h-3 w-3" />Ferroviaria</Badge>;
-    }
-    return <Badge variant="outline" className="flex items-center gap-1"><Truck className="h-3 w-3" />Camión</Badge>;
+  const getTransporteIcon = (tipo: string) => {
+    return tipo === 'Camión' ? <Truck className="h-4 w-4 text-muted-foreground" /> : <Train className="h-4 w-4 text-muted-foreground" />;
   };
 
   const handleRowClick = (recepcion: Recepcion) => {
@@ -165,54 +172,103 @@ const Reciba = () => {
     setValoresAnalisis(prev => ({ ...prev, [nombre]: valor }));
   };
 
-  const handleCrearOperacion = (operacion: {
-    producto: string;
-    proveedor: string;
+  const handleCrearOperacion = async (operacion: {
+    productoId: number;
+    proveedorId: number;
     chofer: string;
     placas: string;
     tipoTransporte: 'Camión' | 'Ferroviaria';
   }) => {
-    const nuevoId = Math.max(...recepciones.map(r => r.id)) + 1;
-    const nuevaBoleta = generarBoletaEntradas(operacion.producto, recepciones.length + 1);
-    
-    const nuevaRecepcion: Recepcion = {
-      id: nuevoId,
-      folio: nuevaBoleta,
-      producto: operacion.producto,
-      proveedor: operacion.proveedor,
-      chofer: operacion.chofer,
-      placas: operacion.placas,
-      fecha: new Date().toISOString().split('T')[0],
-      estatus: 'Pendiente',
-      tipoTransporte: operacion.tipoTransporte,
-    };
-
-    setRecepciones(prev => [nuevaRecepcion, ...prev]);
+    try {
+      const producto = productosDB.find(p => p.id === operacion.productoId);
+      if (!producto) {
+        toast.error('Producto no encontrado');
+        return;
+      }
+      
+      // Usar codigo_boleta de la base de datos, con fallback al nombre si no existe
+      const codigoBoleta = producto.codigo_boleta || producto.nombre;
+      const nuevaBoleta = generarBoletaEntradas(codigoBoleta, recepciones.length + 1);
+      
+      await addRecepcion({
+        boleta: nuevaBoleta,
+        producto_id: operacion.productoId,
+        proveedor_id: operacion.proveedorId,
+        chofer: operacion.chofer,
+        placas: operacion.placas,
+        fecha: new Date().toISOString().split('T')[0],
+        estatus: 'Pendiente',
+        tipo_transporte: operacion.tipoTransporte
+      });
+      
+      await loadRecepciones();
+      toast.success('Operación creada correctamente');
+    } catch (error) {
+      console.error('Error creating recepcion:', error);
+      toast.error('Error al crear operación');
+    }
   };
 
-  const handlePreGuardar = () => {
+  const handlePreGuardar = async () => {
     if (!selectedRecepcion) return;
+    
+    // Manejar proveedor personalizado
+    let proveedorIdFinal = proveedorSeleccionado;
+    if (mostrarProveedorPersonalizado && proveedorPersonalizado.trim()) {
+      try {
+        const nuevoProveedor = await addProveedor({
+          empresa: proveedorPersonalizado.trim(),
+          contacto: null,
+          telefono: null,
+          correo: null,
+          direccion: null
+        });
+        proveedorIdFinal = nuevoProveedor.id;
+        toast.success('Proveedor creado correctamente');
+      } catch (error) {
+        console.error('Error creating proveedor:', error);
+        toast.error('Error al crear proveedor');
+        return;
+      }
+    }
     
     const nuevoEstatus = pesoBruto > 0 && pesoTara === 0 ? 'Peso Bruto' : 
                          pesoBruto > 0 && pesoTara > 0 ? 'Peso Tara' : 'Pendiente';
     
-    setRecepciones(prev => prev.map(r => 
-      r.id === selectedRecepcion.id ? {
-        ...r,
-        pesoBruto,
-        pesoTara,
-        pesoNeto: pesoNeto > 0 ? pesoNeto : undefined,
-        sellos,
-        analisis: valoresAnalisis,
+    try {
+      await updateRecepcion(selectedRecepcion.id, {
+        producto_id: productoSeleccionado,
+        proveedor_id: proveedorIdFinal,
+        peso_bruto: pesoBruto > 0 ? pesoBruto : null,
+        peso_tara: pesoTara > 0 ? pesoTara : null,
+        peso_neto: pesoNeto > 0 ? pesoNeto : null,
+        analisis: Object.keys(valoresAnalisis).length > 0 ? valoresAnalisis : null,
         estatus: nuevoEstatus,
-        tipoBascula
-      } : r
-    ));
-    
-    toast.success('Datos pre-guardados correctamente');
+        tipo_bascula: tipoBascula
+      });
+      
+      await loadRecepciones();
+      toast.success('Datos pre-guardados correctamente');
+    } catch (error) {
+      console.error('Error saving recepcion:', error);
+      toast.error('Error al guardar datos');
+    }
   };
 
-  const handleGuardarBoleta = () => {
+  const handleCapturarPesoBruto = () => {
+    setHoraPesoBruto(getCurrentDateTimeMST());
+  };
+
+  const handleCapturarPesoTara = () => {
+    setHoraPesoTara(getCurrentDateTimeMST());
+    // Calcular peso neto y su hora
+    const nuevoPesoNeto = pesoBruto - pesoTara;
+    if (nuevoPesoNeto > 0) {
+      setHoraPesoNeto(getCurrentDateTimeMST());
+    }
+  };
+
+  const handleGuardarBoleta = async () => {
     if (!selectedRecepcion) return;
     
     if (pesoBruto <= 0) {
@@ -223,28 +279,117 @@ const Reciba = () => {
       toast.error('Debe registrar el peso tara');
       return;
     }
+    if (!productoSeleccionado) {
+      toast.error('Debe seleccionar un producto');
+      return;
+    }
     
-    setRecepciones(prev => prev.map(r => 
-      r.id === selectedRecepcion.id ? {
-        ...r,
-        pesoBruto,
-        pesoTara,
-        pesoNeto,
-        sellos,
-        analisis: valoresAnalisis,
+    // Manejar proveedor personalizado
+    let proveedorIdFinal = proveedorSeleccionado;
+    if (mostrarProveedorPersonalizado && proveedorPersonalizado.trim()) {
+      try {
+        const nuevoProveedor = await addProveedor({
+          empresa: proveedorPersonalizado.trim(),
+          contacto: null,
+          telefono: null,
+          correo: null,
+          direccion: null
+        });
+        proveedorIdFinal = nuevoProveedor.id;
+        toast.success('Proveedor creado correctamente');
+      } catch (error) {
+        console.error('Error creating proveedor:', error);
+        toast.error('Error al crear proveedor');
+        return;
+      }
+    }
+    
+    if (!proveedorIdFinal) {
+      toast.error('Debe seleccionar o ingresar un proveedor');
+      return;
+    }
+
+    // Generar boleta final si aún no tiene una (boleta es temporal)
+    let boletaFinal = selectedRecepcion.boleta;
+    if (selectedRecepcion.boleta.startsWith('TEMP-') || !selectedRecepcion.boleta) {
+      const producto = productosDB.find(p => p.id === productoSeleccionado);
+      if (!producto) {
+        toast.error('Producto no encontrado');
+        return;
+      }
+
+      // Calcular consecutivo: contar recepciones del año actual para el mismo producto
+      const fechaActual = new Date();
+      const añoActual = fechaActual.getFullYear();
+      
+      const recepcionesDelAño = recepciones.filter(r => {
+        if (!r.fecha || r.productoId !== productoSeleccionado) return false;
+        const fechaRecepcion = new Date(r.fecha);
+        return fechaRecepcion.getFullYear() === añoActual &&
+               r.boleta && !r.boleta.startsWith('TEMP-');
+      });
+      
+      const consecutivo = recepcionesDelAño.length + 1;
+      // Usar codigo_boleta de la base de datos, con fallback al nombre si no existe
+      const codigoBoleta = producto.codigo_boleta || producto.nombre;
+      boletaFinal = generarBoletaEntradas(codigoBoleta, consecutivo);
+    }
+
+    // El código de lote se generará automáticamente en updateRecepcion si se proporciona almacen_id
+    try {
+      const recepcionActualizada = await updateRecepcion(selectedRecepcion.id, {
+        boleta: boletaFinal,
+        producto_id: productoSeleccionado,
+        proveedor_id: proveedorIdFinal,
+        peso_bruto: pesoBruto,
+        peso_tara: pesoTara,
+        peso_neto: pesoNeto,
+        analisis: Object.keys(valoresAnalisis).length > 0 ? valoresAnalisis : null,
         estatus: 'Completado',
-        tipoBascula
-      } : r
-    ));
-    
-    toast.success('Boleta guardada correctamente');
-    setIsDialogOpen(false);
+        tipo_bascula: tipoBascula,
+        almacen_id: almacenSeleccionado || null
+      });
+      
+      const mensajeLote = recepcionActualizada?.codigo_lote ? ` - Lote: ${recepcionActualizada.codigo_lote}` : '';
+      
+      // Crear movimiento de entrada
+      try {
+        const producto = productosDB.find(p => p.id === productoSeleccionado);
+        const proveedor = proveedoresDB.find(p => p.id === proveedorIdFinal);
+        const almacen = almacenSeleccionado ? almacenesDB.find(a => a.id === almacenSeleccionado) : null;
+        
+        await createMovimiento({
+          boleta: boletaFinal,
+          producto_id: productoSeleccionado,
+          cliente_proveedor: proveedor?.empresa || null,
+          tipo: 'Entrada',
+          transporte: tipoBascula === 'Camión' ? 'Camión' : 'Ferroviaria',
+          fecha: selectedRecepcion.fecha,
+          ubicacion: almacen?.nombre || null,
+          peso_neto: pesoNeto,
+          peso_bruto: pesoBruto,
+          peso_tara: pesoTara,
+          chofer: selectedRecepcion.chofer || null,
+          placas: selectedRecepcion.placas || null
+        });
+      } catch (error) {
+        console.error('Error creating movimiento:', error);
+        // No mostrar error al usuario, solo loguear
+      }
+      
+      await loadRecepciones();
+      toast.success('Boleta guardada correctamente' + mensajeLote);
+      setIsDialogOpen(false);
+    } catch (error) {
+      console.error('Error saving recepcion:', error);
+      toast.error('Error al guardar boleta');
+    }
   };
 
   const filteredRecepciones = recepciones.filter(r => 
     r.producto.toLowerCase().includes(search.toLowerCase()) ||
     r.proveedor.toLowerCase().includes(search.toLowerCase()) ||
-    r.folio.includes(search) ||
+    (r.boleta && !r.boleta.startsWith('TEMP-') && r.boleta.includes(search)) ||
     r.chofer.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -299,7 +444,7 @@ const Reciba = () => {
           <div className="relative w-full sm:w-96">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Buscar por folio, producto, proveedor o chofer..." 
+              placeholder="Buscar por boleta, producto, proveedor o chofer..." 
               className="pl-10"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -316,7 +461,7 @@ const Reciba = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Scale className="h-5 w-5" />
-              Recepciones Pendientes
+              Historial de Recepciones
             </CardTitle>
             <CardDescription>Haz clic en una fila para abrir el formulario de báscula</CardDescription>
           </CardHeader>
@@ -324,12 +469,13 @@ const Reciba = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="font-bold">Folio</TableHead>
+                  <TableHead>Boleta</TableHead>
                   <TableHead>Producto</TableHead>
                   <TableHead>Proveedor</TableHead>
                   <TableHead>Chofer</TableHead>
                   <TableHead>Placas</TableHead>
                   <TableHead>Transporte</TableHead>
+                  <TableHead>Fecha</TableHead>
                   <TableHead>Estatus</TableHead>
                 </TableRow>
               </TableHeader>
@@ -340,18 +486,26 @@ const Reciba = () => {
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => handleRowClick(recepcion)}
                   >
-                    <TableCell className="font-mono font-bold text-primary">{recepcion.folio}</TableCell>
+                    <TableCell className="font-mono font-bold text-primary">
+                      {recepcion.boleta.startsWith('TEMP-') ? '-' : recepcion.boleta}
+                    </TableCell>
                     <TableCell className="font-medium">{recepcion.producto}</TableCell>
                     <TableCell>{recepcion.proveedor}</TableCell>
                     <TableCell>{recepcion.chofer}</TableCell>
                     <TableCell className="font-mono">{recepcion.placas}</TableCell>
-                    <TableCell>{getTransporteBadge(recepcion.tipoTransporte)}</TableCell>
+                    <TableCell>
+                      <span className="flex items-center gap-1">
+                        {getTransporteIcon(recepcion.tipoTransporte)}
+                        {recepcion.tipoTransporte}
+                      </span>
+                    </TableCell>
+                    <TableCell>{recepcion.fecha}</TableCell>
                     <TableCell>{getEstatusBadge(recepcion.estatus)}</TableCell>
                   </TableRow>
                 )) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                      No hay recepciones pendientes
+                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                      No hay recepciones
                     </TableCell>
                   </TableRow>
                 )}
@@ -365,6 +519,8 @@ const Reciba = () => {
           open={isNuevaOperacionOpen}
           onOpenChange={setIsNuevaOperacionOpen}
           onCrear={handleCrearOperacion}
+          productos={productosDB}
+          proveedores={proveedoresDB}
         />
 
         {/* Formulario de Báscula Dialog */}
@@ -375,35 +531,124 @@ const Reciba = () => {
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
                     <Scale className="h-5 w-5" />
-                    Boleta de Recepción - {selectedRecepcion.folio}
+                    Boleta de Recepción - {selectedRecepcion.boleta.startsWith('TEMP-') ? '-' : selectedRecepcion.boleta}
                     <span className="ml-2">{getEstatusBadge(selectedRecepcion.estatus)}</span>
-                    {getTransporteBadge(selectedRecepcion.tipoTransporte)}
+                    <span className="flex items-center gap-1">
+                      {getTransporteIcon(selectedRecepcion.tipoTransporte)}
+                      {selectedRecepcion.tipoTransporte}
+                    </span>
                   </DialogTitle>
                 </DialogHeader>
 
                 <div className="space-y-6">
-                  {/* Header Info */}
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 p-4 bg-muted/50 rounded-lg">
+                  {/* Header Info - Primera fila: Fecha/Hora, Boleta, Código de Lote, Chofer/Placas */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
                     <div>
                       <Label className="text-xs text-muted-foreground">Fecha/Hora</Label>
-                      <p className="font-medium">{selectedRecepcion.fecha} 10:30</p>
+                      <p className="font-medium">
+                        {selectedRecepcion.created_at 
+                          ? formatDateTimeMST(selectedRecepcion.created_at) 
+                          : selectedRecepcion.fecha}
+                      </p>
                     </div>
                     <div>
-                      <Label className="text-xs text-muted-foreground">Folio</Label>
-                      <p className="font-medium font-mono text-primary">{selectedRecepcion.folio}</p>
+                      <Label className="text-xs text-muted-foreground">Boleta</Label>
+                      <p className="font-medium font-mono text-primary">
+                        {selectedRecepcion.boleta.startsWith('TEMP-') ? '-' : selectedRecepcion.boleta}
+                      </p>
                     </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Producto</Label>
-                      <p className="font-medium">{selectedRecepcion.producto}</p>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Proveedor</Label>
-                      <p className="font-medium">{selectedRecepcion.proveedor}</p>
-                    </div>
+                    {selectedRecepcion.codigoLote && (
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Código de Lote</Label>
+                        <p className="font-medium font-mono text-primary font-bold">{selectedRecepcion.codigoLote}</p>
+                      </div>
+                    )}
                     <div>
                       <Label className="text-xs text-muted-foreground">Chofer / Placas</Label>
                       <p className="font-medium">{selectedRecepcion.chofer}</p>
                       <p className="text-sm font-mono text-muted-foreground">{selectedRecepcion.placas}</p>
+                    </div>
+                  </div>
+
+                  {/* Segunda fila: Producto, Proveedor, Almacén */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Producto</Label>
+                      <Select 
+                        value={productoSeleccionado ? String(productoSeleccionado) : ''} 
+                        onValueChange={(v) => setProductoSeleccionado(parseInt(v))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar producto" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {productosDB.map(p => (
+                            <SelectItem key={p.id} value={String(p.id)}>{p.nombre}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Proveedor</Label>
+                      {!mostrarProveedorPersonalizado ? (
+                        <Select 
+                          value={proveedorSeleccionado ? String(proveedorSeleccionado) : ''} 
+                          onValueChange={(v) => {
+                            if (v === 'otro') {
+                              setMostrarProveedorPersonalizado(true);
+                              setProveedorSeleccionado(null);
+                            } else {
+                              setProveedorSeleccionado(parseInt(v));
+                            }
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar proveedor" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {proveedoresDB.map(p => (
+                              <SelectItem key={p.id} value={String(p.id)}>{p.empresa}</SelectItem>
+                            ))}
+                            <SelectItem value="otro">+ Agregar nuevo proveedor</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <div className="space-y-2">
+                          <Input
+                            value={proveedorPersonalizado}
+                            onChange={(e) => setProveedorPersonalizado(e.target.value)}
+                            placeholder="Nombre del proveedor"
+                          />
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              setMostrarProveedorPersonalizado(false);
+                              setProveedorPersonalizado('');
+                            }}
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Almacén (Destino de la mercancía) *</Label>
+                      <Select 
+                        value={almacenSeleccionado ? String(almacenSeleccionado) : ''} 
+                        onValueChange={(v) => setAlmacenSeleccionado(parseInt(v))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar almacén" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {almacenesDB.map(almacen => (
+                            <SelectItem key={almacen.id} value={String(almacen.id)}>
+                              {almacen.nombre}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
@@ -435,22 +680,6 @@ const Reciba = () => {
                     </RadioGroup>
                   </div>
 
-                  <Separator />
-
-                  {/* Sellos */}
-                  <div className="space-y-3">
-                    <h4 className="font-medium flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      Sellos de Seguridad
-                    </h4>
-                    <SellosSection 
-                      sellos={sellos} 
-                      onChange={setSellos}
-                      readOnlyEntrada={selectedRecepcion.estatus !== 'Pendiente'}
-                    />
-                  </div>
-
-                  <Separator />
 
                   {/* Pesos - BRUTO → TARA → NETO para Reciba */}
                   <div className="space-y-4">
@@ -471,9 +700,18 @@ const Reciba = () => {
                             onChange={(e) => setPesoBruto(parseInt(e.target.value) || 0)}
                             placeholder="0"
                           />
-                          <Button className="w-full mt-2" size="sm">
+                          <Button 
+                            className="w-full mt-2" 
+                            size="sm"
+                            onClick={handleCapturarPesoBruto}
+                          >
                             Capturar Peso
                           </Button>
+                          {horaPesoBruto && (
+                            <p className="text-xs text-center text-muted-foreground mt-2">
+                              {formatDateTimeMST(horaPesoBruto)}
+                            </p>
+                          )}
                         </CardContent>
                       </Card>
 
@@ -489,9 +727,19 @@ const Reciba = () => {
                             onChange={(e) => setPesoTara(parseInt(e.target.value) || 0)}
                             placeholder="0"
                           />
-                          <Button className="w-full mt-2" size="sm" variant="outline">
+                          <Button 
+                            className="w-full mt-2" 
+                            size="sm" 
+                            variant="outline"
+                            onClick={handleCapturarPesoTara}
+                          >
                             Capturar Peso
                           </Button>
+                          {horaPesoTara && (
+                            <p className="text-xs text-center text-muted-foreground mt-2">
+                              {formatDateTimeMST(horaPesoTara)}
+                            </p>
+                          )}
                         </CardContent>
                       </Card>
 
@@ -504,6 +752,11 @@ const Reciba = () => {
                             {pesoNeto > 0 ? formatNumber(pesoNeto) : '0'}
                           </div>
                           <p className="text-xs text-center text-muted-foreground mt-2">Calculado automáticamente</p>
+                          {horaPesoNeto && (
+                            <p className="text-xs text-center text-muted-foreground mt-1">
+                              {formatDateTimeMST(horaPesoNeto)}
+                            </p>
+                          )}
                         </CardContent>
                       </Card>
                     </div>
@@ -512,26 +765,30 @@ const Reciba = () => {
                   <Separator />
 
                   {/* Análisis dinámicos según producto */}
-                  <div className="space-y-4">
-                    <h4 className="font-medium flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      Análisis de Calidad - {selectedRecepcion.producto}
-                    </h4>
-                    <AnalisisDinamico 
-                      producto={selectedRecepcion.producto}
-                      valores={valoresAnalisis}
-                      onChange={handleAnalisisChange}
-                    />
-                  </div>
+                  {productoSeleccionado && (
+                    <div className="space-y-4">
+                      <h4 className="font-medium flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        Análisis de Calidad - {productosDB.find(p => p.id === productoSeleccionado)?.nombre || 'Producto'}
+                      </h4>
+                      <AnalisisDinamico 
+                        analisis={analisisProducto}
+                        valores={valoresAnalisis}
+                        onChange={handleAnalisisChange}
+                      />
+                    </div>
+                  )}
 
                   <Separator />
 
                   {/* Descuentos calculados */}
-                  <DescuentosPanel 
-                    producto={selectedRecepcion.producto}
-                    valoresAnalisis={valoresAnalisis}
-                    pesoNeto={pesoNeto > 0 ? pesoNeto : 0}
-                  />
+                  {productoSeleccionado && analisisProducto.length > 0 && (
+                    <DescuentosPanel 
+                      analisis={analisisProducto}
+                      valoresAnalisis={valoresAnalisis}
+                      pesoNeto={pesoNeto > 0 ? pesoNeto : 0}
+                    />
+                  )}
                 </div>
 
                 <DialogFooter className="mt-6 gap-2">
@@ -568,3 +825,4 @@ const Reciba = () => {
 };
 
 export default Reciba;
+

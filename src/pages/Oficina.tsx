@@ -13,89 +13,174 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import BoletaPreviewDialog from '@/components/oficina/BoletaPreviewDialog';
 import { generateNumeroBoleta, TipoOperacion } from '@/utils/folioGenerator';
+import { useOrdenes } from '@/services/hooks/useOrdenes';
+import type { Orden as OrdenDB } from '@/services/supabase/ordenes';
+import CompletarOrdenDialog from '@/components/oficina/CompletarOrdenDialog';
+import { toast } from 'sonner';
+import { formatDateTimeMST } from '@/utils/dateUtils';
+import { createEmbarque } from '@/services/supabase/embarques';
 
 interface Orden {
   id: number;
   boleta: string;
   producto: string;
-  cliente: string;
-  tipoOperacion: TipoOperacion;
-  destino: string;
-  nombreChofer: string;
-  vehiculo: string;
-  placas: string;
-  fechaHoraIngreso: string;
-  estatus: 'Pendiente' | 'En Báscula' | 'En Proceso' | 'Completado';
+  cliente?: string | null;
+  tipoOperacion: 'Reciba' | 'Embarque Nacional' | 'Embarque Exportación';
+  destino?: string | null;
+  nombreChofer?: string | null;
+  vehiculo?: string | null;
+  placas?: string | null;
+  fechaHoraIngreso?: string | null;
+  estatus: 'Nuevo' | 'En Proceso' | 'Completado';
 }
 
 const Oficina = () => {
+  const { ordenes: ordenesDB, loading, loadOrdenes, updateOrden } = useOrdenes();
+  
   const [search, setSearch] = useState('');
   const [selectedOrden, setSelectedOrden] = useState<Orden | null>(null);
   const [showPreview, setShowPreview] = useState(false);
-  const [ordenes, setOrdenes] = useState<Orden[]>([
-    { 
-      id: 1, 
-      boleta: generateNumeroBoleta('Embarque Nacional', 'Aceite Crudo de Soya', 1),
-      producto: 'Aceite Crudo de Soya', 
-      cliente: 'Aceites del Pacífico SA',
-      tipoOperacion: 'Embarque Nacional',
-      destino: 'Guadalajara, JAL',
-      nombreChofer: 'Juan Carlos Mendoza',
-      vehiculo: 'Pipa',
-      placas: 'ABC-123-A',
-      fechaHoraIngreso: '2024-12-10 08:30',
-      estatus: 'En Báscula'
-    },
-    { 
-      id: 2, 
-      boleta: generateNumeroBoleta('Entradas', 'Frijol Soya', 2),
-      producto: 'Frijol Soya', 
-      cliente: 'Granos Selectos',
-      tipoOperacion: 'Entradas',
-      destino: 'Planta AP',
-      nombreChofer: 'Pedro Ramírez López',
-      vehiculo: 'Tractocamión',
-      placas: 'XYZ-789-B',
-      fechaHoraIngreso: '2024-12-10 09:15',
-      estatus: 'Pendiente'
-    },
-    { 
-      id: 3, 
-      boleta: generateNumeroBoleta('Embarque Nacional', 'Pasta de Soya', 3),
-      producto: 'Pasta de Soya', 
-      cliente: 'Alimentos Balanceados MX',
-      tipoOperacion: 'Embarque Nacional',
-      destino: 'Monterrey, NL',
-      nombreChofer: 'Miguel Ángel Torres',
-      vehiculo: 'Torton',
-      placas: 'DEF-456-C',
-      fechaHoraIngreso: '2024-12-10 07:45',
-      estatus: 'Completado'
-    },
-    { 
-      id: 4, 
-      boleta: generateNumeroBoleta('Exportación', 'Aceite Crudo de Soya', 4),
-      producto: 'Aceite Crudo de Soya', 
-      cliente: 'Export Foods Inc.',
-      tipoOperacion: 'Exportación',
-      destino: 'Houston, TX',
-      nombreChofer: 'Roberto Sánchez',
-      vehiculo: 'Contenedor',
-      placas: 'GHI-321-D',
-      fechaHoraIngreso: '2024-12-10 10:00',
-      estatus: 'En Proceso'
-    },
-  ]);
+  const [showCompletarDialog, setShowCompletarDialog] = useState(false);
+  const [ordenParaCompletar, setOrdenParaCompletar] = useState<OrdenDB | null>(null);
+  
+  // Mapear órdenes de DB a formato local
+  const ordenes: Orden[] = ordenesDB.map(o => ({
+    id: o.id,
+    boleta: o.boleta,
+    producto: o.producto?.nombre || '',
+    cliente: o.cliente?.empresa,
+    tipoOperacion: o.tipo_operacion as any,
+    destino: o.destino,
+    nombreChofer: o.nombre_chofer,
+    vehiculo: o.vehiculo,
+    placas: o.placas,
+    fechaHoraIngreso: o.fecha_hora_ingreso,
+    estatus: o.estatus as any
+  }));
 
-  const handleViewBoleta = (orden: Orden) => {
+  const handleViewTicket = (orden: Orden) => {
     setSelectedOrden(orden);
     setShowPreview(true);
   };
 
+  const handleCompletarOrden = (orden: Orden) => {
+    // Buscar la orden completa en ordenesDB
+    const ordenCompleta = ordenesDB.find(o => o.id === orden.id);
+    if (ordenCompleta) {
+      setOrdenParaCompletar(ordenCompleta);
+      setShowCompletarDialog(true);
+    }
+  };
+
+  const handleSaveOrden = async (ordenId: number, data: {
+    producto_id: number;
+    cliente_id?: number | null;
+    proveedor_id?: number | null;
+    tipo_transporte?: string;
+  }) => {
+    try {
+      const orden = ordenesDB.find(o => o.id === ordenId);
+      if (!orden) {
+        toast.error('Orden no encontrada');
+        return;
+      }
+
+      // Obtener producto para generar boleta
+      const productosService = await import('@/services/supabase/productos');
+      const productos = await productosService.getProductos();
+      const producto = productos.find(p => p.id === data.producto_id);
+      
+      if (!producto) {
+        toast.error('Producto no encontrado');
+        return;
+      }
+      
+      // Generar ticket final si es temporal
+      let ticketFinal = orden.boleta;
+      if (orden.boleta.startsWith('TEMP-')) {
+        const tipoOperacion: TipoOperacion = orden.tipo_operacion === 'Reciba' 
+          ? 'Entradas' 
+          : orden.tipo_operacion === 'Embarque Nacional' 
+          ? 'Embarque Nacional' 
+          : 'Exportación';
+        
+        // Calcular consecutivo anual: contar órdenes del año actual para el mismo tipo de operación y producto
+        const fechaActual = new Date();
+        const añoActual = fechaActual.getFullYear();
+        
+        // Contar órdenes completadas del año actual con el mismo tipo de operación y producto
+        // IMPORTANTE: Solo contar órdenes que ya tienen boleta final (no temporales) y que no sean la orden actual
+        const ordenesDelAño = ordenesDB.filter(o => {
+          // Excluir la orden actual
+          if (o.id === ordenId) return false;
+          // Debe tener fecha de ingreso
+          if (!o.fecha_hora_ingreso) return false;
+          // Debe tener el mismo producto
+          if (o.producto_id !== data.producto_id) return false;
+          // Debe tener el mismo tipo de operación
+          if (o.tipo_operacion !== orden.tipo_operacion) return false;
+          // Debe ser del año actual
+          const fechaOrden = new Date(o.fecha_hora_ingreso);
+          if (fechaOrden.getFullYear() !== añoActual) return false;
+          // Debe tener boleta final (no temporal)
+          if (!o.boleta || o.boleta.startsWith('TEMP-')) return false;
+          // Ignorar boletas que contengan "1212" (números incorrectos del código anterior)
+          if (o.boleta.includes('1212')) return false;
+          return true;
+        });
+        
+        const consecutivo = ordenesDelAño.length + 1;
+        
+        // Usar codigo_boleta de la base de datos, con fallback al nombre si no existe
+        const codigoBoleta = producto.codigo_boleta || producto.nombre;
+        ticketFinal = generateNumeroBoleta(tipoOperacion, codigoBoleta, consecutivo);
+      }
+
+      // Actualizar la orden
+      await updateOrden(ordenId, {
+        producto_id: data.producto_id,
+        cliente_id: data.cliente_id,
+        proveedor_id: data.proveedor_id,
+        boleta: ticketFinal,
+        estatus: 'En Proceso'
+      });
+
+      // Si es una orden de Embarque, crear también el registro en embarques
+      if (orden.tipo_operacion === 'Embarque Nacional' || orden.tipo_operacion === 'Embarque Exportación') {
+        if (data.cliente_id && data.producto_id) {
+          try {
+            const fechaActual = new Date();
+            const fechaMST = `${fechaActual.getFullYear()}-${String(fechaActual.getMonth() + 1).padStart(2, '0')}-${String(fechaActual.getDate()).padStart(2, '0')}`;
+            
+            await createEmbarque({
+              boleta: ticketFinal,
+              producto_id: data.producto_id,
+              cliente_id: data.cliente_id,
+              chofer: orden.nombre_chofer || null,
+              destino: orden.destino || null,
+              fecha: fechaMST,
+              estatus: 'Pendiente',
+              tipo_transporte: data.tipo_transporte || null,
+              tipo_embarque: orden.tipo_operacion === 'Embarque Nacional' ? 'Nacional' : 'Exportación'
+            });
+          } catch (error) {
+            console.error('Error creating embarque:', error);
+            // No lanzamos error para no interrumpir el flujo, solo lo registramos
+          }
+        }
+      }
+
+      await loadOrdenes();
+      toast.success('Orden completada correctamente');
+    } catch (error) {
+      console.error('Error saving orden:', error);
+      throw error;
+    }
+  };
+
   const getEstatusBadge = (estatus: string) => {
     const config: Record<string, { className: string; icon: React.ReactNode }> = {
-      'Pendiente': { className: 'bg-yellow-100 text-yellow-700 border-yellow-300', icon: <Clock className="h-3 w-3 mr-1" /> },
-      'En Báscula': { className: 'bg-blue-100 text-blue-700 border-blue-300', icon: <Truck className="h-3 w-3 mr-1" /> },
+      'Nuevo': { className: 'bg-yellow-100 text-yellow-700 border-yellow-300', icon: <Clock className="h-3 w-3 mr-1" /> },
       'En Proceso': { className: 'bg-orange-100 text-orange-700 border-orange-300', icon: <FileText className="h-3 w-3 mr-1" /> },
       'Completado': { className: 'bg-green-100 text-green-700 border-green-300', icon: <CheckCircle className="h-3 w-3 mr-1" /> },
     };
@@ -109,7 +194,7 @@ const Oficina = () => {
       'Embarque Nacional': 'bg-blue-500 text-white',
       'Embarque Exportación': 'bg-purple-500 text-white',
     };
-    return <Badge className={colors[tipo]}>{tipo}</Badge>;
+    return <Badge className={colors[tipo] || 'bg-gray-500 text-white'}>{tipo}</Badge>;
   };
 
   const filteredOrdenes = ordenes.filter(o => 
@@ -120,8 +205,8 @@ const Oficina = () => {
   );
 
   const stats = {
-    pendientes: ordenes.filter(o => o.estatus === 'Pendiente').length,
-    enProceso: ordenes.filter(o => o.estatus === 'En Báscula' || o.estatus === 'En Proceso').length,
+    pendientes: ordenes.filter(o => o.estatus === 'Nuevo').length,
+    enProceso: ordenes.filter(o => o.estatus === 'En Proceso').length,
     completados: ordenes.filter(o => o.estatus === 'Completado').length,
   };
   return (
@@ -132,7 +217,7 @@ const Oficina = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Pendientes</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Nuevas</CardTitle>
               <Clock className="h-5 w-5 text-yellow-500" />
             </CardHeader>
             <CardContent>
@@ -164,7 +249,7 @@ const Oficina = () => {
           <div className="relative w-full sm:w-80">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Buscar por folio, producto, cliente..." 
+              placeholder="Buscar por boleta, producto, cliente..." 
               className="pl-10"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -381,7 +466,7 @@ const Oficina = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="font-bold">Folio</TableHead>
+                  <TableHead>Boleta</TableHead>
                   <TableHead>Producto</TableHead>
                   <TableHead>Cliente/Proveedor</TableHead>
                   <TableHead>Tipo</TableHead>
@@ -395,35 +480,58 @@ const Oficina = () => {
               </TableHeader>
               <TableBody>
                 {filteredOrdenes.map((orden) => (
-                  <TableRow key={orden.id} className="cursor-pointer hover:bg-muted/50">
+                  <TableRow 
+                    key={orden.id} 
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => {
+                      if (orden.estatus === 'Nuevo' && orden.boleta.startsWith('TEMP-')) {
+                        handleCompletarOrden(orden);
+                      } else {
+                        handleViewTicket(orden);
+                      }
+                    }}
+                  >
                     <TableCell className="font-mono font-bold text-primary">{orden.boleta}</TableCell>
-                    <TableCell className="font-medium">{orden.producto}</TableCell>
-                    <TableCell>{orden.cliente}</TableCell>
+                    <TableCell className="font-medium">{orden.producto || '-'}</TableCell>
+                    <TableCell>{orden.cliente || '-'}</TableCell>
                     <TableCell>{getTipoOperacionBadge(orden.tipoOperacion)}</TableCell>
                     <TableCell>{orden.destino}</TableCell>
                     <TableCell>{orden.nombreChofer}</TableCell>
                     <TableCell className="font-mono text-sm">{orden.placas}</TableCell>
-                    <TableCell>{orden.fechaHoraIngreso}</TableCell>
+                    <TableCell>{formatDateTimeMST(orden.fechaHoraIngreso || null)}</TableCell>
                     <TableCell>{getEstatusBadge(orden.estatus)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8"
-                        onClick={() => handleViewBoleta(orden)}
-                        title="Ver boleta"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8"
-                        onClick={() => handleViewBoleta(orden)}
-                        title="Imprimir boleta"
-                      >
-                        <Printer className="h-4 w-4" />
-                      </Button>
+                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                      {orden.estatus === 'Nuevo' && orden.boleta.startsWith('TEMP-') ? (
+                        <Button 
+                          variant="default" 
+                          size="sm"
+                          onClick={() => handleCompletarOrden(orden)}
+                          className="bg-primary hover:bg-primary/90"
+                        >
+                          Completar Orden
+                        </Button>
+                      ) : (
+                        <>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8"
+                            onClick={() => handleViewTicket(orden)}
+                            title="Ver ticket"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8"
+                            onClick={() => handleViewTicket(orden)}
+                            title="Imprimir ticket"
+                          >
+                            <Printer className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -432,12 +540,22 @@ const Oficina = () => {
           </CardContent>
         </Card>
 
-        {/* Boleta Preview Dialog */}
+        {/* Ticket Preview Dialog */}
         <BoletaPreviewDialog 
           open={showPreview} 
           onOpenChange={setShowPreview} 
           orden={selectedOrden} 
         />
+
+        {/* Completar Orden Dialog */}
+        {ordenParaCompletar && (
+          <CompletarOrdenDialog
+            open={showCompletarDialog}
+            onOpenChange={setShowCompletarDialog}
+            orden={ordenParaCompletar}
+            onSave={handleSaveOrden}
+          />
+        )}
       </div>
     </Layout>
   );

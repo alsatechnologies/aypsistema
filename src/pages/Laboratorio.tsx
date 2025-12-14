@@ -10,8 +10,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Search, Plus, FlaskConical, Clock, CheckCircle, Eye, FileText } from 'lucide-react';
+import { Search, Plus, FlaskConical, Clock, CheckCircle, Eye, FileText, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useLaboratorio } from '@/services/hooks/useLaboratorio';
+import type { ReporteLab as ReporteLabDB } from '@/services/supabase/laboratorio';
 
 interface ReporteLab {
   id: string;
@@ -20,23 +22,48 @@ interface ReporteLab {
   turno: 'Matutino' | 'Vespertino' | 'Nocturno';
   estatus: 'Pendiente' | 'En proceso' | 'Completado';
   pasta?: {
-    textura: 'Alto' | 'Bajo';
-    humedadPromedio: number;
-    costraVibrador: 'Alto' | 'Bajo';
-    proteina: number;
-    residuales: number;
+    textura: {
+      promedio: number;
+      alto: number;
+      bajo: number;
+    };
+    humedad: {
+      promedio: number;
+      alto: number;
+      bajo: number;
+    };
+    proteina: Array<{ valor: number; porcentaje: number }>;
+    residuales: {
+      promedio: number;
+      alto: number;
+      bajo: number;
+    };
     temperaturaPromedio: number;
   };
   expander?: {
-    residual: number;
-    humedad: number;
-  };
-  hojuela?: {
-    porcentaje: number;
-  };
-  semilla?: {
-    residual: number;
-    humedad: number;
+    hojuela: {
+      residual: number;
+      humedad: number;
+    };
+    semilla: {
+      humedad: number;
+      contenidoAceite: number;
+    };
+    costraVibrador: {
+      residual: number;
+      humedad: number;
+    };
+    costraDirecta: {
+      residual: number;
+      humedad: number;
+    };
+    aceite: Array<{
+      tipo: 'Expander' | 'Prensa' | 'Desborrador' | 'Filtro';
+      filtroNumeros?: string;
+      humedad: number;
+      acidez: number;
+      acidoOleico: number;
+    }>;
   };
   aceitePlanta?: {
     acidez: number;
@@ -56,20 +83,27 @@ const Laboratorio = () => {
     turno: 'Matutino' as 'Matutino' | 'Vespertino' | 'Nocturno',
     responsable: '',
     // Pasta
-    pastaTextura: 'Alto' as 'Alto' | 'Bajo',
-    pastaHumedad: '',
-    pastaCostra: 'Alto' as 'Alto' | 'Bajo',
-    pastaProteina: '',
-    pastaResiduales: '',
+    pastaTexturaPromedio: '',
+    pastaTexturaAlto: '',
+    pastaTexturaBajo: '',
+    pastaHumedadPromedio: '',
+    pastaHumedadAlto: '',
+    pastaHumedadBajo: '',
+    pastaProteina: [{ valor: '', porcentaje: '' }],
+    pastaResidualesPromedio: '',
+    pastaResidualesAlto: '',
+    pastaResidualesBajo: '',
     pastaTemperatura: '',
     // Expander
-    expanderResidual: '',
-    expanderHumedad: '',
-    // Hojuela
-    hojuelaPorcentaje: '',
-    // Semilla
-    semillaResidual: '',
-    semillaHumedad: '',
+    expanderHojuelaResidual: '',
+    expanderHojuelaHumedad: '',
+    expanderSemillaHumedad: '',
+    expanderSemillaContenidoAceite: '',
+    expanderCostraVibradorResidual: '',
+    expanderCostraVibradorHumedad: '',
+    expanderCostraDirectaResidual: '',
+    expanderCostraDirectaHumedad: '',
+    expanderAceite: [{ tipo: 'Expander' as 'Expander' | 'Prensa' | 'Desborrador' | 'Filtro', filtroNumeros: '', humedad: '', acidez: '', acidoOleico: '' }],
     // Aceite Planta
     aceiteAcidez: '',
     aceiteOleico: '',
@@ -77,53 +111,74 @@ const Laboratorio = () => {
     aceiteFlashPoint: '+' as '+' | '-'
   });
 
-  const [reportes, setReportes] = useState<ReporteLab[]>([
-    { 
-      id: 'REP-001', 
-      fecha: '2024-12-10', 
-      responsable: 'Q.F.B. Karen López', 
-      turno: 'Matutino', 
-      estatus: 'Completado',
-      pasta: { textura: 'Alto', humedadPromedio: 12.5, costraVibrador: 'Bajo', proteina: 46.2, residuales: 0.8, temperaturaPromedio: 85 },
-      expander: { residual: 1.2, humedad: 11.0 },
-      hojuela: { porcentaje: 98.5 },
-      semilla: { residual: 0.5, humedad: 10.8 },
-      aceitePlanta: { acidez: 0.15, acidoOleico: 23.5, humedad: 0.08, flashPoint: '+' }
-    },
-    { 
-      id: 'REP-002', 
-      fecha: '2024-12-09', 
-      responsable: 'Q.F.B. Karen López', 
-      turno: 'Vespertino', 
-      estatus: 'Completado',
-      pasta: { textura: 'Bajo', humedadPromedio: 11.8, costraVibrador: 'Alto', proteina: 45.8, residuales: 0.9, temperaturaPromedio: 82 },
-      expander: { residual: 1.5, humedad: 11.5 },
-      hojuela: { porcentaje: 97.8 },
-      semilla: { residual: 0.6, humedad: 11.2 },
-      aceitePlanta: { acidez: 0.18, acidoOleico: 24.1, humedad: 0.10, flashPoint: '+' }
-    },
-    { 
-      id: 'REP-003', 
-      fecha: '2024-12-09', 
-      responsable: 'Ing. Carlos Mendoza', 
-      turno: 'Nocturno', 
-      estatus: 'En proceso',
-      pasta: { textura: 'Alto', humedadPromedio: 12.1, costraVibrador: 'Bajo', proteina: 46.0, residuales: 0.7, temperaturaPromedio: 84 }
-    },
-    { 
-      id: 'REP-004', 
-      fecha: '2024-12-08', 
-      responsable: 'Q.F.B. Karen López', 
-      turno: 'Matutino', 
-      estatus: 'Completado',
-      pasta: { textura: 'Alto', humedadPromedio: 12.3, costraVibrador: 'Bajo', proteina: 46.5, residuales: 0.6, temperaturaPromedio: 86 },
-      expander: { residual: 1.1, humedad: 10.8 },
-      hojuela: { porcentaje: 99.0 },
-      semilla: { residual: 0.4, humedad: 10.5 },
-      aceitePlanta: { acidez: 0.12, acidoOleico: 23.0, humedad: 0.07, flashPoint: '+' }
-    },
-    { id: 'REP-005', fecha: '2024-12-08', responsable: 'Ing. Carlos Mendoza', turno: 'Vespertino', estatus: 'Pendiente' },
-  ]);
+  const { reportes: reportesDB, loading, addReporte, updateReporte, deleteReporte, loadReportes } = useLaboratorio();
+  
+  // Mapear reportes de DB a formato local
+  const reportes: ReporteLab[] = reportesDB.map(r => {
+    const pasta = r.planta_textura_promedio !== null ? {
+      textura: {
+        promedio: r.planta_textura_promedio || 0,
+        alto: r.planta_textura_alto || 0,
+        bajo: r.planta_textura_bajo || 0
+      },
+      humedad: {
+        promedio: r.planta_humedad_promedio || 0,
+        alto: r.planta_humedad_alto || 0,
+        bajo: r.planta_humedad_bajo || 0
+      },
+      proteina: (r.planta_proteina || []) as Array<{ valor: number; porcentaje: number }>,
+      residuales: {
+        promedio: r.planta_residuales_promedio || 0,
+        alto: r.planta_residuales_alto || 0,
+        bajo: r.planta_residuales_bajo || 0
+      },
+      temperaturaPromedio: r.planta_temperatura_promedio || 0
+    } : undefined;
+    
+    const expander = r.expander_hojuela_residual !== null ? {
+      hojuela: {
+        residual: r.expander_hojuela_residual || 0,
+        humedad: r.expander_hojuela_humedad || 0
+      },
+      semilla: {
+        humedad: r.expander_semilla_humedad || 0,
+        contenidoAceite: r.expander_semilla_contenido_aceite || 0
+      },
+      costraVibrador: {
+        residual: r.expander_costra_vibrador_residual || 0,
+        humedad: r.expander_costra_vibrador_humedad || 0
+      },
+      costraDirecta: {
+        residual: r.expander_costra_directa_residual || 0,
+        humedad: r.expander_costra_directa_humedad || 0
+      },
+      aceite: (r.expander_aceite || []) as Array<{
+        tipo: 'Expander' | 'Prensa' | 'Desborrador' | 'Filtro';
+        filtroNumeros?: string;
+        humedad: number;
+        acidez: number;
+        acidoOleico: number;
+      }>
+    } : undefined;
+    
+    const aceitePlanta = r.planta_aceite_acidez !== null ? {
+      acidez: r.planta_aceite_acidez || 0,
+      acidoOleico: r.planta_aceite_oleico || 0,
+      humedad: r.planta_aceite_humedad || 0,
+      flashPoint: (r.planta_aceite_flash_point || '+') as '+' | '-'
+    } : undefined;
+    
+    return {
+      id: r.id,
+      fecha: r.fecha,
+      responsable: r.responsable,
+      turno: r.turno as 'Matutino' | 'Vespertino' | 'Nocturno',
+      estatus: r.estatus as 'Pendiente' | 'En proceso' | 'Completado',
+      pasta,
+      expander,
+      aceitePlanta
+    };
+  });
 
   const responsables = ['Q.F.B. Karen López', 'Ing. Carlos Mendoza', 'Q.F.B. Ana García'];
 
@@ -143,67 +198,100 @@ const Laboratorio = () => {
     r.fecha.includes(search)
   );
 
-  const handleNuevoReporte = () => {
+  const handleNuevoReporte = async () => {
     if (!formData.responsable) {
       toast.error('Seleccione un responsable');
       return;
     }
 
-    const nuevoReporte: ReporteLab = {
-      id: `REP-${String(reportes.length + 1).padStart(3, '0')}`,
-      fecha: new Date().toISOString().split('T')[0],
-      responsable: formData.responsable,
-      turno: formData.turno,
-      estatus: 'Pendiente',
-      pasta: formData.pastaHumedad ? {
-        textura: formData.pastaTextura,
-        humedadPromedio: parseFloat(formData.pastaHumedad) || 0,
-        costraVibrador: formData.pastaCostra,
-        proteina: parseFloat(formData.pastaProteina) || 0,
-        residuales: parseFloat(formData.pastaResiduales) || 0,
-        temperaturaPromedio: parseFloat(formData.pastaTemperatura) || 0
-      } : undefined,
-      expander: formData.expanderResidual ? {
-        residual: parseFloat(formData.expanderResidual) || 0,
-        humedad: parseFloat(formData.expanderHumedad) || 0
-      } : undefined,
-      hojuela: formData.hojuelaPorcentaje ? {
-        porcentaje: parseFloat(formData.hojuelaPorcentaje) || 0
-      } : undefined,
-      semilla: formData.semillaResidual ? {
-        residual: parseFloat(formData.semillaResidual) || 0,
-        humedad: parseFloat(formData.semillaHumedad) || 0
-      } : undefined,
-      aceitePlanta: formData.aceiteAcidez ? {
-        acidez: parseFloat(formData.aceiteAcidez) || 0,
-        acidoOleico: parseFloat(formData.aceiteOleico) || 0,
-        humedad: parseFloat(formData.aceiteHumedad) || 0,
-        flashPoint: formData.aceiteFlashPoint
-      } : undefined
-    };
+    try {
+      const proteina = formData.pastaProteina
+        .filter(item => item.valor && item.porcentaje)
+        .map(item => ({
+          valor: parseFloat(item.valor) || 0,
+          porcentaje: parseFloat(item.porcentaje) || 0,
+        }));
+      
+      const expanderAceite = formData.expanderAceite
+        .filter(item => item.humedad || item.acidez || item.acidoOleico)
+        .map(item => ({
+          tipo: item.tipo,
+          filtroNumeros: item.filtroNumeros || undefined,
+          humedad: parseFloat(item.humedad) || 0,
+          acidez: parseFloat(item.acidez) || 0,
+          acidoOleico: parseFloat(item.acidoOleico) || 0,
+        }));
 
-    setReportes([nuevoReporte, ...reportes]);
-    setFormData({
-      turno: 'Matutino',
-      responsable: '',
-      pastaTextura: 'Alto',
-      pastaHumedad: '',
-      pastaCostra: 'Alto',
-      pastaProteina: '',
-      pastaResiduales: '',
-      pastaTemperatura: '',
-      expanderResidual: '',
-      expanderHumedad: '',
-      hojuelaPorcentaje: '',
-      semillaResidual: '',
-      semillaHumedad: '',
-      aceiteAcidez: '',
-      aceiteOleico: '',
-      aceiteHumedad: '',
-      aceiteFlashPoint: '+'
-    });
-    setIsNuevoReporteOpen(false);
-    toast.success('Reporte de laboratorio creado');
+      await addReporte({
+        id: '', // Se generará automáticamente
+        fecha: new Date().toISOString().split('T')[0],
+        responsable: formData.responsable,
+        turno: formData.turno,
+        estatus: 'Pendiente',
+        // PLANTA
+        planta_textura_promedio: formData.pastaTexturaPromedio ? parseFloat(formData.pastaTexturaPromedio) : null,
+        planta_textura_alto: formData.pastaTexturaAlto ? parseFloat(formData.pastaTexturaAlto) : null,
+        planta_textura_bajo: formData.pastaTexturaBajo ? parseFloat(formData.pastaTexturaBajo) : null,
+        planta_humedad_promedio: formData.pastaHumedadPromedio ? parseFloat(formData.pastaHumedadPromedio) : null,
+        planta_humedad_alto: formData.pastaHumedadAlto ? parseFloat(formData.pastaHumedadAlto) : null,
+        planta_humedad_bajo: formData.pastaHumedadBajo ? parseFloat(formData.pastaHumedadBajo) : null,
+        planta_proteina: proteina.length > 0 ? proteina : null,
+        planta_residuales_promedio: formData.pastaResidualesPromedio ? parseFloat(formData.pastaResidualesPromedio) : null,
+        planta_residuales_alto: formData.pastaResidualesAlto ? parseFloat(formData.pastaResidualesAlto) : null,
+        planta_residuales_bajo: formData.pastaResidualesBajo ? parseFloat(formData.pastaResidualesBajo) : null,
+        planta_temperatura_promedio: formData.pastaTemperatura ? parseFloat(formData.pastaTemperatura) : null,
+        planta_aceite_acidez: formData.aceiteAcidez ? parseFloat(formData.aceiteAcidez) : null,
+        planta_aceite_oleico: formData.aceiteOleico ? parseFloat(formData.aceiteOleico) : null,
+        planta_aceite_humedad: formData.aceiteHumedad ? parseFloat(formData.aceiteHumedad) : null,
+        planta_aceite_flash_point: formData.aceiteFlashPoint || null,
+        // EXPANDER
+        expander_hojuela_residual: formData.expanderHojuelaResidual ? parseFloat(formData.expanderHojuelaResidual) : null,
+        expander_hojuela_humedad: formData.expanderHojuelaHumedad ? parseFloat(formData.expanderHojuelaHumedad) : null,
+        expander_semilla_humedad: formData.expanderSemillaHumedad ? parseFloat(formData.expanderSemillaHumedad) : null,
+        expander_semilla_contenido_aceite: formData.expanderSemillaContenidoAceite ? parseFloat(formData.expanderSemillaContenidoAceite) : null,
+        expander_costra_vibrador_residual: formData.expanderCostraVibradorResidual ? parseFloat(formData.expanderCostraVibradorResidual) : null,
+        expander_costra_vibrador_humedad: formData.expanderCostraVibradorHumedad ? parseFloat(formData.expanderCostraVibradorHumedad) : null,
+        expander_costra_directa_residual: formData.expanderCostraDirectaResidual ? parseFloat(formData.expanderCostraDirectaResidual) : null,
+        expander_costra_directa_humedad: formData.expanderCostraDirectaHumedad ? parseFloat(formData.expanderCostraDirectaHumedad) : null,
+        expander_aceite: expanderAceite.length > 0 ? expanderAceite : null
+      });
+      
+      await loadReportes();
+      
+      setFormData({
+        turno: 'Matutino',
+        responsable: '',
+        pastaTexturaPromedio: '',
+        pastaTexturaAlto: '',
+        pastaTexturaBajo: '',
+        pastaHumedadPromedio: '',
+        pastaHumedadAlto: '',
+        pastaHumedadBajo: '',
+        pastaProteina: [{ valor: '', porcentaje: '' }],
+        pastaResidualesPromedio: '',
+        pastaResidualesAlto: '',
+        pastaResidualesBajo: '',
+        pastaTemperatura: '',
+        expanderHojuelaResidual: '',
+        expanderHojuelaHumedad: '',
+        expanderSemillaHumedad: '',
+        expanderSemillaContenidoAceite: '',
+        expanderCostraVibradorResidual: '',
+        expanderCostraVibradorHumedad: '',
+        expanderCostraDirectaResidual: '',
+        expanderCostraDirectaHumedad: '',
+        expanderAceite: [{ tipo: 'Expander' as 'Expander' | 'Prensa' | 'Desborrador' | 'Filtro', filtroNumeros: '', humedad: '', acidez: '', acidoOleico: '' }],
+        aceiteAcidez: '',
+        aceiteOleico: '',
+        aceiteHumedad: '',
+        aceiteFlashPoint: '+'
+      });
+      setIsNuevoReporteOpen(false);
+      toast.success('Reporte de laboratorio creado');
+    } catch (error) {
+      console.error('Error creating reporte:', error);
+      toast.error('Error al crear reporte');
+    }
   };
 
   const handleVerDetalle = (reporte: ReporteLab) => {
@@ -284,10 +372,10 @@ const Laboratorio = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>ID</TableHead>
                   <TableHead>FECHA</TableHead>
                   <TableHead>RESPONSABLE</TableHead>
                   <TableHead>TURNO</TableHead>
-                  <TableHead>ESTATUS</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
@@ -298,12 +386,12 @@ const Laboratorio = () => {
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => handleVerDetalle(reporte)}
                   >
-                    <TableCell className="font-medium">{reporte.fecha}</TableCell>
+                    <TableCell className="font-medium">{reporte.id}</TableCell>
+                    <TableCell>{reporte.fecha}</TableCell>
                     <TableCell>{reporte.responsable}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{reporte.turno}</Badge>
                     </TableCell>
-                    <TableCell>{getEstatusBadge(reporte.estatus)}</TableCell>
                     <TableCell>
                       <Eye className="h-4 w-4 text-muted-foreground" />
                     </TableCell>
@@ -356,46 +444,228 @@ const Laboratorio = () => {
 
               <Separator />
 
-              {/* PASTA */}
+              {/* PLANTA */}
               <div>
-                <h3 className="font-semibold text-lg mb-3">PASTA</h3>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Textura</Label>
-                    <Select value={formData.pastaTextura} onValueChange={(v) => setFormData({ ...formData, pastaTextura: v as any })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Alto">Alto</SelectItem>
-                        <SelectItem value="Bajo">Bajo</SelectItem>
-                      </SelectContent>
-                    </Select>
+                <h3 className="font-semibold text-lg mb-3 bg-red-600 text-white p-2 text-center">PLANTA</h3>
+                
+                {/* PASTA */}
+                <div className="mb-4 border rounded-lg p-4 bg-gray-50">
+                  <h3 className="font-semibold text-lg mb-3">PASTA</h3>
+                  
+                  {/* TEXTURA */}
+                <div className="mb-4">
+                  <Label className="text-base font-semibold mb-2 block">TEXTURA</Label>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm text-red-600 font-semibold">PROMEDIO (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.pastaTexturaPromedio} 
+                        onChange={(e) => setFormData({ ...formData, pastaTexturaPromedio: e.target.value })} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm text-red-600 font-semibold">ALTO (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.pastaTexturaAlto} 
+                        onChange={(e) => setFormData({ ...formData, pastaTexturaAlto: e.target.value })} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm text-red-600 font-semibold">BAJO (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.pastaTexturaBajo} 
+                        onChange={(e) => setFormData({ ...formData, pastaTexturaBajo: e.target.value })} 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* HUMEDAD */}
+                <div className="mb-4">
+                  <Label className="text-base font-semibold mb-2 block">HUMEDAD</Label>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm text-red-600 font-semibold">PROMEDIO (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.pastaHumedadPromedio} 
+                        onChange={(e) => setFormData({ ...formData, pastaHumedadPromedio: e.target.value })} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm text-red-600 font-semibold">ALTO (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.pastaHumedadAlto} 
+                        onChange={(e) => setFormData({ ...formData, pastaHumedadAlto: e.target.value })} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm text-red-600 font-semibold">BAJO (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.pastaHumedadBajo} 
+                        onChange={(e) => setFormData({ ...formData, pastaHumedadBajo: e.target.value })} 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* PROTEINA - Repeater */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-base font-semibold">PROTEINA</Label>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setFormData({
+                          ...formData,
+                          pastaProteina: [...formData.pastaProteina, { valor: '', porcentaje: '' }]
+                        });
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Agregar Fila
+                    </Button>
                   </div>
                   <div className="space-y-2">
-                    <Label>Humedad Promedio (%)</Label>
-                    <Input type="number" step="0.1" value={formData.pastaHumedad} onChange={(e) => setFormData({ ...formData, pastaHumedad: e.target.value })} />
+                    {formData.pastaProteina.map((item, index) => (
+                      <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-end">
+                        <div className="space-y-2">
+                          <Label className="text-sm">Valor</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="Ej: 5.30"
+                            value={item.valor}
+                            onChange={(e) => {
+                              const newProteina = [...formData.pastaProteina];
+                              newProteina[index].valor = e.target.value;
+                              setFormData({ ...formData, pastaProteina: newProteina });
+                            }}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm">Porcentaje (%)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="Ej: 21.47"
+                            value={item.porcentaje}
+                            onChange={(e) => {
+                              const newProteina = [...formData.pastaProteina];
+                              newProteina[index].porcentaje = e.target.value;
+                              setFormData({ ...formData, pastaProteina: newProteina });
+                            }}
+                          />
+                        </div>
+                        {formData.pastaProteina.length > 1 && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              const newProteina = formData.pastaProteina.filter((_, i) => i !== index);
+                              setFormData({ ...formData, pastaProteina: newProteina });
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                  <div className="space-y-2">
-                    <Label>Costra Vibrador</Label>
-                    <Select value={formData.pastaCostra} onValueChange={(v) => setFormData({ ...formData, pastaCostra: v as any })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Alto">Alto</SelectItem>
-                        <SelectItem value="Bajo">Bajo</SelectItem>
-                      </SelectContent>
-                    </Select>
+                </div>
+
+                {/* RESIDUALES */}
+                <div className="mb-4">
+                  <Label className="text-base font-semibold mb-2 block">RESIDUALES</Label>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm text-red-600 font-semibold">PROMEDIO (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.pastaResidualesPromedio} 
+                        onChange={(e) => setFormData({ ...formData, pastaResidualesPromedio: e.target.value })} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm text-red-600 font-semibold">ALTO (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.pastaResidualesAlto} 
+                        onChange={(e) => setFormData({ ...formData, pastaResidualesAlto: e.target.value })} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm text-red-600 font-semibold">BAJO (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.pastaResidualesBajo} 
+                        onChange={(e) => setFormData({ ...formData, pastaResidualesBajo: e.target.value })} 
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Proteína (%)</Label>
-                    <Input type="number" step="0.1" value={formData.pastaProteina} onChange={(e) => setFormData({ ...formData, pastaProteina: e.target.value })} />
+                </div>
+
+                {/* TEMPERATURA PROMEDIO */}
+                <div className="mb-4">
+                  <Label className="text-base font-semibold mb-2 block">TEMPERATURA PROMEDIO (°C)</Label>
+                  <div className="grid grid-cols-1 gap-4 max-w-xs">
+                    <div className="space-y-2">
+                      <Input 
+                        type="number" 
+                        step="0.1" 
+                        placeholder="Ej: 48.5"
+                        value={formData.pastaTemperatura} 
+                        onChange={(e) => setFormData({ ...formData, pastaTemperatura: e.target.value })} 
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Residuales (%)</Label>
-                    <Input type="number" step="0.1" value={formData.pastaResiduales} onChange={(e) => setFormData({ ...formData, pastaResiduales: e.target.value })} />
+                </div>
+
+                {/* ACEITE PLANTA */}
+                <div className="mb-4 border rounded-lg p-4 bg-gray-50">
+                  <h3 className="font-semibold text-lg mb-3">ACEITE PLANTA</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Acidez (%)</Label>
+                      <Input type="number" step="0.01" value={formData.aceiteAcidez} onChange={(e) => setFormData({ ...formData, aceiteAcidez: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Ácido Oleico (%)</Label>
+                      <Input type="number" step="0.1" value={formData.aceiteOleico} onChange={(e) => setFormData({ ...formData, aceiteOleico: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Humedad (%)</Label>
+                      <Input type="number" step="0.01" value={formData.aceiteHumedad} onChange={(e) => setFormData({ ...formData, aceiteHumedad: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Flash Point</Label>
+                      <Select value={formData.aceiteFlashPoint} onValueChange={(v) => setFormData({ ...formData, aceiteFlashPoint: v as any })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="+">+ (Positivo)</SelectItem>
+                          <SelectItem value="-">- (Negativo)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Temperatura Promedio (°C)</Label>
-                    <Input type="number" value={formData.pastaTemperatura} onChange={(e) => setFormData({ ...formData, pastaTemperatura: e.target.value })} />
-                  </div>
+                </div>
                 </div>
               </div>
 
@@ -403,76 +673,226 @@ const Laboratorio = () => {
 
               {/* EXPANDER */}
               <div>
-                <h3 className="font-semibold text-lg mb-3">EXPANDER</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Residual (%)</Label>
-                    <Input type="number" step="0.1" value={formData.expanderResidual} onChange={(e) => setFormData({ ...formData, expanderResidual: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Humedad (%)</Label>
-                    <Input type="number" step="0.1" value={formData.expanderHumedad} onChange={(e) => setFormData({ ...formData, expanderHumedad: e.target.value })} />
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* HOJUELA */}
-              <div>
-                <h3 className="font-semibold text-lg mb-3">HOJUELA (PROVISIONAL)</h3>
-                <div className="grid grid-cols-1 gap-4">
-                  <div className="space-y-2">
-                    <Label>Porcentaje (%)</Label>
-                    <Input type="number" step="0.1" value={formData.hojuelaPorcentaje} onChange={(e) => setFormData({ ...formData, hojuelaPorcentaje: e.target.value })} />
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* SEMILLA */}
-              <div>
-                <h3 className="font-semibold text-lg mb-3">SEMILLA</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Residual (%)</Label>
-                    <Input type="number" step="0.1" value={formData.semillaResidual} onChange={(e) => setFormData({ ...formData, semillaResidual: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Humedad (%)</Label>
-                    <Input type="number" step="0.1" value={formData.semillaHumedad} onChange={(e) => setFormData({ ...formData, semillaHumedad: e.target.value })} />
+                <h3 className="font-semibold text-lg mb-3 bg-red-600 text-white p-2 text-center">EXPANDER</h3>
+                
+                {/* HOJUELA (PROVISIONAL) */}
+                <div className="mb-4 border rounded-lg p-4 bg-gray-50">
+                  <Label className="text-base font-semibold mb-3 block">HOJUELA (PROVISIONAL)</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">RESIDUAL (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.expanderHojuelaResidual} 
+                        onChange={(e) => setFormData({ ...formData, expanderHojuelaResidual: e.target.value })} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">HUMEDAD (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.expanderHojuelaHumedad} 
+                        onChange={(e) => setFormData({ ...formData, expanderHojuelaHumedad: e.target.value })} 
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <Separator />
+                {/* SEMILLA */}
+                <div className="mb-4 border rounded-lg p-4 bg-gray-50">
+                  <Label className="text-base font-semibold mb-3 block">SEMILLA</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">HUMEDAD (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.expanderSemillaHumedad} 
+                        onChange={(e) => setFormData({ ...formData, expanderSemillaHumedad: e.target.value })} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">CONTENIDO ACEITE (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.expanderSemillaContenidoAceite} 
+                        onChange={(e) => setFormData({ ...formData, expanderSemillaContenidoAceite: e.target.value })} 
+                      />
+                    </div>
+                  </div>
+                </div>
 
-              {/* ACEITE PLANTA */}
-              <div>
-                <h3 className="font-semibold text-lg mb-3">ACEITE PLANTA</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Acidez (%)</Label>
-                    <Input type="number" step="0.01" value={formData.aceiteAcidez} onChange={(e) => setFormData({ ...formData, aceiteAcidez: e.target.value })} />
+                {/* COSTRA VIBRADOR */}
+                <div className="mb-4 border rounded-lg p-4 bg-gray-50">
+                  <Label className="text-base font-semibold mb-3 block">COSTRA VIBRADOR</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">RESIDUAL (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.expanderCostraVibradorResidual} 
+                        onChange={(e) => setFormData({ ...formData, expanderCostraVibradorResidual: e.target.value })} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">HUMEDAD (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.expanderCostraVibradorHumedad} 
+                        onChange={(e) => setFormData({ ...formData, expanderCostraVibradorHumedad: e.target.value })} 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* COSTRA DIRECTA */}
+                <div className="mb-4 border rounded-lg p-4 bg-gray-50">
+                  <Label className="text-base font-semibold mb-3 block">COSTRA DIRECTA</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">RESIDUAL (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.expanderCostraDirectaResidual} 
+                        onChange={(e) => setFormData({ ...formData, expanderCostraDirectaResidual: e.target.value })} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">HUMEDAD (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.expanderCostraDirectaHumedad} 
+                        onChange={(e) => setFormData({ ...formData, expanderCostraDirectaHumedad: e.target.value })} 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ACEITE */}
+                <div className="mb-4 border rounded-lg p-4 bg-gray-50">
+                  <div className="flex items-center justify-between mb-3">
+                    <Label className="text-base font-semibold">ACEITE</Label>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setFormData({
+                          ...formData,
+                          expanderAceite: [...formData.expanderAceite, { tipo: 'Expander', filtroNumeros: '', humedad: '', acidez: '', acidoOleico: '' }]
+                        });
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Agregar Fila
+                    </Button>
                   </div>
                   <div className="space-y-2">
-                    <Label>Ácido Oleico (%)</Label>
-                    <Input type="number" step="0.1" value={formData.aceiteOleico} onChange={(e) => setFormData({ ...formData, aceiteOleico: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Humedad (%)</Label>
-                    <Input type="number" step="0.01" value={formData.aceiteHumedad} onChange={(e) => setFormData({ ...formData, aceiteHumedad: e.target.value })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Flash Point</Label>
-                    <Select value={formData.aceiteFlashPoint} onValueChange={(v) => setFormData({ ...formData, aceiteFlashPoint: v as any })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="+">+ (Positivo)</SelectItem>
-                        <SelectItem value="-">- (Negativo)</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="grid grid-cols-5 gap-2 font-semibold text-sm border-b pb-2">
+                      <div>Tipo</div>
+                      <div>Filtro</div>
+                      <div>HUMEDAD (%)</div>
+                      <div>ACIDEZ (%)</div>
+                      <div>ÁCIDO OLEICO (%)</div>
+                    </div>
+                    {formData.expanderAceite.map((item, index) => (
+                      <div key={index} className="grid grid-cols-5 gap-2 items-end">
+                        <div className="space-y-2">
+                          <Select 
+                            value={item.tipo} 
+                            onValueChange={(v) => {
+                              const newAceite = [...formData.expanderAceite];
+                              newAceite[index].tipo = v as any;
+                              setFormData({ ...formData, expanderAceite: newAceite });
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Expander">Expander</SelectItem>
+                              <SelectItem value="Prensa">Prensa</SelectItem>
+                              <SelectItem value="Desborrador">Desborrador</SelectItem>
+                              <SelectItem value="Filtro">Filtro</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          {item.tipo === 'Filtro' ? (
+                            <Input
+                              placeholder="Ej: 19, 23, 2, 4 y 8"
+                              value={item.filtroNumeros}
+                              onChange={(e) => {
+                                const newAceite = [...formData.expanderAceite];
+                                newAceite[index].filtroNumeros = e.target.value;
+                                setFormData({ ...formData, expanderAceite: newAceite });
+                              }}
+                            />
+                          ) : (
+                            <Input disabled className="bg-gray-100" />
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={item.humedad}
+                            onChange={(e) => {
+                              const newAceite = [...formData.expanderAceite];
+                              newAceite[index].humedad = e.target.value;
+                              setFormData({ ...formData, expanderAceite: newAceite });
+                            }}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={item.acidez}
+                            onChange={(e) => {
+                              const newAceite = [...formData.expanderAceite];
+                              newAceite[index].acidez = e.target.value;
+                              setFormData({ ...formData, expanderAceite: newAceite });
+                            }}
+                          />
+                        </div>
+                        <div className="space-y-2 flex gap-2">
+                          <Input
+                            type="number"
+                            step="0.0001"
+                            placeholder="0.0000"
+                            value={item.acidoOleico}
+                            onChange={(e) => {
+                              const newAceite = [...formData.expanderAceite];
+                              newAceite[index].acidoOleico = e.target.value;
+                              setFormData({ ...formData, expanderAceite: newAceite });
+                            }}
+                          />
+                          {formData.expanderAceite.length > 1 && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                const newAceite = formData.expanderAceite.filter((_, i) => i !== index);
+                                setFormData({ ...formData, expanderAceite: newAceite });
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -491,7 +911,7 @@ const Laboratorio = () => {
 
         {/* Detalle Reporte Dialog */}
         <Dialog open={isDetalleOpen} onOpenChange={setIsDetalleOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
             {selectedReporte && (
               <>
                 <DialogHeader>
@@ -499,92 +919,137 @@ const Laboratorio = () => {
                     <FileText className="h-5 w-5" />
                     Reporte {selectedReporte.id} - {selectedReporte.fecha}
                   </DialogTitle>
+                  <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                    <span><strong>Responsable:</strong> {selectedReporte.responsable}</span>
+                    <span><strong>Turno:</strong> <Badge variant="outline" className="ml-1">{selectedReporte.turno}</Badge></span>
+                  </div>
                 </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="grid grid-cols-3 gap-4 mb-4">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Responsable</Label>
-                      <p className="font-medium">{selectedReporte.responsable}</p>
+                <div className="py-4">
+                  <div className="grid grid-cols-2 gap-6">
+                    {/* Columna Izquierda - PLANTA */}
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-lg mb-4 pb-2 border-b">PLANTA</h3>
+                      
+                      {selectedReporte.pasta && (
+                        <div className="space-y-4">
+                          <div className="border rounded-lg p-4 bg-gray-50">
+                            <h4 className="font-semibold text-base mb-3">PASTA</h4>
+                            <div className="space-y-3 text-sm">
+                              <div>
+                                <span className="font-semibold text-red-600">TEXTURA:</span>
+                                <div className="ml-2 mt-1 space-y-1">
+                                  <div>PROMEDIO: <span className="font-medium">{selectedReporte.pasta.textura.promedio}%</span></div>
+                                  <div>ALTO: <span className="font-medium">{selectedReporte.pasta.textura.alto}%</span></div>
+                                  <div>BAJO: <span className="font-medium">{selectedReporte.pasta.textura.bajo}%</span></div>
+                                </div>
+                              </div>
+                              <div className="pt-2 border-t">
+                                <span className="font-semibold text-red-600">HUMEDAD:</span>
+                                <div className="ml-2 mt-1 space-y-1">
+                                  <div>PROMEDIO: <span className="font-medium">{selectedReporte.pasta.humedad.promedio}%</span></div>
+                                  <div>ALTO: <span className="font-medium">{selectedReporte.pasta.humedad.alto}%</span></div>
+                                  <div>BAJO: <span className="font-medium">{selectedReporte.pasta.humedad.bajo}%</span></div>
+                                </div>
+                              </div>
+                              <div className="pt-2 border-t">
+                                <span className="font-semibold text-red-600">PROTEINA:</span>
+                                <div className="ml-2 mt-1 space-y-1">
+                                  {selectedReporte.pasta.proteina.map((item, idx) => (
+                                    <div key={idx}><span className="font-medium">{item.valor}</span>: <span className="font-medium">{item.porcentaje}%</span></div>
+                                  ))}
+                                </div>
+                              </div>
+                              <div className="pt-2 border-t">
+                                <span className="font-semibold text-red-600">RESIDUALES:</span>
+                                <div className="ml-2 mt-1 space-y-1">
+                                  <div>PROMEDIO: <span className="font-medium">{selectedReporte.pasta.residuales.promedio}%</span></div>
+                                  <div>ALTO: <span className="font-medium">{selectedReporte.pasta.residuales.alto}%</span></div>
+                                  <div>BAJO: <span className="font-medium">{selectedReporte.pasta.residuales.bajo}%</span></div>
+                                </div>
+                              </div>
+                              <div className="pt-2 border-t">
+                                <span className="font-semibold text-red-600">TEMPERATURA PROMEDIO:</span> <span className="font-medium">{selectedReporte.pasta.temperaturaPromedio}°C</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {selectedReporte.aceitePlanta && (
+                            <div className="border rounded-lg p-4 bg-gray-50">
+                              <h4 className="font-semibold text-base mb-3">ACEITE PLANTA</h4>
+                              <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div><span className="text-muted-foreground">Acidez:</span> <span className="font-medium">{selectedReporte.aceitePlanta.acidez}%</span></div>
+                                <div><span className="text-muted-foreground">Ác. Oleico:</span> <span className="font-medium">{selectedReporte.aceitePlanta.acidoOleico}%</span></div>
+                                <div><span className="text-muted-foreground">Humedad:</span> <span className="font-medium">{selectedReporte.aceitePlanta.humedad}%</span></div>
+                                <div><span className="text-muted-foreground">Flash Point:</span> <span className="font-medium">{selectedReporte.aceitePlanta.flashPoint}</span></div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Turno</Label>
-                      <Badge variant="outline">{selectedReporte.turno}</Badge>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Estatus</Label>
-                      {getEstatusBadge(selectedReporte.estatus)}
+
+                    {/* Columna Derecha - EXPANDER */}
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-lg mb-4 pb-2 border-b">EXPANDER</h3>
+                      
+                      {selectedReporte.expander && (
+                        <div className="space-y-4">
+                          <div className="border rounded-lg p-4 bg-gray-50">
+                            <h4 className="font-semibold text-base mb-3">HOJUELA (PROVISIONAL)</h4>
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div><span className="text-muted-foreground">RESIDUAL:</span> <span className="font-medium">{selectedReporte.expander.hojuela.residual}%</span></div>
+                              <div><span className="text-muted-foreground">HUMEDAD:</span> <span className="font-medium">{selectedReporte.expander.hojuela.humedad}%</span></div>
+                            </div>
+                          </div>
+
+                          <div className="border rounded-lg p-4 bg-gray-50">
+                            <h4 className="font-semibold text-base mb-3">SEMILLA</h4>
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div><span className="text-muted-foreground">HUMEDAD:</span> <span className="font-medium">{selectedReporte.expander.semilla.humedad}%</span></div>
+                              <div><span className="text-muted-foreground">CONTENIDO ACEITE:</span> <span className="font-medium">{selectedReporte.expander.semilla.contenidoAceite}%</span></div>
+                            </div>
+                          </div>
+
+                          <div className="border rounded-lg p-4 bg-gray-50">
+                            <h4 className="font-semibold text-base mb-3">COSTRA VIBRADOR</h4>
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div><span className="text-muted-foreground">RESIDUAL:</span> <span className="font-medium">{selectedReporte.expander.costraVibrador.residual}%</span></div>
+                              <div><span className="text-muted-foreground">HUMEDAD:</span> <span className="font-medium">{selectedReporte.expander.costraVibrador.humedad}%</span></div>
+                            </div>
+                          </div>
+
+                          <div className="border rounded-lg p-4 bg-gray-50">
+                            <h4 className="font-semibold text-base mb-3">COSTRA DIRECTA</h4>
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div><span className="text-muted-foreground">RESIDUAL:</span> <span className="font-medium">{selectedReporte.expander.costraDirecta.residual}%</span></div>
+                              <div><span className="text-muted-foreground">HUMEDAD:</span> <span className="font-medium">{selectedReporte.expander.costraDirecta.humedad}%</span></div>
+                            </div>
+                          </div>
+
+                          <div className="border rounded-lg p-4 bg-gray-50">
+                            <h4 className="font-semibold text-base mb-3">ACEITE</h4>
+                            <div className="space-y-2 text-sm">
+                              {selectedReporte.expander.aceite.map((item, idx) => (
+                                <div key={idx} className="pb-2 border-b last:border-0">
+                                  <div className="font-medium mb-1">
+                                    {item.tipo === 'Filtro' && item.filtroNumeros 
+                                      ? `Filtro (${item.filtroNumeros})`
+                                      : item.tipo
+                                    }
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground">
+                                    <div>HUMEDAD: <span className="font-medium text-foreground">{item.humedad}%</span></div>
+                                    <div>ACIDEZ: <span className="font-medium text-foreground">{item.acidez}%</span></div>
+                                    <div>ÁCIDO OLEICO: <span className="font-medium text-foreground">{item.acidoOleico}%</span></div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
-
-                  {selectedReporte.pasta && (
-                    <>
-                      <Separator />
-                      <div>
-                        <h4 className="font-semibold mb-2">PASTA</h4>
-                        <div className="grid grid-cols-3 gap-2 text-sm">
-                          <div><span className="text-muted-foreground">Textura:</span> {selectedReporte.pasta.textura}</div>
-                          <div><span className="text-muted-foreground">Humedad:</span> {selectedReporte.pasta.humedadPromedio}%</div>
-                          <div><span className="text-muted-foreground">Costra:</span> {selectedReporte.pasta.costraVibrador}</div>
-                          <div><span className="text-muted-foreground">Proteína:</span> {selectedReporte.pasta.proteina}%</div>
-                          <div><span className="text-muted-foreground">Residuales:</span> {selectedReporte.pasta.residuales}%</div>
-                          <div><span className="text-muted-foreground">Temp:</span> {selectedReporte.pasta.temperaturaPromedio}°C</div>
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {selectedReporte.expander && (
-                    <>
-                      <Separator />
-                      <div>
-                        <h4 className="font-semibold mb-2">EXPANDER</h4>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div><span className="text-muted-foreground">Residual:</span> {selectedReporte.expander.residual}%</div>
-                          <div><span className="text-muted-foreground">Humedad:</span> {selectedReporte.expander.humedad}%</div>
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {selectedReporte.hojuela && (
-                    <>
-                      <Separator />
-                      <div>
-                        <h4 className="font-semibold mb-2">HOJUELA</h4>
-                        <div className="text-sm">
-                          <span className="text-muted-foreground">Porcentaje:</span> {selectedReporte.hojuela.porcentaje}%
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {selectedReporte.semilla && (
-                    <>
-                      <Separator />
-                      <div>
-                        <h4 className="font-semibold mb-2">SEMILLA</h4>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div><span className="text-muted-foreground">Residual:</span> {selectedReporte.semilla.residual}%</div>
-                          <div><span className="text-muted-foreground">Humedad:</span> {selectedReporte.semilla.humedad}%</div>
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {selectedReporte.aceitePlanta && (
-                    <>
-                      <Separator />
-                      <div>
-                        <h4 className="font-semibold mb-2">ACEITE PLANTA</h4>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div><span className="text-muted-foreground">Acidez:</span> {selectedReporte.aceitePlanta.acidez}%</div>
-                          <div><span className="text-muted-foreground">Ác. Oleico:</span> {selectedReporte.aceitePlanta.acidoOleico}%</div>
-                          <div><span className="text-muted-foreground">Humedad:</span> {selectedReporte.aceitePlanta.humedad}%</div>
-                          <div><span className="text-muted-foreground">Flash Point:</span> {selectedReporte.aceitePlanta.flashPoint}</div>
-                        </div>
-                      </div>
-                    </>
-                  )}
                 </div>
                 <DialogFooter>
                   <DialogClose asChild>

@@ -9,18 +9,22 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Label } from '@/components/ui/label';
 import { Search, Plus, Download, Building2, MapPin, Phone, Mail, Eye, Edit, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
+import { useProveedores } from '@/services/hooks/useProveedores';
+import type { Proveedor as ProveedorDB } from '@/services/supabase/proveedores';
 
 interface Proveedor {
   id: number;
   empresa: string;
-  producto: string;
-  telefono: string;
-  email: string;
+  producto?: string | null;
+  telefono?: string | null;
+  email?: string | null;
   fechaAlta: string;
-  ubicacion: string;
+  ubicacion?: string | null;
 }
 
 const Proveedores = () => {
+  const { proveedores: proveedoresDB, loading, addProveedor, loadProveedores } = useProveedores();
+  
   const [search, setSearch] = useState('');
   const [isNuevoDialogOpen, setIsNuevoDialogOpen] = useState(false);
   const [isDetalleDialogOpen, setIsDetalleDialogOpen] = useState(false);
@@ -34,13 +38,16 @@ const Proveedores = () => {
     ubicacion: ''
   });
 
-  const [proveedores, setProveedores] = useState<Proveedor[]>([
-    { id: 1, empresa: 'Oleaginosas del Bajío SA de CV', producto: 'Frijol Soya', telefono: '462-123-4567', email: 'ventas@oleaginosas.com', fechaAlta: '2024-01-15', ubicacion: 'Irapuato, GTO' },
-    { id: 2, empresa: 'Granos del Norte SA de CV', producto: 'Sorgo', telefono: '844-234-5678', email: 'contacto@granosnorte.com', fechaAlta: '2024-02-20', ubicacion: 'Saltillo, COAH' },
-    { id: 3, empresa: 'Agrícola del Centro SA de CV', producto: 'Canola', telefono: '449-345-6789', email: 'info@agricolacentro.com', fechaAlta: '2024-03-10', ubicacion: 'Aguascalientes, AGS' },
-    { id: 4, empresa: 'Exportadora de Granos MX SA de CV', producto: 'Frijol Soya', telefono: '33-456-7890', email: 'export@granosmx.com', fechaAlta: '2024-04-05', ubicacion: 'Guadalajara, JAL' },
-    { id: 5, empresa: 'Semillas y Granos del Pacífico', producto: 'Maíz', telefono: '667-567-8901', email: 'ventas@semipacifico.com', fechaAlta: '2024-05-12', ubicacion: 'Culiacán, SIN' },
-  ]);
+  // Mapear proveedores de DB a formato local
+  const proveedores: Proveedor[] = proveedoresDB.map(p => ({
+    id: p.id,
+    empresa: p.empresa,
+    producto: p.producto || '',
+    telefono: p.telefono || '',
+    email: p.email || '',
+    fechaAlta: p.fecha_alta || new Date().toISOString().split('T')[0],
+    ubicacion: p.ubicacion || ''
+  }));
 
   const filteredProveedores = proveedores.filter(p =>
     p.empresa.toLowerCase().includes(search.toLowerCase()) ||
@@ -48,26 +55,29 @@ const Proveedores = () => {
     p.ubicacion.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleNuevoProveedor = () => {
+  const handleNuevoProveedor = async () => {
     if (!formData.empresa || !formData.producto) {
       toast.error('Complete los campos obligatorios');
       return;
     }
 
-    const nuevoProveedor: Proveedor = {
-      id: proveedores.length + 1,
-      empresa: formData.empresa,
-      producto: formData.producto,
-      telefono: formData.telefono,
-      email: formData.email,
-      fechaAlta: new Date().toISOString().split('T')[0],
-      ubicacion: formData.ubicacion
-    };
-
-    setProveedores([nuevoProveedor, ...proveedores]);
-    setFormData({ empresa: '', producto: '', telefono: '', email: '', ubicacion: '' });
-    setIsNuevoDialogOpen(false);
-    toast.success('Proveedor agregado correctamente');
+    try {
+      await addProveedor({
+        empresa: formData.empresa,
+        producto: formData.producto || null,
+        telefono: formData.telefono || null,
+        email: formData.email || null,
+        ubicacion: formData.ubicacion || null,
+        fecha_alta: new Date().toISOString().split('T')[0]
+      });
+      await loadProveedores();
+      setFormData({ empresa: '', producto: '', telefono: '', email: '', ubicacion: '' });
+      setIsNuevoDialogOpen(false);
+      toast.success('Proveedor agregado correctamente');
+    } catch (error) {
+      console.error('Error saving proveedor:', error);
+      toast.error('Error al guardar proveedor');
+    }
   };
 
   const handleVerDetalle = (proveedor: Proveedor) => {
@@ -172,24 +182,24 @@ const Proveedores = () => {
                 {filteredProveedores.map((proveedor) => (
                   <TableRow key={proveedor.id} className="cursor-pointer hover:bg-muted/50">
                     <TableCell className="font-medium">{proveedor.empresa}</TableCell>
-                    <TableCell>{proveedor.producto}</TableCell>
+                    <TableCell>{proveedor.producto || '-'}</TableCell>
                     <TableCell>
                       <span className="flex items-center gap-1">
                         <Phone className="h-3 w-3 text-muted-foreground" />
-                        {proveedor.telefono}
+                        {proveedor.telefono || '-'}
                       </span>
                     </TableCell>
                     <TableCell>
                       <span className="flex items-center gap-1">
                         <Mail className="h-3 w-3 text-muted-foreground" />
-                        {proveedor.email}
+                        {proveedor.email || '-'}
                       </span>
                     </TableCell>
                     <TableCell>{proveedor.fechaAlta}</TableCell>
                     <TableCell>
                       <span className="flex items-center gap-1">
                         <MapPin className="h-3 w-3 text-muted-foreground" />
-                        {proveedor.ubicacion}
+                        {proveedor.ubicacion || '-'}
                       </span>
                     </TableCell>
                     <TableCell>
@@ -285,7 +295,7 @@ const Proveedores = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Producto</Label>
-                      <p className="font-medium">{selectedProveedor.producto}</p>
+                      <p className="font-medium">{selectedProveedor.producto || '-'}</p>
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Fecha de Alta</Label>
@@ -295,21 +305,21 @@ const Proveedores = () => {
                       <Label className="text-xs text-muted-foreground">Teléfono</Label>
                       <p className="flex items-center gap-1">
                         <Phone className="h-3 w-3" />
-                        {selectedProveedor.telefono}
+                        {selectedProveedor.telefono || '-'}
                       </p>
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Email</Label>
                       <p className="flex items-center gap-1">
                         <Mail className="h-3 w-3" />
-                        {selectedProveedor.email}
+                        {selectedProveedor.email || '-'}
                       </p>
                     </div>
                     <div className="space-y-1 col-span-2">
                       <Label className="text-xs text-muted-foreground">Ubicación</Label>
                       <p className="flex items-center gap-1">
                         <MapPin className="h-3 w-3" />
-                        {selectedProveedor.ubicacion}
+                        {selectedProveedor.ubicacion || '-'}
                       </p>
                     </div>
                   </div>

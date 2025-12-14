@@ -2,18 +2,23 @@ import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { AnalisisConfig, getProductoAnalisis } from '@/utils/productAnalysis';
+
+interface AnalisisItem {
+  id: string | number;
+  nombre: string;
+  generaDescuento: boolean;
+  rangosDescuento?: Array<{ porcentaje: number; kgDescuentoTon: number }>;
+}
 
 interface AnalisisDinamicoProps {
-  producto: string;
+  analisis: AnalisisItem[]; // Análisis del producto desde Supabase
   valores: Record<string, number>;
   onChange: (nombre: string, valor: number) => void;
 }
 
-const AnalisisDinamico: React.FC<AnalisisDinamicoProps> = ({ producto, valores, onChange }) => {
-  const analisis = getProductoAnalisis(producto);
+const AnalisisDinamico: React.FC<AnalisisDinamicoProps> = ({ analisis, valores, onChange }) => {
 
-  if (analisis.length === 0) {
+  if (!analisis || analisis.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-4">
         No hay análisis configurados para este producto
@@ -21,10 +26,17 @@ const AnalisisDinamico: React.FC<AnalisisDinamicoProps> = ({ producto, valores, 
     );
   }
 
-  const getValorStatus = (config: AnalisisConfig, valor: number) => {
+  const getValorStatus = (item: AnalisisItem, valor: number) => {
     if (!valor) return 'neutral';
-    if (config.rangoMax !== undefined && valor > config.rangoMax) return 'error';
-    if (config.tolerancia !== undefined && valor > config.tolerancia) return 'warning';
+    // Verificar rangos si existen
+    const tieneRangos = item.rangosDescuento && item.rangosDescuento.length > 0;
+    if (tieneRangos) {
+      const maxRango = Math.max(...item.rangosDescuento.map(r => r.porcentaje));
+      if (valor > maxRango) return 'error';
+      // Encontrar el primer rango que exceda
+      const rangoExcedido = item.rangosDescuento.find(r => valor > r.porcentaje);
+      if (rangoExcedido) return 'warning';
+    }
     return 'ok';
   };
 
@@ -39,18 +51,19 @@ const AnalisisDinamico: React.FC<AnalisisDinamicoProps> = ({ producto, valores, 
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      {analisis.map((config) => {
-        const valor = valores[config.nombre] || 0;
-        const status = getValorStatus(config, valor);
+      {analisis.map((item) => {
+        const nombreAnalisis = item.nombre;
+        const valor = valores[nombreAnalisis] || 0;
+        const status = getValorStatus(item, valor);
         
         return (
           <div 
-            key={config.nombre} 
+            key={item.id} 
             className={`space-y-2 p-3 rounded-lg border ${getStatusColor(status)}`}
           >
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">{config.nombre}</Label>
-              {config.descuento && (
+              <Label className="text-sm font-medium">{nombreAnalisis}</Label>
+              {item.generaDescuento && (
                 <Badge variant="outline" className="text-xs">Descuento</Badge>
               )}
             </div>
@@ -60,17 +73,14 @@ const AnalisisDinamico: React.FC<AnalisisDinamicoProps> = ({ producto, valores, 
                 step="0.1" 
                 placeholder="0.0"
                 value={valor || ''}
-                onChange={(e) => onChange(config.nombre, parseFloat(e.target.value) || 0)}
+                onChange={(e) => onChange(nombreAnalisis, parseFloat(e.target.value) || 0)}
                 className="text-center"
               />
-              <span className="text-sm text-muted-foreground w-12">{config.unidad}</span>
+              <span className="text-sm text-muted-foreground w-12">%</span>
             </div>
-            {config.rangoMin !== undefined && config.rangoMax !== undefined && (
+            {item.rangosDescuento && item.rangosDescuento.length > 0 && (
               <p className="text-xs text-muted-foreground">
-                Rango: {config.rangoMin} - {config.rangoMax}{config.unidad}
-                {config.tolerancia !== undefined && (
-                  <span className="block">Tolerancia: {config.tolerancia}{config.unidad}</span>
-                )}
+                Rangos: {item.rangosDescuento.map(r => `${r.porcentaje}%`).join(', ')}
               </p>
             )}
           </div>
