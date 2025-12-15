@@ -7,6 +7,7 @@ export interface Orden {
   cliente_id?: number | null;
   proveedor_id?: number | null;
   tipo_operacion: string;
+  tipo_transporte?: string | null;
   destino?: string | null;
   nombre_chofer?: string | null;
   vehiculo?: string | null;
