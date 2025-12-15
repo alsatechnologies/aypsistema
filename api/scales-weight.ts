@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const SCALES_API_URL = process.env.SCALES_API_URL || 'http://apiscales.alsatechnologies.com';
+// Intentar usar HTTPS primero, si falla usar HTTP
+const SCALES_API_URL = process.env.SCALES_API_URL || 'https://apiscales.alsatechnologies.com';
 
 export default async function handler(
   req: VercelRequest,
@@ -19,9 +20,14 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { scale_id, get_type } = req.query;
+  // Obtener parámetros del query, asegurándose de que sean strings
+  const scale_id = typeof req.query.scale_id === 'string' ? req.query.scale_id : Array.isArray(req.query.scale_id) ? req.query.scale_id[0] : '';
+  const get_type = typeof req.query.get_type === 'string' ? req.query.get_type : Array.isArray(req.query.get_type) ? req.query.get_type[0] : 'weight';
+
+  console.log('Parámetros recibidos:', { scale_id, get_type, query: req.query });
 
   if (!scale_id || !get_type) {
+    console.error('Parámetros faltantes:', { scale_id, get_type });
     return res.status(400).json({
       success: false,
       error: 'scale_id y get_type son requeridos',
@@ -29,16 +35,35 @@ export default async function handler(
   }
 
   try {
-    const apiUrl = `${SCALES_API_URL}/scales/${scale_id}/${get_type}`;
+    // Asegurar que los parámetros estén correctamente codificados
+    const encodedScaleId = encodeURIComponent(scale_id);
+    const encodedGetType = encodeURIComponent(get_type);
+    
+    // Usar HTTP directamente ya que la API está en HTTP
+    const apiUrl = `http://apiscales.alsatechnologies.com/scales/${encodedScaleId}/${encodedGetType}`;
     console.log('Llamando a API de básculas:', apiUrl);
+    console.log('Parámetros codificados:', { encodedScaleId, encodedGetType });
 
-    // Hacer la solicitud al servidor de básculas
+    // Hacer la solicitud al servidor de básculas con timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos timeout
+
     const response = await fetch(apiUrl, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json, text/plain, */*',
       },
+      signal: controller.signal,
+    }).catch((fetchError: any) => {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        throw new Error('Timeout al conectar con la báscula (más de 10 segundos)');
+      }
+      throw fetchError;
     });
+    
+    clearTimeout(timeoutId);
 
     console.log('Respuesta recibida, status:', response.status);
 

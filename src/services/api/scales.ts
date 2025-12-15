@@ -58,8 +58,16 @@ export async function registerScale(config: ScaleConfig): Promise<{ success: boo
  */
 export async function getScaleWeight(scaleId: string, getType: string = 'weight'): Promise<ScaleReadingResponse> {
   try {
+    // Asegurar que los parámetros estén correctamente codificados
+    const encodedScaleId = encodeURIComponent(scaleId.trim());
+    const encodedGetType = encodeURIComponent(getType.trim());
+    const url = `${API_BASE_URL}?scale_id=${encodedScaleId}&get_type=${encodedGetType}`;
+    
+    console.log('Llamando a función serverless:', url);
+    console.log('Parámetros:', { scaleId, getType, encodedScaleId, encodedGetType });
+    
     // Usar la función serverless proxy con query parameters
-    const response = await fetch(`${API_BASE_URL}?scale_id=${encodeURIComponent(scaleId)}&get_type=${encodeURIComponent(getType)}`, {
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
