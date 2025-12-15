@@ -622,7 +622,12 @@ const Oficina = () => {
                 <DialogClose asChild>
                   <Button variant="outline">Cancelar</Button>
                 </DialogClose>
-                <Button className="bg-primary hover:bg-primary/90">Crear Orden</Button>
+                <Button 
+                  className="bg-primary hover:bg-primary/90"
+                  onClick={handleCrearNuevaOrden}
+                >
+                  Crear Orden
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
