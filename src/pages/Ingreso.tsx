@@ -36,7 +36,6 @@ interface Ingreso {
 const Ingreso = () => {
   const { ingresos: ingresosDB, loading, addIngreso, updateIngreso, loadIngresos } = useIngresos();
   const { addOrden } = useOrdenes();
-  const { addRecepcion } = useRecepciones();
   
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -99,10 +98,10 @@ const Ingreso = () => {
         fecha_hora_ingreso: now,
         fecha_hora_salida: null,
         ubicacion: data.ubicacion || 'Patio de espera',
-        producto: data.producto || null,
-        cliente: data.cliente || null,
-        proveedor: data.proveedor || null,
-        tipo_transporte: data.tipoTransporte || null,
+        producto: null,
+        cliente: null,
+        proveedor: null,
+        tipo_transporte: data.vehiculo ? (data.vehiculo === 'Ferrocarril' ? 'Ferroviaria' : 'Camión') : null,
         enviado_a_oficina: esBascula
       });
       
@@ -142,46 +141,8 @@ const Ingreso = () => {
           toast.error('Ingreso registrado, pero hubo un error al crear el ticket en Oficina');
         }
       } else if (data.motivo === 'Reciba') {
-        // Reciba va directamente al módulo de Reciba - crear recepción automáticamente
-        try {
-          // Generar boleta temporal única (se mostrará como "-" en la UI hasta que se complete)
-          // Usamos timestamp para garantizar unicidad
-          const timestamp = Date.now();
-          const boletaTemporal = `TEMP-${timestamp}`;
-          
-          // Obtener fecha actual en formato YYYY-MM-DD para MST
-          const fechaActual = new Date();
-          const fechaMST = `${fechaActual.getFullYear()}-${String(fechaActual.getMonth() + 1).padStart(2, '0')}-${String(fechaActual.getDate()).padStart(2, '0')}`;
-          
-          // Determinar tipo de transporte
-          let tipoTransporte: string | null = null;
-          if (data.vehiculo) {
-            tipoTransporte = data.vehiculo === 'Ferrocarril' ? 'Ferroviaria' : 'Camión';
-          }
-          
-          const recepcionData = {
-            boleta: boletaTemporal,
-            producto_id: null,
-            proveedor_id: null,
-            chofer: data.nombreChofer || null,
-            placas: data.placas || null,
-            fecha: fechaMST,
-            estatus: 'Pendiente',
-            tipo_transporte: tipoTransporte
-          };
-          
-          console.log('Intentando crear recepción con datos:', recepcionData);
-          
-          const nuevaRecepcion = await addRecepcion(recepcionData);
-          
-          console.log('Recepción creada exitosamente:', nuevaRecepcion);
-          toast.success('Ingreso registrado. Recepción creada en módulo Reciba');
-        } catch (error: any) {
-          console.error('Error detallado al crear recepción:', error);
-          console.error('Stack trace:', error?.stack);
-          const errorMessage = error?.message || error?.toString() || 'Error desconocido';
-          toast.error(`Ingreso registrado, pero hubo un error al crear la recepción: ${errorMessage}`);
-        }
+        // Reciba va directamente al módulo de Reciba, no a Oficina
+        toast.success('Ingreso registrado. Vehículo listo para báscula de Reciba');
       } else {
         toast.success('Ingreso registrado correctamente');
       }

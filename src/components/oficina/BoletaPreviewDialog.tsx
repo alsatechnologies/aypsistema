@@ -1,22 +1,24 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Printer, X } from 'lucide-react';
 import { formatDateTimeMST } from '@/utils/dateUtils';
+import { printTicket } from '@/services/api/printer';
+import { toast } from 'sonner';
 
 interface Orden {
   id: number;
   boleta: string;
   producto: string;
-  cliente: string;
+  cliente?: string | null;
   tipoOperacion: 'Reciba' | 'Embarque Nacional' | 'Embarque Exportación';
-  destino: string;
-  nombreChofer: string;
-  vehiculo: string;
-  placas: string;
-  fechaHoraIngreso: string;
+  destino?: string | null;
+  nombreChofer?: string | null;
+  vehiculo?: string | null;
+  placas?: string | null;
+  fechaHoraIngreso?: string | null;
   estatus: 'Nuevo' | 'En Proceso' | 'Completado';
 }
 
@@ -28,48 +30,46 @@ interface BoletaPreviewDialogProps {
 
 const BoletaPreviewDialog: React.FC<BoletaPreviewDialogProps> = ({ open, onOpenChange, orden }) => {
   const printRef = useRef<HTMLDivElement>(null);
+  const [isPrinting, setIsPrinting] = useState(false);
 
-  const handlePrint = () => {
-    const printContent = printRef.current;
-    if (!printContent) return;
+  const handlePrint = async () => {
+    if (!orden) return;
 
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+    setIsPrinting(true);
+    try {
+      // Formatear fecha actual
+      const fechaActual = format(new Date(), 'dd/MM/yyyy HH:mm', { locale: es });
 
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Boleta ${orden?.boleta}</title>
-          <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { font-family: Arial, sans-serif; padding: 20px; }
-            .boleta { max-width: 800px; margin: 0 auto; }
-            .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 16px; margin-bottom: 24px; }
-            .header h1 { font-size: 24px; font-weight: bold; margin-bottom: 8px; }
-            .header-info { display: flex; justify-content: space-between; font-size: 14px; }
-            .section { margin-bottom: 20px; }
-            .section-title { font-weight: bold; font-size: 16px; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-bottom: 12px; }
-            .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-            .info-row { display: flex; margin-bottom: 8px; }
-            .info-label { font-weight: 600; width: 120px; }
-            .info-value { flex: 1; }
-            .boleta-box { background: #f5f5f5; padding: 12px; border-radius: 8px; text-align: center; margin: 16px 0; }
-            .boleta-box .boleta { font-size: 28px; font-weight: bold; font-family: monospace; }
-            @media print { body { padding: 0; } }
-          </style>
-        </head>
-        <body>
-          ${printContent.innerHTML}
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 250);
+      // Preparar datos para la API
+      const printData = {
+        printer_config: {
+          connection_type: 'usb' as const,
+          printer_name: 'POS-80c',
+        },
+        producto: orden.producto || '',
+        fecha: fechaActual,
+        boleta: orden.boleta || '',
+        cliente: orden.cliente || '',
+        destino: orden.destino || '',
+        placas: orden.placas || '',
+        vehiculo: orden.vehiculo || '',
+        chofer: orden.nombreChofer || '',
+        copias: 2,
+      };
+
+      const result = await printTicket(printData);
+
+      if (result.success) {
+        toast.success('Ticket enviado a impresión correctamente');
+      } else {
+        toast.error(result.error || 'Error al imprimir ticket');
+      }
+    } catch (error) {
+      console.error('Error al imprimir:', error);
+      toast.error('Error al comunicarse con la impresora');
+    } finally {
+      setIsPrinting(false);
+    }
   };
 
   if (!orden) return null;
@@ -165,9 +165,13 @@ const BoletaPreviewDialog: React.FC<BoletaPreviewDialogProps> = ({ open, onOpenC
             <X className="h-4 w-4 mr-2" />
             Cerrar
           </Button>
-          <Button onClick={handlePrint} className="bg-primary hover:bg-primary/90">
+          <Button 
+            onClick={handlePrint} 
+            className="bg-primary hover:bg-primary/90"
+            disabled={isPrinting}
+          >
             <Printer className="h-4 w-4 mr-2" />
-            Imprimir
+            {isPrinting ? 'Imprimiendo...' : 'Imprimir'}
           </Button>
         </DialogFooter>
       </DialogContent>
