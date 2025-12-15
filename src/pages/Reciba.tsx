@@ -257,63 +257,56 @@ const Reciba = () => {
   };
 
   const handleCapturarPesoBruto = async () => {
-    // Si es báscula ferroviaria, leer desde la API
-    if (tipoBascula === 'Ferroviaria') {
-      try {
-        toast.loading('Leyendo peso de la báscula...', { id: 'reading-weight' });
-        const result = await getScaleWeight(PREDEFINED_SCALES.FERROVIARIA.scale_id, 'weight');
-        
-        if (result.success && result.weight !== undefined) {
-          setPesoBruto(Math.round(result.weight));
-          setHoraPesoBruto(getCurrentDateTimeMST());
-          toast.success(`Peso bruto capturado: ${Math.round(result.weight)} kg`, { id: 'reading-weight' });
-        } else {
-          toast.error(result.error || 'Error al leer peso de la báscula', { id: 'reading-weight' });
-        }
-      } catch (error) {
-        console.error('Error al leer peso:', error);
-        toast.error('Error al comunicarse con la báscula', { id: 'reading-weight' });
+    // Leer desde la API según el tipo de báscula seleccionada
+    const scaleId = tipoBascula === 'Ferroviaria' 
+      ? PREDEFINED_SCALES.FERROVIARIA.scale_id 
+      : PREDEFINED_SCALES.CAMION.scale_id;
+    
+    try {
+      toast.loading('Leyendo peso de la báscula...', { id: 'reading-weight' });
+      const result = await getScaleWeight(scaleId, 'weight');
+      
+      if (result.success && result.weight !== undefined) {
+        setPesoBruto(Math.round(result.weight));
+        setHoraPesoBruto(getCurrentDateTimeMST());
+        toast.success(`Peso bruto capturado: ${Math.round(result.weight)} kg`, { id: 'reading-weight' });
+      } else {
+        toast.error(result.error || 'Error al leer peso de la báscula', { id: 'reading-weight' });
       }
-    } else {
-      // Para báscula de camión, solo registrar la hora
-      setHoraPesoBruto(getCurrentDateTimeMST());
+    } catch (error) {
+      console.error('Error al leer peso:', error);
+      toast.error('Error al comunicarse con la báscula', { id: 'reading-weight' });
     }
   };
 
   const handleCapturarPesoTara = async () => {
-    // Si es báscula ferroviaria, leer desde la API
-    if (tipoBascula === 'Ferroviaria') {
-      try {
-        toast.loading('Leyendo peso de la báscula...', { id: 'reading-weight-tara' });
-        const result = await getScaleWeight(PREDEFINED_SCALES.FERROVIARIA.scale_id, 'weight');
+    // Leer desde la API según el tipo de báscula seleccionada
+    const scaleId = tipoBascula === 'Ferroviaria' 
+      ? PREDEFINED_SCALES.FERROVIARIA.scale_id 
+      : PREDEFINED_SCALES.CAMION.scale_id;
+    
+    try {
+      toast.loading('Leyendo peso de la báscula...', { id: 'reading-weight-tara' });
+      const result = await getScaleWeight(scaleId, 'weight');
+      
+      if (result.success && result.weight !== undefined) {
+        const nuevoPesoTara = Math.round(result.weight);
+        setPesoTara(nuevoPesoTara);
+        setHoraPesoTara(getCurrentDateTimeMST());
         
-        if (result.success && result.weight !== undefined) {
-          const nuevoPesoTara = Math.round(result.weight);
-          setPesoTara(nuevoPesoTara);
-          setHoraPesoTara(getCurrentDateTimeMST());
-          
-          // Calcular peso neto y su hora
-          const nuevoPesoNeto = pesoBruto - nuevoPesoTara;
-          if (nuevoPesoNeto > 0) {
-            setHoraPesoNeto(getCurrentDateTimeMST());
-          }
-          
-          toast.success(`Peso tara capturado: ${nuevoPesoTara} kg`, { id: 'reading-weight-tara' });
-        } else {
-          toast.error(result.error || 'Error al leer peso de la báscula', { id: 'reading-weight-tara' });
+        // Calcular peso neto y su hora
+        const nuevoPesoNeto = pesoBruto - nuevoPesoTara;
+        if (nuevoPesoNeto > 0) {
+          setHoraPesoNeto(getCurrentDateTimeMST());
         }
-      } catch (error) {
-        console.error('Error al leer peso:', error);
-        toast.error('Error al comunicarse con la báscula', { id: 'reading-weight-tara' });
+        
+        toast.success(`Peso tara capturado: ${nuevoPesoTara} kg`, { id: 'reading-weight-tara' });
+      } else {
+        toast.error(result.error || 'Error al leer peso de la báscula', { id: 'reading-weight-tara' });
       }
-    } else {
-      // Para báscula de camión, solo registrar la hora
-      setHoraPesoTara(getCurrentDateTimeMST());
-      // Calcular peso neto y su hora
-      const nuevoPesoNeto = pesoBruto - pesoTara;
-      if (nuevoPesoNeto > 0) {
-        setHoraPesoNeto(getCurrentDateTimeMST());
-      }
+    } catch (error) {
+      console.error('Error al leer peso:', error);
+      toast.error('Error al comunicarse con la báscula', { id: 'reading-weight-tara' });
     }
   };
 

@@ -181,62 +181,50 @@ const EmbarquePage = () => {
   }, [formData.pesoBruto, formData.pesoTara, horaPesoNeto]);
 
   const handleCapturarPesoTara = async () => {
-    // Si es transporte ferroviario, leer desde la API
-    if (selectedEmbarque?.tipoTransporte === 'Ferroviaria') {
-      try {
-        toast.loading('Leyendo peso de la báscula...', { id: 'reading-weight-tara' });
-        const result = await getScaleWeight(PREDEFINED_SCALES.FERROVIARIA.scale_id, 'weight');
-        
-        if (result.success && result.weight !== undefined) {
-          const nuevoPesoTara = Math.round(result.weight);
-          setFormData({ ...formData, pesoTara: nuevoPesoTara });
-          setHoraPesoTara(getCurrentDateTimeMST());
-          toast.success(`Peso tara capturado: ${nuevoPesoTara} kg`, { id: 'reading-weight-tara' });
-        } else {
-          toast.error(result.error || 'Error al leer peso de la báscula', { id: 'reading-weight-tara' });
-        }
-      } catch (error) {
-        console.error('Error al leer peso:', error);
-        toast.error('Error al comunicarse con la báscula', { id: 'reading-weight-tara' });
-      }
-    } else {
-      // Para transporte de camión, validar que haya un peso ingresado
-      if (formData.pesoTara > 0) {
+    // Leer desde la API según el tipo de transporte
+    const scaleId = selectedEmbarque?.tipoTransporte === 'Ferroviaria' 
+      ? PREDEFINED_SCALES.FERROVIARIA.scale_id 
+      : PREDEFINED_SCALES.CAMION.scale_id;
+    
+    try {
+      toast.loading('Leyendo peso de la báscula...', { id: 'reading-weight-tara' });
+      const result = await getScaleWeight(scaleId, 'weight');
+      
+      if (result.success && result.weight !== undefined) {
+        const nuevoPesoTara = Math.round(result.weight);
+        setFormData({ ...formData, pesoTara: nuevoPesoTara });
         setHoraPesoTara(getCurrentDateTimeMST());
-        toast.success('Peso Tara capturado');
+        toast.success(`Peso tara capturado: ${nuevoPesoTara} kg`, { id: 'reading-weight-tara' });
       } else {
-        toast.error('Ingrese un peso válido');
+        toast.error(result.error || 'Error al leer peso de la báscula', { id: 'reading-weight-tara' });
       }
+    } catch (error) {
+      console.error('Error al leer peso:', error);
+      toast.error('Error al comunicarse con la báscula', { id: 'reading-weight-tara' });
     }
   };
 
   const handleCapturarPesoBruto = async () => {
-    // Si es transporte ferroviario, leer desde la API
-    if (selectedEmbarque?.tipoTransporte === 'Ferroviaria') {
-      try {
-        toast.loading('Leyendo peso de la báscula...', { id: 'reading-weight-bruto' });
-        const result = await getScaleWeight(PREDEFINED_SCALES.FERROVIARIA.scale_id, 'weight');
-        
-        if (result.success && result.weight !== undefined) {
-          const nuevoPesoBruto = Math.round(result.weight);
-          setFormData({ ...formData, pesoBruto: nuevoPesoBruto });
-          setHoraPesoBruto(getCurrentDateTimeMST());
-          toast.success(`Peso bruto capturado: ${nuevoPesoBruto} kg`, { id: 'reading-weight-bruto' });
-        } else {
-          toast.error(result.error || 'Error al leer peso de la báscula', { id: 'reading-weight-bruto' });
-        }
-      } catch (error) {
-        console.error('Error al leer peso:', error);
-        toast.error('Error al comunicarse con la báscula', { id: 'reading-weight-bruto' });
-      }
-    } else {
-      // Para transporte de camión, validar que haya un peso ingresado
-      if (formData.pesoBruto > 0) {
+    // Leer desde la API según el tipo de transporte
+    const scaleId = selectedEmbarque?.tipoTransporte === 'Ferroviaria' 
+      ? PREDEFINED_SCALES.FERROVIARIA.scale_id 
+      : PREDEFINED_SCALES.CAMION.scale_id;
+    
+    try {
+      toast.loading('Leyendo peso de la báscula...', { id: 'reading-weight-bruto' });
+      const result = await getScaleWeight(scaleId, 'weight');
+      
+      if (result.success && result.weight !== undefined) {
+        const nuevoPesoBruto = Math.round(result.weight);
+        setFormData({ ...formData, pesoBruto: nuevoPesoBruto });
         setHoraPesoBruto(getCurrentDateTimeMST());
-        toast.success('Peso Bruto capturado');
+        toast.success(`Peso bruto capturado: ${nuevoPesoBruto} kg`, { id: 'reading-weight-bruto' });
       } else {
-        toast.error('Ingrese un peso válido');
+        toast.error(result.error || 'Error al leer peso de la báscula', { id: 'reading-weight-bruto' });
       }
+    } catch (error) {
+      console.error('Error al leer peso:', error);
+      toast.error('Error al comunicarse con la báscula', { id: 'reading-weight-bruto' });
     }
   };
 
