@@ -97,7 +97,7 @@ Si no las tienes:
 3. Ve a **Settings** (⚙️) → **API**
 4. Copia:
    - **Project URL** → `VITE_SUPABASE_URL`
-   - **anon public** key → `VITE_SUPABASE_ANON_KEY`
+   - **anon public** key → `image.pngVITE_SUPABASE_ANON_KEY`
 
 ---
 
@@ -240,4 +240,5 @@ Si encuentras problemas:
 4. Revisa que las variables de entorno estén correctas
 
 ¡Buena suerte con tu despliegue! 🚀
+
 

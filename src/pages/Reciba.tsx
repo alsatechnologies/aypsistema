@@ -389,7 +389,8 @@ const Reciba = () => {
         analisis: Object.keys(valoresAnalisis).length > 0 ? valoresAnalisis : null,
         estatus: 'Completado',
         tipo_bascula: tipoBascula,
-        almacen_id: almacenSeleccionado || null
+        almacen_id: almacenSeleccionado || null,
+        placas: selectedRecepcion.placas || null
       });
       
       const mensajeLote = recepcionActualizada?.codigo_lote ? ` - Lote: ${recepcionActualizada.codigo_lote}` : '';

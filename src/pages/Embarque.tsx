@@ -36,6 +36,7 @@ interface Embarque {
   producto: string;
   cliente: string;
   chofer?: string | null;
+  placas?: string | null;
   destino?: string | null;
   fecha: string;
   estatus: 'Pendiente' | 'Peso Tara' | 'En Carga' | 'Peso Bruto' | 'Completado';
@@ -77,6 +78,7 @@ const EmbarquePage = () => {
     producto: e.producto?.nombre || '',
     cliente: e.cliente?.empresa || '',
     chofer: e.chofer,
+    placas: e.placas,
     destino: e.destino,
     fecha: e.fecha,
     estatus: e.estatus as any,
@@ -103,7 +105,8 @@ const EmbarquePage = () => {
     valoresAnalisis: {} as Record<string, number>,
     pesoBruto: 0,
     pesoTara: 0,
-    almacenId: null as number | null
+    almacenId: null as number | null,
+    placas: ''
   });
 
   const [analisisProducto, setAnalisisProducto] = useState<any[]>([]);
@@ -161,7 +164,8 @@ const EmbarquePage = () => {
       valoresAnalisis: embarque.valoresAnalisis || {},
       pesoBruto: embarque.pesoBruto || 0,
       pesoTara: embarque.pesoTara || 0,
-      almacenId: embarque.almacenId || null
+      almacenId: embarque.almacenId || null,
+      placas: embarque.placas || ''
     });
     // Resetear horas de captura
     setHoraPesoTara(null);
@@ -310,7 +314,8 @@ const EmbarquePage = () => {
         sello_salida_2: formData.sellos.selloSalida2 || null,
         valores_analisis: Object.keys(formData.valoresAnalisis).length > 0 ? formData.valoresAnalisis : null,
         estatus: nuevoEstatus,
-        almacen_id: formData.almacenId || null
+        almacen_id: formData.almacenId || null,
+        placas: formData.placas || null
       });
       
       await loadEmbarques();
@@ -357,7 +362,8 @@ const EmbarquePage = () => {
         valores_analisis: Object.keys(formData.valoresAnalisis).length > 0 ? formData.valoresAnalisis : null,
         estatus: 'Completado',
         codigo_lote: codigoLote || null,
-        almacen_id: formData.almacenId || null
+        almacen_id: formData.almacenId || null,
+        placas: formData.placas || null
       });
       
       const codigoLoteFinal = embarqueActualizado?.codigo_lote || codigoLote;
@@ -380,7 +386,7 @@ const EmbarquePage = () => {
           peso_bruto: formData.pesoBruto,
           peso_tara: formData.pesoTara,
           chofer: selectedEmbarque.chofer || null,
-          placas: null // Los embarques no tienen placas directamente
+          placas: formData.placas || null
         });
       } catch (error) {
         console.error('Error creating movimiento:', error);
@@ -604,7 +610,11 @@ const EmbarquePage = () => {
                         </div>
                         <div className="space-y-2">
                           <Label>Placas</Label>
-                          <Input placeholder="ABC-123-A" />
+                          <Input 
+                            placeholder="ABC-123-A" 
+                            value={formData.placas}
+                            onChange={(e) => setFormData({ ...formData, placas: e.target.value })}
+                          />
                         </div>
                       </div>
                     </TabsContent>

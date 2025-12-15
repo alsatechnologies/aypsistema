@@ -68,3 +68,4 @@ CREATE POLICY "Allow all for authenticated users" ON public.operaciones_lotes FO
 ALTER FUNCTION public.update_updated_at_column() SET search_path = '';
 ALTER FUNCTION public.copy_codigo_lote_to_folio() SET search_path = '';
 
+

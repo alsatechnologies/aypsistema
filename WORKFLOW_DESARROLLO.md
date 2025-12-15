@@ -208,3 +208,4 @@ Desarrollo Local → git commit → git push → Vercel despliega automáticamen
 
 ¡Es así de simple! 🎉
 
+

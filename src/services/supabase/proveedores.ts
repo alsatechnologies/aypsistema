@@ -74,3 +74,4 @@ export async function deleteProveedor(id: number) {
   if (error) throw error;
 }
 
+

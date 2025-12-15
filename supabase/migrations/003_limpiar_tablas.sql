@@ -115,3 +115,4 @@ INSERT INTO origenes_lote (codigo, nombre, tipo, activo) VALUES
   ('00', 'OTROS', 'Otros', true)
 ON CONFLICT (codigo) DO NOTHING;
 
+

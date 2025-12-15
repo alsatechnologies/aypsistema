@@ -161,3 +161,4 @@ export async function deleteCliente(id: number) {
   if (error) throw error;
 }
 
+

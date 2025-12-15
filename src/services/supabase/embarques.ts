@@ -8,6 +8,7 @@ export interface Embarque {
   producto_id?: number | null;
   cliente_id?: number | null;
   chofer?: string | null;
+  placas?: string | null;
   destino?: string | null;
   fecha: string;
   estatus: string;
@@ -138,4 +139,5 @@ export async function deleteEmbarque(id: number) {
   
   if (error) throw error;
 }
+
 

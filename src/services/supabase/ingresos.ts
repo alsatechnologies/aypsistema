@@ -101,3 +101,4 @@ export async function deleteIngreso(id: number) {
   if (error) throw error;
 }
 
+

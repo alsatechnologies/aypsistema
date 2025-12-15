@@ -73,3 +73,4 @@ export async function deleteAlmacen(id: number) {
   if (error) throw error;
 }
 
+

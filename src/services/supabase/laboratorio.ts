@@ -154,3 +154,4 @@ export async function getSiguienteIdReporte(): Promise<string> {
   return `LAB-${String(siguienteNumero).padStart(4, '0')}`;
 }
 
+

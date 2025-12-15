@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import Header from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -14,11 +14,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import BoletaPreviewDialog from '@/components/oficina/BoletaPreviewDialog';
 import { generateNumeroBoleta, TipoOperacion } from '@/utils/folioGenerator';
 import { useOrdenes } from '@/services/hooks/useOrdenes';
+import { useProductos } from '@/services/hooks/useProductos';
+import { useClientes } from '@/services/hooks/useClientes';
+import { useProveedores } from '@/services/hooks/useProveedores';
 import type { Orden as OrdenDB } from '@/services/supabase/ordenes';
 import CompletarOrdenDialog from '@/components/oficina/CompletarOrdenDialog';
 import { toast } from 'sonner';
 import { formatDateTimeMST } from '@/utils/dateUtils';
 import { createEmbarque } from '@/services/supabase/embarques';
+import { createOrden } from '@/services/supabase/ordenes';
+import { getCurrentDateTimeMST } from '@/utils/dateUtils';
 
 interface Orden {
   id: number;
@@ -36,13 +41,47 @@ interface Orden {
 
 const Oficina = () => {
   const { ordenes: ordenesDB, loading, loadOrdenes, updateOrden } = useOrdenes();
+  const { productos } = useProductos();
+  const { clientes } = useClientes();
+  const { proveedores } = useProveedores();
   
   const [search, setSearch] = useState('');
   const [selectedOrden, setSelectedOrden] = useState<Orden | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [showCompletarDialog, setShowCompletarDialog] = useState(false);
   const [ordenParaCompletar, setOrdenParaCompletar] = useState<OrdenDB | null>(null);
+  const [isNuevaOrdenOpen, setIsNuevaOrdenOpen] = useState(false);
   
+  // Estado para el formulario de nueva orden
+  const [nuevaOrdenData, setNuevaOrdenData] = useState({
+    tipoOperacion: 'Embarque Nacional' as 'Reciba' | 'Embarque Nacional' | 'Embarque Exportación',
+    productoId: '',
+    clienteId: '',
+    proveedorId: '',
+    destino: '',
+    tipoTransporte: '',
+    chofer: '',
+    vehiculo: '',
+    placas: ''
+  });
+
+  // Resetear formulario cuando se cierra el diálogo
+  useEffect(() => {
+    if (!isNuevaOrdenOpen) {
+      setNuevaOrdenData({
+        tipoOperacion: 'Embarque Nacional',
+        productoId: '',
+        clienteId: '',
+        proveedorId: '',
+        destino: '',
+        tipoTransporte: '',
+        chofer: '',
+        vehiculo: '',
+        placas: ''
+      });
+    }
+  }, [isNuevaOrdenOpen]);
+
   // Mapear órdenes de DB a formato local
   const ordenes: Orden[] = ordenesDB.map(o => ({
     id: o.id,
@@ -69,6 +108,64 @@ const Oficina = () => {
     if (ordenCompleta) {
       setOrdenParaCompletar(ordenCompleta);
       setShowCompletarDialog(true);
+    }
+  };
+
+  const handleCrearNuevaOrden = async () => {
+    // Validaciones básicas
+    if (!nuevaOrdenData.productoId) {
+      toast.error('Debe seleccionar un producto');
+      return;
+    }
+
+    if (nuevaOrdenData.tipoOperacion === 'Reciba' && !nuevaOrdenData.proveedorId) {
+      toast.error('Debe seleccionar un proveedor para Reciba');
+      return;
+    }
+
+    if ((nuevaOrdenData.tipoOperacion === 'Embarque Nacional' || nuevaOrdenData.tipoOperacion === 'Embarque Exportación') && !nuevaOrdenData.clienteId) {
+      toast.error('Debe seleccionar un cliente para Embarque');
+      return;
+    }
+
+    try {
+      // Generar boleta temporal
+      const tempBoleta = `TEMP-${Date.now()}`;
+
+      await createOrden({
+        boleta: tempBoleta,
+        producto_id: parseInt(nuevaOrdenData.productoId),
+        cliente_id: nuevaOrdenData.tipoOperacion === 'Reciba' ? null : (nuevaOrdenData.clienteId ? parseInt(nuevaOrdenData.clienteId) : null),
+        proveedor_id: nuevaOrdenData.tipoOperacion === 'Reciba' ? (nuevaOrdenData.proveedorId ? parseInt(nuevaOrdenData.proveedorId) : null) : null,
+        destino: nuevaOrdenData.destino || null,
+        nombre_chofer: nuevaOrdenData.chofer || null,
+        vehiculo: nuevaOrdenData.vehiculo || null,
+        placas: nuevaOrdenData.placas || null,
+        fecha_hora_ingreso: getCurrentDateTimeMST(),
+        estatus: 'Nuevo',
+        tipo_operacion: nuevaOrdenData.tipoOperacion,
+        tipo_transporte: nuevaOrdenData.tipoTransporte || null
+      });
+
+      await loadOrdenes();
+      toast.success('Orden creada correctamente');
+      setIsNuevaOrdenOpen(false);
+      
+      // Resetear formulario
+      setNuevaOrdenData({
+        tipoOperacion: 'Embarque Nacional',
+        productoId: '',
+        clienteId: '',
+        proveedorId: '',
+        destino: '',
+        tipoTransporte: '',
+        chofer: '',
+        vehiculo: '',
+        placas: ''
+      });
+    } catch (error) {
+      console.error('Error creating orden:', error);
+      toast.error('Error al crear la orden');
     }
   };
 
@@ -157,6 +254,7 @@ const Oficina = () => {
               producto_id: data.producto_id,
               cliente_id: data.cliente_id,
               chofer: orden.nombre_chofer || null,
+              placas: orden.placas || null,
               destino: orden.destino || null,
               fecha: fechaMST,
               estatus: 'Pendiente',
@@ -199,9 +297,9 @@ const Oficina = () => {
 
   const filteredOrdenes = ordenes.filter(o => 
     o.producto.toLowerCase().includes(search.toLowerCase()) ||
-    o.cliente.toLowerCase().includes(search.toLowerCase()) ||
+    (o.cliente && o.cliente.toLowerCase().includes(search.toLowerCase())) ||
     o.boleta.includes(search) ||
-    o.nombreChofer.toLowerCase().includes(search.toLowerCase())
+    (o.nombreChofer && o.nombreChofer.toLowerCase().includes(search.toLowerCase()))
   );
 
   const stats = {
@@ -255,7 +353,7 @@ const Oficina = () => {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <Dialog>
+          <Dialog open={isNuevaOrdenOpen} onOpenChange={setIsNuevaOrdenOpen}>
             <DialogTrigger asChild>
               <Button className="bg-primary hover:bg-primary/90">
                 <Plus className="h-4 w-4 mr-2" />
@@ -266,7 +364,18 @@ const Oficina = () => {
               <DialogHeader>
                 <DialogTitle>Crear Nueva Orden</DialogTitle>
               </DialogHeader>
-              <Tabs defaultValue="nacional" className="w-full">
+              <Tabs 
+                defaultValue="nacional" 
+                className="w-full"
+                onValueChange={(value) => {
+                  const tipoOperacion = value === 'reciba' 
+                    ? 'Reciba' 
+                    : value === 'nacional' 
+                    ? 'Embarque Nacional' 
+                    : 'Embarque Exportación';
+                  setNuevaOrdenData(prev => ({ ...prev, tipoOperacion }));
+                }}
+              >
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="reciba" className="flex items-center gap-1">
                     <Truck className="h-3 w-3" />
@@ -285,26 +394,38 @@ const Oficina = () => {
                 <TabsContent value="reciba" className="space-y-4 mt-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Proveedor</Label>
-                      <Select>
+                      <Label>Proveedor *</Label>
+                      <Select 
+                        value={nuevaOrdenData.proveedorId} 
+                        onValueChange={(value) => setNuevaOrdenData(prev => ({ ...prev, proveedorId: value }))}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar proveedor" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="prov1">Oleaginosas del Bajío</SelectItem>
-                          <SelectItem value="prov2">Granos del Norte</SelectItem>
+                          {proveedores.map((prov) => (
+                            <SelectItem key={prov.id} value={prov.id.toString()}>
+                              {prov.empresa}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Producto</Label>
-                      <Select>
+                      <Label>Producto *</Label>
+                      <Select 
+                        value={nuevaOrdenData.productoId} 
+                        onValueChange={(value) => setNuevaOrdenData(prev => ({ ...prev, productoId: value }))}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar producto" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="frijol">Frijol Soya</SelectItem>
-                          <SelectItem value="maiz">Maíz</SelectItem>
+                          {productos.map((prod) => (
+                            <SelectItem key={prod.id} value={prod.id.toString()}>
+                              {prod.nombre}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -312,17 +433,24 @@ const Oficina = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Origen</Label>
-                      <Input placeholder="Ciudad, Estado" />
+                      <Input 
+                        placeholder="Ciudad, Estado" 
+                        value={nuevaOrdenData.destino}
+                        onChange={(e) => setNuevaOrdenData(prev => ({ ...prev, destino: e.target.value }))}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label>Tipo de Transporte</Label>
-                      <Select>
+                      <Select 
+                        value={nuevaOrdenData.tipoTransporte} 
+                        onValueChange={(value) => setNuevaOrdenData(prev => ({ ...prev, tipoTransporte: value }))}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="camion">Camión</SelectItem>
-                          <SelectItem value="ferroviaria">Ferroviaria</SelectItem>
+                          <SelectItem value="Camión">Camión</SelectItem>
+                          <SelectItem value="Ferroviaria">Ferroviaria</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -332,26 +460,38 @@ const Oficina = () => {
                 <TabsContent value="nacional" className="space-y-4 mt-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Cliente</Label>
-                      <Select>
+                      <Label>Cliente *</Label>
+                      <Select 
+                        value={nuevaOrdenData.clienteId} 
+                        onValueChange={(value) => setNuevaOrdenData(prev => ({ ...prev, clienteId: value }))}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar cliente" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="cli1">Aceites del Pacífico SA</SelectItem>
-                          <SelectItem value="cli2">Alimentos Balanceados MX</SelectItem>
+                          {clientes.map((cli) => (
+                            <SelectItem key={cli.id} value={cli.id.toString()}>
+                              {cli.empresa}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Producto</Label>
-                      <Select>
+                      <Label>Producto *</Label>
+                      <Select 
+                        value={nuevaOrdenData.productoId} 
+                        onValueChange={(value) => setNuevaOrdenData(prev => ({ ...prev, productoId: value }))}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar producto" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="aceite">Aceite Crudo de Soya</SelectItem>
-                          <SelectItem value="pasta">Pasta de Soya</SelectItem>
+                          {productos.map((prod) => (
+                            <SelectItem key={prod.id} value={prod.id.toString()}>
+                              {prod.nombre}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -359,17 +499,24 @@ const Oficina = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Destino</Label>
-                      <Input placeholder="Ciudad, Estado" />
+                      <Input 
+                        placeholder="Ciudad, Estado" 
+                        value={nuevaOrdenData.destino}
+                        onChange={(e) => setNuevaOrdenData(prev => ({ ...prev, destino: e.target.value }))}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label>Tipo de Transporte</Label>
-                      <Select>
+                      <Select 
+                        value={nuevaOrdenData.tipoTransporte} 
+                        onValueChange={(value) => setNuevaOrdenData(prev => ({ ...prev, tipoTransporte: value }))}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="camion">Camión</SelectItem>
-                          <SelectItem value="ferroviaria">Ferroviaria</SelectItem>
+                          <SelectItem value="Camión">Camión</SelectItem>
+                          <SelectItem value="Ferroviaria">Ferroviaria</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -379,26 +526,38 @@ const Oficina = () => {
                 <TabsContent value="exportacion" className="space-y-4 mt-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Cliente Internacional</Label>
-                      <Select>
+                      <Label>Cliente Internacional *</Label>
+                      <Select 
+                        value={nuevaOrdenData.clienteId} 
+                        onValueChange={(value) => setNuevaOrdenData(prev => ({ ...prev, clienteId: value }))}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar cliente" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="exp1">Export Foods Inc.</SelectItem>
-                          <SelectItem value="exp2">Global Oils LLC</SelectItem>
+                          {clientes.map((cli) => (
+                            <SelectItem key={cli.id} value={cli.id.toString()}>
+                              {cli.empresa}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Producto</Label>
-                      <Select>
+                      <Label>Producto *</Label>
+                      <Select 
+                        value={nuevaOrdenData.productoId} 
+                        onValueChange={(value) => setNuevaOrdenData(prev => ({ ...prev, productoId: value }))}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar producto" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="aceite">Aceite Crudo de Soya</SelectItem>
-                          <SelectItem value="pasta">Pasta de Soya</SelectItem>
+                          {productos.map((prod) => (
+                            <SelectItem key={prod.id} value={prod.id.toString()}>
+                              {prod.nombre}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -406,7 +565,11 @@ const Oficina = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>País / Puerto Destino</Label>
-                      <Input placeholder="Ej: Houston, TX" />
+                      <Input 
+                        placeholder="Ej: Houston, TX" 
+                        value={nuevaOrdenData.destino}
+                        onChange={(e) => setNuevaOrdenData(prev => ({ ...prev, destino: e.target.value }))}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label>Incoterm</Label>
@@ -415,9 +578,9 @@ const Oficina = () => {
                           <SelectValue placeholder="Seleccionar" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="fob">FOB</SelectItem>
-                          <SelectItem value="cif">CIF</SelectItem>
-                          <SelectItem value="exw">EXW</SelectItem>
+                          <SelectItem value="FOB">FOB</SelectItem>
+                          <SelectItem value="CIF">CIF</SelectItem>
+                          <SelectItem value="EXW">EXW</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -430,15 +593,27 @@ const Oficina = () => {
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>Nombre del Chofer</Label>
-                    <Input placeholder="Nombre completo" />
+                    <Input 
+                      placeholder="Nombre completo" 
+                      value={nuevaOrdenData.chofer}
+                      onChange={(e) => setNuevaOrdenData(prev => ({ ...prev, chofer: e.target.value }))}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Vehículo</Label>
-                    <Input placeholder="Tipo de vehículo" />
+                    <Input 
+                      placeholder="Tipo de vehículo" 
+                      value={nuevaOrdenData.vehiculo}
+                      onChange={(e) => setNuevaOrdenData(prev => ({ ...prev, vehiculo: e.target.value }))}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Placas</Label>
-                    <Input placeholder="ABC-123-A" />
+                    <Input 
+                      placeholder="ABC-123-A" 
+                      value={nuevaOrdenData.placas}
+                      onChange={(e) => setNuevaOrdenData(prev => ({ ...prev, placas: e.target.value }))}
+                    />
                   </div>
                 </div>
               </div>

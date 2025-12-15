@@ -88,3 +88,4 @@ export async function deleteMovimiento(id: number) {
   if (error) throw error;
 }
 
+
