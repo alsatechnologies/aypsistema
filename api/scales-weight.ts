@@ -85,33 +85,44 @@ export default async function handler(
       });
     }
 
-    // La API retorna un string con el peso (según la documentación)
-    const contentType = response.headers.get('content-type');
-    let weightString: string;
+    // La API puede retornar un string, un número, o un objeto JSON
+    const contentType = response.headers.get('content-type') || '';
+    let weight: number;
     
-    if (contentType && contentType.includes('application/json')) {
+    console.log('Content-Type recibido:', contentType);
+    
+    if (contentType.includes('application/json')) {
       // Si es JSON, parsearlo
       const jsonData = await response.json();
-      weightString = typeof jsonData === 'string' ? jsonData : String(jsonData);
+      console.log('Respuesta JSON recibida:', jsonData);
+      
+      // Intentar extraer el peso de diferentes formatos posibles
+      if (typeof jsonData === 'number') {
+        weight = jsonData;
+      } else if (typeof jsonData === 'string') {
+        weight = parseFloat(jsonData.replace(/"/g, '').trim());
+      } else if (jsonData && typeof jsonData === 'object') {
+        // Buscar el peso en diferentes propiedades posibles
+        weight = jsonData.weight || jsonData.peso || jsonData.value || jsonData.data || 
+                 jsonData.result || parseFloat(String(jsonData));
+      } else {
+        weight = parseFloat(String(jsonData));
+      }
     } else {
-      // Si es texto plano
-      weightString = await response.text();
+      // Si es texto plano, parsearlo
+      const textData = await response.text();
+      console.log('Respuesta texto recibida:', textData);
+      weight = parseFloat(textData.replace(/"/g, '').replace(/'/g, '').trim());
     }
-
-    console.log('Respuesta raw:', weightString);
-
-    // Limpiar y parsear el peso
-    const cleanedWeight = weightString.replace(/"/g, '').replace(/'/g, '').trim();
-    const weight = parseFloat(cleanedWeight);
 
     console.log('Peso parseado:', weight);
 
-    if (isNaN(weight)) {
-      console.error('Peso inválido, string original:', weightString);
+    if (isNaN(weight) || weight === null || weight === undefined) {
+      console.error('Peso inválido después del parseo');
       res.setHeader('Access-Control-Allow-Origin', '*');
       return res.status(500).json({
         success: false,
-        error: `Respuesta inválida de la báscula: "${weightString}"`,
+        error: 'Respuesta inválida de la báscula: no se pudo extraer un peso válido',
       });
     }
 
