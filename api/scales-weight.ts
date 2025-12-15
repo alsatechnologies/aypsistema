@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-// Intentar usar HTTPS primero, si falla usar HTTP
-const SCALES_API_URL = process.env.SCALES_API_URL || 'https://apiscales.alsatechnologies.com';
+// Usar HTTP directamente ya que la API está en HTTP
+const SCALES_API_URL = process.env.SCALES_API_URL || 'http://apiscales.alsatechnologies.com';
 
 export default async function handler(
   req: VercelRequest,
