@@ -1,5 +1,3 @@
-const API_BASE_URL = import.meta.env.VITE_PRINTER_API_URL || 'https://apiticket.alsatechnologies.com';
-
 export interface PrinterConfig {
   connection_type: 'usb' | 'network';
   printer_name?: string;
@@ -29,10 +27,14 @@ export interface PrintTicketResponse {
 
 /**
  * Imprime un ticket térmico usando la API de impresión
+ * Usa una función serverless de Vercel como proxy para evitar problemas de CORS
  */
 export async function printTicket(data: PrintTicketRequest): Promise<PrintTicketResponse> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/printer/print-ticket`, {
+    // Usar la ruta relativa que apunta a la función serverless de Vercel
+    const apiUrl = '/api/print-ticket';
+    
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -41,13 +43,13 @@ export async function printTicket(data: PrintTicketRequest): Promise<PrintTicket
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
-      throw new Error(errorData.message || `Error ${response.status}: ${response.statusText}`);
+      const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }));
+      throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
     }
 
     const result = await response.json();
     return {
-      success: true,
+      success: result.success || true,
       message: result.message || 'Ticket impreso correctamente',
     };
   } catch (error) {
