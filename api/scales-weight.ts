@@ -29,32 +29,64 @@ export default async function handler(
   }
 
   try {
+    const apiUrl = `${SCALES_API_URL}/scales/${scale_id}/${get_type}`;
+    console.log('Llamando a API de básculas:', apiUrl);
+
     // Hacer la solicitud al servidor de básculas
-    const response = await fetch(`${SCALES_API_URL}/scales/${scale_id}/${get_type}`, {
+    const response = await fetch(apiUrl, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
     });
 
+    console.log('Respuesta recibida, status:', response.status);
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
+      let errorMessage = 'Error al leer peso de la báscula';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorData.detail || errorMessage;
+      } catch (e) {
+        const errorText = await response.text().catch(() => '');
+        errorMessage = errorText || `Error ${response.status}: ${response.statusText}`;
+      }
+      
+      console.error('Error en respuesta de API:', errorMessage);
       res.setHeader('Access-Control-Allow-Origin', '*');
       return res.status(response.status).json({
         success: false,
-        error: errorData.message || 'Error al leer peso de la báscula',
+        error: errorMessage,
       });
     }
 
-    // La API retorna un string con el peso
-    const weightString = await response.text();
-    const weight = parseFloat(weightString.replace(/"/g, '').trim());
+    // La API retorna un string con el peso (según la documentación)
+    const contentType = response.headers.get('content-type');
+    let weightString: string;
+    
+    if (contentType && contentType.includes('application/json')) {
+      // Si es JSON, parsearlo
+      const jsonData = await response.json();
+      weightString = typeof jsonData === 'string' ? jsonData : String(jsonData);
+    } else {
+      // Si es texto plano
+      weightString = await response.text();
+    }
+
+    console.log('Respuesta raw:', weightString);
+
+    // Limpiar y parsear el peso
+    const cleanedWeight = weightString.replace(/"/g, '').replace(/'/g, '').trim();
+    const weight = parseFloat(cleanedWeight);
+
+    console.log('Peso parseado:', weight);
 
     if (isNaN(weight)) {
+      console.error('Peso inválido, string original:', weightString);
       res.setHeader('Access-Control-Allow-Origin', '*');
       return res.status(500).json({
         success: false,
-        error: 'Respuesta inválida de la báscula',
+        error: `Respuesta inválida de la báscula: "${weightString}"`,
       });
     }
 
@@ -69,10 +101,12 @@ export default async function handler(
     });
   } catch (error) {
     console.error('Error en proxy de básculas:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Error desconocido al leer peso';
+    console.error('Mensaje de error:', errorMessage);
     res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido al leer peso',
+      error: errorMessage,
     });
   }
 }
