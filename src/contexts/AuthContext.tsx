@@ -227,25 +227,34 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log('🔑 Intentando autenticar con Supabase Auth...');
       console.log('   Email:', usuarioData.correo);
       console.log('   Contraseña proporcionada:', contrasena ? '***' : 'NO');
+      console.log('   Supabase URL:', supabase?.supabaseUrl || 'No disponible');
+      console.log('   Supabase Key:', supabase?.supabaseKey ? 'Configurada' : 'NO CONFIGURADA');
 
       // Intentar iniciar sesión con Supabase Auth usando el correo
       console.log('   Llamando a signInWithPassword...');
-      const authPromise = supabase.auth.signInWithPassword({
-        email: usuarioData.correo,
-        password: contrasena
-      });
-
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Timeout en signInWithPassword después de 8 segundos')), 8000);
-      });
-
+      
       let authResult;
       try {
+        const authPromise = supabase.auth.signInWithPassword({
+          email: usuarioData.correo,
+          password: contrasena
+        });
+
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Timeout en signInWithPassword después de 10 segundos')), 10000);
+        });
+
         authResult = await Promise.race([authPromise, timeoutPromise]) as any;
         console.log('   Respuesta recibida de signInWithPassword');
+        console.log('   Resultado:', authResult ? 'OK' : 'NULL');
       } catch (timeoutError) {
         console.error('❌ Timeout en autenticación:', timeoutError);
-        toast.error('La autenticación está tardando demasiado. Verifica tu conexión.');
+        console.error('   Esto puede indicar:');
+        console.error('   1. Problema de conexión a Supabase');
+        console.error('   2. La contraseña es incorrecta');
+        console.error('   3. El usuario no existe en auth.users');
+        console.error('   4. Variables de entorno no configuradas');
+        toast.error('La autenticación está tardando demasiado. Verifica tu conexión y que las variables de entorno estén configuradas en Vercel.');
         return false;
       }
 
