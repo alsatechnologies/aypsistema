@@ -19,15 +19,23 @@ const Login = () => {
     setLoading(true);
     
     try {
+      console.log('🔵 Login.tsx: Iniciando proceso de login...');
       const success = await login(usuarioOCorreo, contrasena);
+      console.log('🔵 Login.tsx: Resultado de login:', success);
       
       if (success) {
+        console.log('🔵 Login.tsx: Login exitoso, navegando...');
         const from = (location.state as any)?.from?.pathname || '/oficina';
+        console.log('🔵 Login.tsx: Navegando a:', from);
         navigate(from, { replace: true });
+        console.log('🔵 Login.tsx: Navegación completada');
+      } else {
+        console.log('🔵 Login.tsx: Login falló');
       }
     } catch (error) {
-      console.error('Error en handleLogin:', error);
+      console.error('🔵 Login.tsx: Error en handleLogin:', error);
     } finally {
+      console.log('🔵 Login.tsx: Finalizando, setLoading(false)');
       setLoading(false);
     }
   };
