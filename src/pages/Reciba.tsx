@@ -52,6 +52,7 @@ interface Recepcion {
   codigoLote?: string | null;
   proveedorId?: number | null;
   productoId?: number | null;
+  almacenId?: number | null;
 }
 
 const Reciba = () => {
@@ -99,7 +100,8 @@ const Reciba = () => {
     analisis: r.analisis as Record<string, number> | null,
     codigoLote: r.codigo_lote,
     proveedorId: r.proveedor_id,
-    productoId: r.producto_id
+    productoId: r.producto_id,
+    almacenId: r.almacen_id || null
   }));
 
   // Cargar análisis cuando se selecciona un producto
@@ -135,6 +137,7 @@ const Reciba = () => {
       setPesoTara(selectedRecepcion.pesoTara || 0);
       setValoresAnalisis(selectedRecepcion.analisis || {});
       setTipoBascula((selectedRecepcion.tipoBascula || selectedRecepcion.tipoTransporte || 'Camión') as 'Camión' | 'Ferroviaria');
+      setAlmacenSeleccionado(selectedRecepcion.almacenId || null);
       // Resetear horas de captura
       setHoraPesoBruto(null);
       setHoraPesoTara(null);
