@@ -503,6 +503,7 @@ const EmbarquePage = () => {
                   <TableHead>Destino</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Transporte</TableHead>
+                  <TableHead>Placas</TableHead>
                   <TableHead>Chofer</TableHead>
                   <TableHead>Fecha</TableHead>
                   <TableHead>Estatus</TableHead>
@@ -526,6 +527,7 @@ const EmbarquePage = () => {
                         {embarque.tipoTransporte}
                       </span>
                     </TableCell>
+                    <TableCell className="font-mono">{embarque.placas || '-'}</TableCell>
                     <TableCell>{embarque.chofer}</TableCell>
                     <TableCell>{embarque.fecha}</TableCell>
                     <TableCell>{getEstatusBadge(embarque.estatus)}</TableCell>
