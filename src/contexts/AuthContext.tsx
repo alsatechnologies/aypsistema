@@ -326,12 +326,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           console.log('✅ Autenticación exitosa vía serverless');
           authData = { user: result.user, session: result.session };
           
-          // Establecer la sesión en el cliente de Supabase (no bloquear)
+          // Establecer la sesión en el cliente de Supabase (IMPORTANTE para RLS)
           if (supabase && result.session) {
-            supabase.auth.setSession(result.session).catch(err => {
-              console.warn('Advertencia al establecer sesión:', err);
-              // No es crítico, continuar de todas formas
-            });
+            console.log('   Estableciendo sesión en cliente Supabase...');
+            try {
+              const { error: sessionError } = await supabase.auth.setSession({
+                access_token: result.session.access_token,
+                refresh_token: result.session.refresh_token,
+              });
+              
+              if (sessionError) {
+                console.error('❌ Error estableciendo sesión:', sessionError);
+              } else {
+                console.log('   ✅ Sesión establecida correctamente');
+              }
+            } catch (sessionErr) {
+              console.error('❌ Error al establecer sesión:', sessionErr);
+            }
           }
         } else {
           console.error('❌ Error en autenticación:', result.error);
