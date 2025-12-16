@@ -145,80 +145,47 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const busqueda = usuarioOCorreo.toLowerCase().trim();
       console.log('🔐 Iniciando login para:', busqueda);
       
-      // Buscar usuario por nombre_usuario PRIMERO (prioridad), luego por correo
-      // Esto permite que el usuario ingrese solo su nombre de usuario
+      // Buscar usuario por nombre_usuario O correo en una sola consulta (más eficiente)
+      console.log('🔍 Buscando usuario (nombre_usuario o correo)...');
       let usuarioData = null;
       let usuarioError = null;
       
-      // Intentar primero por nombre_usuario con timeout
-      console.log('🔍 Buscando por nombre_usuario...');
-      let dataPorUsuario, errorPorUsuario;
       try {
-        const usuarioPromise = supabase
+        const searchPromise = supabase
           .from('usuarios')
           .select('*')
-          .eq('nombre_usuario', busqueda)
           .eq('activo', true)
+          .or(`nombre_usuario.eq.${busqueda},correo.eq.${busqueda}`)
           .maybeSingle();
         
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Timeout buscando por nombre_usuario después de 5 segundos')), 5000);
+          setTimeout(() => reject(new Error('Timeout en búsqueda de usuario después de 5 segundos')), 5000);
         });
 
-        const result = await Promise.race([usuarioPromise, timeoutPromise]) as any;
-        dataPorUsuario = result.data;
-        errorPorUsuario = result.error;
-        console.log('   Respuesta recibida de búsqueda por nombre_usuario');
+        const result = await Promise.race([searchPromise, timeoutPromise]) as any;
+        usuarioData = result.data;
+        usuarioError = result.error;
+        console.log('   Respuesta recibida de búsqueda');
       } catch (timeoutError) {
-        console.error('❌ Timeout buscando por nombre_usuario:', timeoutError);
-        dataPorUsuario = null;
-        errorPorUsuario = timeoutError as any;
-      }
-      
-      if (dataPorUsuario && !errorPorUsuario) {
-        console.log('✅ Usuario encontrado por nombre_usuario:', dataPorUsuario);
-        usuarioData = dataPorUsuario;
-      } else {
-        // Si no se encuentra por nombre_usuario, buscar por correo
-        console.log('🔍 Buscando por correo...');
-        let dataPorCorreo, errorPorCorreo;
-        try {
-          const correoPromise = supabase
-            .from('usuarios')
-            .select('*')
-            .eq('correo', busqueda)
-            .eq('activo', true)
-            .maybeSingle();
-          
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Timeout buscando por correo después de 5 segundos')), 5000);
-          });
-
-          const result = await Promise.race([correoPromise, timeoutPromise]) as any;
-          dataPorCorreo = result.data;
-          errorPorCorreo = result.error;
-          console.log('   Respuesta recibida de búsqueda por correo');
-        } catch (timeoutError) {
-          console.error('❌ Timeout buscando por correo:', timeoutError);
-          dataPorCorreo = null;
-          errorPorCorreo = timeoutError as any;
-        }
-        
-        usuarioData = dataPorCorreo;
-        usuarioError = errorPorCorreo;
-        if (dataPorCorreo) {
-          console.log('✅ Usuario encontrado por correo:', dataPorCorreo);
-        } else {
-          console.log('❌ Usuario no encontrado. Error:', errorPorCorreo);
-        }
+        console.error('❌ Timeout en búsqueda:', timeoutError);
+        usuarioError = timeoutError as any;
       }
 
-      if (usuarioError || !usuarioData) {
+      if (usuarioError) {
         console.error('❌ Error buscando usuario:', usuarioError);
+        console.log('Búsqueda realizada:', busqueda);
+        toast.error('Error al buscar usuario. Verifica tu conexión.');
+        return false;
+      }
+
+      if (!usuarioData) {
+        console.log('❌ Usuario no encontrado');
         console.log('Búsqueda realizada:', busqueda);
         toast.error('Usuario o contraseña incorrectos');
         return false;
       }
+
+      console.log('✅ Usuario encontrado:', usuarioData);
 
       // Validar que el rol sea válido
       const rolValido: Rol[] = ['Oficina', 'Portero', 'Báscula', 'Calidad', 'Laboratorio', 'Producción', 'Administrador'];
