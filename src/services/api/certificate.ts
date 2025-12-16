@@ -46,28 +46,22 @@ export interface BoletaRecibaRequest {
   observaciones?: string;
 }
 
+// La API de salida usa el MISMO formato que la de entrada
+// (productor, procedencia en lugar de cliente, destino)
 export interface BoletaEmbarqueRequest {
   boleta_no: string;
   fecha: string;
   lote?: string;
-  cliente: string;
+  productor: string;  // Usa "productor" aunque sea cliente en embarque
   producto: string;
-  destino: string;
+  procedencia: string;  // Usa "procedencia" aunque sea destino en embarque
   vehiculo: string;
-  placas?: string;
+  placas: string;
   chofer: string;
-  tipo_transporte: 'Camión' | 'Ferroviaria';
-  tipo_embarque: 'Nacional' | 'Exportación';
-  analisis?: AnalisisItem[];
+  analisis: AnalisisItem[];
   pesos_info1: PesosInfo1;
-  pesos_info2?: PesosInfo2;
+  pesos_info2: PesosInfo2;
   observaciones?: string;
-  sellos?: {
-    entrada1?: string;
-    entrada2?: string;
-    salida1?: string;
-    salida2?: string;
-  };
 }
 
 export interface CertificateResponse {

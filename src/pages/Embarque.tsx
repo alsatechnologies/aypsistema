@@ -467,18 +467,18 @@ const EmbarquePage = () => {
         unidad: '%'
       }));
 
+      // La API de salida usa el mismo formato que entrada
+      // "productor" = cliente, "procedencia" = destino
       const boletaData = {
         boleta_no: selectedEmbarque.boleta.startsWith('TEMP-') ? 'PENDIENTE' : selectedEmbarque.boleta,
         fecha: fechaActual,
         lote: selectedEmbarque.codigoLote || '',
-        cliente: cliente.empresa,
+        productor: cliente.empresa,  // La API espera "productor" aunque sea cliente
         producto: producto.nombre,
-        destino: selectedEmbarque.destino || 'N/A',
+        procedencia: selectedEmbarque.destino || 'N/A',  // La API espera "procedencia" aunque sea destino
         vehiculo: selectedEmbarque.tipoTransporte || 'Camión',
         placas: formData.placas || selectedEmbarque.placas || 'N/A',
         chofer: selectedEmbarque.chofer || 'N/A',
-        tipo_transporte: (selectedEmbarque.tipoTransporte === 'Ferroviaria' ? 'Ferroviaria' : 'Camión') as 'Camión' | 'Ferroviaria',
-        tipo_embarque: (selectedEmbarque.tipoEmbarque === 'Exportación' ? 'Exportación' : 'Nacional') as 'Nacional' | 'Exportación',
         analisis: analisisArray,
         pesos_info1: {
           peso_bruto: formData.pesoBruto,
@@ -494,13 +494,7 @@ const EmbarquePage = () => {
           deduccion: 0,
           peso_neto_analizado: pesoNeto
         },
-        observaciones: '',
-        sellos: {
-          entrada1: formData.sellos.selloEntrada1 || undefined,
-          entrada2: formData.sellos.selloEntrada2 || undefined,
-          salida1: formData.sellos.selloSalida1 || undefined,
-          salida2: formData.sellos.selloSalida2 || undefined
-        }
+        observaciones: ''
       };
 
       toast.loading('Generando boleta PDF...', { id: 'generating-pdf' });
