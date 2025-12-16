@@ -48,18 +48,29 @@ export default async function handler(
       }
     });
 
-    // Obtener usuario por email
-    const { data: userData, error: getUserError } = await supabaseAdmin.auth.admin.getUserByEmail(email);
+    // Obtener usuario por email usando listUsers y filtrando
+    const { data: usersList, error: listError } = await supabaseAdmin.auth.admin.listUsers();
 
-    if (getUserError || !userData?.user) {
+    if (listError) {
       res.setHeader('Access-Control-Allow-Origin', '*');
-      return res.status(404).json({
+      return res.status(500).json({
         success: false,
-        error: 'Usuario no encontrado en auth.users',
+        error: `Error al listar usuarios: ${listError.message}`,
       });
     }
 
-    const userId = userData.user.id;
+    // Buscar usuario por email
+    const userFound = usersList.users.find(user => user.email?.toLowerCase() === email.toLowerCase());
+
+    if (!userFound) {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      return res.status(404).json({
+        success: false,
+        error: `Usuario con email ${email} no encontrado en auth.users`,
+      });
+    }
+
+    const userId = userFound.id;
     const updateData: any = {};
 
     if (password) {
