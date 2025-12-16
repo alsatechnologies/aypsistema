@@ -118,19 +118,50 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return;
       }
 
-      // Obtener sesión actual de Supabase Auth
-      const { data: { session }, error } = await supabase.auth.getSession();
+      console.log('🔍 Verificando sesión existente...');
+      
+      // Obtener sesión actual de Supabase Auth con timeout
+      const sessionPromise = supabase.auth.getSession();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout verificando sesión')), 5000)
+      );
 
-      if (error || !session || !session.user.email) {
+      let sessionResult;
+      try {
+        sessionResult = await Promise.race([sessionPromise, timeoutPromise]) as any;
+      } catch (timeoutError) {
+        console.error('❌ Timeout verificando sesión:', timeoutError);
         setUsuario(null);
         setLoading(false);
         return;
       }
 
-      // Cargar usuario desde la tabla usuarios
-      await cargarUsuarioDesdeAuth(session.user.email);
+      const { data: { session }, error } = sessionResult;
+
+      if (error || !session || !session.user.email) {
+        console.log('   No hay sesión activa');
+        setUsuario(null);
+        setLoading(false);
+        return;
+      }
+
+      console.log('   Sesión encontrada, cargando usuario...');
+      // Cargar usuario desde la tabla usuarios con timeout
+      try {
+        await Promise.race([
+          cargarUsuarioDesdeAuth(session.user.email),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout cargando usuario')), 5000)
+          )
+        ]);
+        console.log('   ✅ Usuario cargado');
+      } catch (loadError) {
+        console.error('❌ Error cargando usuario en verificarSesion:', loadError);
+        setUsuario(null);
+        setLoading(false);
+      }
     } catch (error) {
-      console.error('Error verificando sesión:', error);
+      console.error('❌ Error verificando sesión:', error);
       setUsuario(null);
       setLoading(false);
     }
