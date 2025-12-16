@@ -1,11 +1,12 @@
 /**
- * Servicio para generar certificados/boletas PDF usando la API externa
- * La URL puede configurarse mediante variable de entorno o usar localhost por defecto
+ * Servicio para generar certificados/boletas PDF usando las APIs externas
+ * - Entradas (Reciba): https://pdf-entrada.alsatechnologies.com
+ * - Salidas (Embarque): https://pdf-salida.alsatechnologies.com
  */
 
-// Usar la función serverless de Vercel como proxy para evitar problemas de CORS
-// La URL real de la API se configura en la variable de entorno CERTIFICATE_API_URL en Vercel
-const CERTIFICATE_API_URL = '/api/generate-certificate';
+// Usar las funciones serverless de Vercel como proxy para evitar problemas de CORS
+const CERTIFICATE_ENTRADA_API_URL = '/api/generate-certificate-entrada';
+const CERTIFICATE_SALIDA_API_URL = '/api/generate-certificate-salida';
 
 export interface AnalisisItem {
   nombre: string;
@@ -78,11 +79,13 @@ export interface CertificateResponse {
 }
 
 /**
- * Genera un PDF de boleta de Reciba usando la API externa
+ * Genera un PDF de boleta de Reciba (Entrada) usando la API externa
  */
 export async function generateBoletaRecibaPDF(data: BoletaRecibaRequest): Promise<CertificateResponse> {
   try {
-    const response = await fetch(CERTIFICATE_API_URL, {
+    console.log('Generando boleta de ENTRADA (Reciba):', data.boleta_no);
+    
+    const response = await fetch(CERTIFICATE_ENTRADA_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -101,24 +104,26 @@ export async function generateBoletaRecibaPDF(data: BoletaRecibaRequest): Promis
       success: result.success !== false,
       pdf_url: result.pdf_url,
       pdf_base64: result.pdf_base64,
-      message: result.message || 'Boleta generada correctamente',
+      message: result.message || 'Boleta de entrada generada correctamente',
       error: result.error,
     };
   } catch (error) {
-    console.error('Error al generar boleta PDF:', error);
+    console.error('Error al generar boleta de entrada PDF:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido al generar PDF',
+      error: error instanceof Error ? error.message : 'Error desconocido al generar PDF de entrada',
     };
   }
 }
 
 /**
- * Genera un PDF de boleta de Embarque usando la API externa
+ * Genera un PDF de boleta de Embarque (Salida) usando la API externa
  */
 export async function generateBoletaEmbarquePDF(data: BoletaEmbarqueRequest): Promise<CertificateResponse> {
   try {
-    const response = await fetch(CERTIFICATE_API_URL, {
+    console.log('Generando boleta de SALIDA (Embarque):', data.boleta_no);
+    
+    const response = await fetch(CERTIFICATE_SALIDA_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -137,14 +142,14 @@ export async function generateBoletaEmbarquePDF(data: BoletaEmbarqueRequest): Pr
       success: result.success !== false,
       pdf_url: result.pdf_url,
       pdf_base64: result.pdf_base64,
-      message: result.message || 'Boleta generada correctamente',
+      message: result.message || 'Boleta de salida generada correctamente',
       error: result.error,
     };
   } catch (error) {
-    console.error('Error al generar boleta PDF:', error);
+    console.error('Error al generar boleta de salida PDF:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido al generar PDF',
+      error: error instanceof Error ? error.message : 'Error desconocido al generar PDF de salida',
     };
   }
 }

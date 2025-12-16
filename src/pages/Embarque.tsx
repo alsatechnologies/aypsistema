@@ -29,6 +29,9 @@ import { createMovimiento } from '@/services/supabase/movimientos';
 import { getCurrentDateTimeMST, formatDateTimeMST } from '@/utils/dateUtils';
 import type { Embarque as EmbarqueDB } from '@/services/supabase/embarques';
 import { getScaleWeight, PREDEFINED_SCALES } from '@/services/api/scales';
+import { generateBoletaEmbarquePDF, openPDF } from '@/services/api/certificate';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 interface Embarque {
   id: number;
@@ -119,6 +122,7 @@ const EmbarquePage = () => {
   const [horaPesoTara, setHoraPesoTara] = useState<string | null>(null);
   const [horaPesoBruto, setHoraPesoBruto] = useState<string | null>(null);
   const [horaPesoNeto, setHoraPesoNeto] = useState<string | null>(null);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   // Cargar análisis cuando se selecciona un embarque
   useEffect(() => {
@@ -411,6 +415,109 @@ const EmbarquePage = () => {
     } catch (error) {
       console.error('Error saving embarque:', error);
       toast.error('Error al guardar embarque');
+    }
+  };
+
+  // Función helper para formatear fecha y hora
+  const formatearFechaHora = (isoString: string | null) => {
+    if (!isoString) return { fecha: '', hora: '' };
+    try {
+      const date = new Date(isoString);
+      return {
+        fecha: format(date, 'dd/MM/yyyy', { locale: es }),
+        hora: format(date, 'HH:mm', { locale: es })
+      };
+    } catch {
+      return { fecha: '', hora: '' };
+    }
+  };
+
+  const handleImprimir = async () => {
+    if (!selectedEmbarque) return;
+    
+    // Validar datos mínimos
+    if (formData.pesoTara <= 0 || formData.pesoBruto <= 0) {
+      toast.error('Debe registrar los pesos antes de imprimir');
+      return;
+    }
+
+    setIsGeneratingPDF(true);
+    try {
+      const producto = productosDB.find(p => p.id === selectedEmbarque.productoId);
+      const cliente = clientesDB.find(c => c.id === selectedEmbarque.clienteId);
+      
+      if (!producto || !cliente) {
+        toast.error('Error al obtener datos del producto o cliente');
+        setIsGeneratingPDF(false);
+        return;
+      }
+
+      const pesoNeto = formData.pesoBruto - formData.pesoTara;
+      const fechaActual = format(new Date(), 'dd/MM/yyyy', { locale: es });
+      
+      // Formatear fechas y horas de peso
+      const fechaHoraBruto = formatearFechaHora(horaPesoBruto);
+      const fechaHoraTara = formatearFechaHora(horaPesoTara);
+      const fechaHoraNeto = formatearFechaHora(horaPesoNeto);
+      
+      // Convertir análisis a formato esperado por la API
+      const analisisArray = Object.entries(formData.valoresAnalisis).map(([nombre, valor]) => ({
+        nombre,
+        valor,
+        unidad: '%'
+      }));
+
+      const boletaData = {
+        boleta_no: selectedEmbarque.boleta.startsWith('TEMP-') ? 'PENDIENTE' : selectedEmbarque.boleta,
+        fecha: fechaActual,
+        lote: selectedEmbarque.codigoLote || '',
+        cliente: cliente.empresa,
+        producto: producto.nombre,
+        destino: selectedEmbarque.destino || 'N/A',
+        vehiculo: selectedEmbarque.tipoTransporte || 'Camión',
+        placas: formData.placas || selectedEmbarque.placas || 'N/A',
+        chofer: selectedEmbarque.chofer || 'N/A',
+        tipo_transporte: (selectedEmbarque.tipoTransporte === 'Ferroviaria' ? 'Ferroviaria' : 'Camión') as 'Camión' | 'Ferroviaria',
+        tipo_embarque: (selectedEmbarque.tipoEmbarque === 'Exportación' ? 'Exportación' : 'Nacional') as 'Nacional' | 'Exportación',
+        analisis: analisisArray,
+        pesos_info1: {
+          peso_bruto: formData.pesoBruto,
+          peso_tara: formData.pesoTara,
+          peso_neto: pesoNeto,
+          fechaneto: fechaHoraNeto.fecha,
+          fechabruto: fechaHoraBruto.fecha,
+          fechatara: fechaHoraTara.fecha,
+          horabruto: fechaHoraBruto.hora,
+          horatara: fechaHoraTara.hora
+        },
+        pesos_info2: {
+          deduccion: 0,
+          peso_neto_analizado: pesoNeto
+        },
+        observaciones: '',
+        sellos: {
+          entrada1: formData.sellos.selloEntrada1 || undefined,
+          entrada2: formData.sellos.selloEntrada2 || undefined,
+          salida1: formData.sellos.selloSalida1 || undefined,
+          salida2: formData.sellos.selloSalida2 || undefined
+        }
+      };
+
+      toast.loading('Generando boleta PDF...', { id: 'generating-pdf' });
+      
+      const result = await generateBoletaEmbarquePDF(boletaData);
+      
+      if (result.success) {
+        toast.success('Boleta generada correctamente', { id: 'generating-pdf' });
+        openPDF(result.pdf_url, result.pdf_base64);
+      } else {
+        toast.error(result.error || 'Error al generar boleta PDF', { id: 'generating-pdf' });
+      }
+    } catch (error) {
+      console.error('Error al imprimir boleta:', error);
+      toast.error('Error al comunicarse con la API de certificados', { id: 'generating-pdf' });
+    } finally {
+      setIsGeneratingPDF(false);
     }
   };
 
@@ -804,9 +911,14 @@ const EmbarquePage = () => {
                     <BookmarkPlus className="h-4 w-4" />
                     Pre-Guardar
                   </Button>
-                  <Button variant="outline" className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center gap-2"
+                    onClick={handleImprimir}
+                    disabled={isGeneratingPDF}
+                  >
                     <Printer className="h-4 w-4" />
-                    Imprimir
+                    {isGeneratingPDF ? 'Generando...' : 'Imprimir'}
                   </Button>
                   <Button onClick={handleGuardar} className="bg-primary hover:bg-primary/90 flex items-center gap-2">
                     <Save className="h-4 w-4" />
