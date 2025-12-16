@@ -132,12 +132,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       // Buscar usuario por nombre_usuario PRIMERO (prioridad), luego por correo
       // Esto permite que el usuario ingrese solo su nombre de usuario
-      const { data: usuarioData, error: usuarioError } = await supabase
+      let usuarioData = null;
+      let usuarioError = null;
+      
+      // Intentar primero por nombre_usuario
+      const { data: dataPorUsuario, error: errorPorUsuario } = await supabase
         .from('usuarios')
         .select('*')
-        .or(`nombre_usuario.eq.${busqueda},correo.eq.${busqueda}`)
+        .eq('nombre_usuario', busqueda)
         .eq('activo', true)
-        .single();
+        .maybeSingle();
+      
+      if (dataPorUsuario && !errorPorUsuario) {
+        usuarioData = dataPorUsuario;
+      } else {
+        // Si no se encuentra por nombre_usuario, buscar por correo
+        const { data: dataPorCorreo, error: errorPorCorreo } = await supabase
+          .from('usuarios')
+          .select('*')
+          .eq('correo', busqueda)
+          .eq('activo', true)
+          .maybeSingle();
+        
+        usuarioData = dataPorCorreo;
+        usuarioError = errorPorCorreo;
+      }
 
       if (usuarioError || !usuarioData) {
         console.error('Error buscando usuario:', usuarioError);
