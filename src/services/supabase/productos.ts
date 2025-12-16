@@ -37,12 +37,25 @@ export async function getProductos() {
     throw new Error('Supabase no está configurado');
   }
   
+  // Verificar sesión antes de consultar
+  const { data: { session } } = await supabase.auth.getSession();
+  console.log('📦 getProductos - Sesión activa:', session ? 'Sí' : 'No');
+  if (session) {
+    console.log('   Email del usuario:', session.user.email);
+  }
+  
   const { data, error } = await supabase
     .from('productos')
     .select('*')
     .order('nombre');
   
-  if (error) throw error;
+  if (error) {
+    console.error('❌ Error en getProductos:', error);
+    console.error('   Detalles:', JSON.stringify(error, null, 2));
+    throw error;
+  }
+  
+  console.log('✅ Productos obtenidos:', data?.length || 0);
   return data;
 }
 
