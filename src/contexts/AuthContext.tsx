@@ -257,9 +257,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           console.log('✅ Autenticación exitosa vía serverless');
           authData = { user: result.user, session: result.session };
           
-          // Establecer la sesión en el cliente de Supabase
+          // Establecer la sesión en el cliente de Supabase (no bloquear)
           if (supabase && result.session) {
-            await supabase.auth.setSession(result.session);
+            supabase.auth.setSession(result.session).catch(err => {
+              console.warn('Advertencia al establecer sesión:', err);
+              // No es crítico, continuar de todas formas
+            });
           }
         } else {
           console.error('❌ Error en autenticación:', result.error);
@@ -305,24 +308,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       console.log('✅ Autenticación exitosa');
       console.log('   User ID:', authData.user.id);
+      console.log('   Estableciendo usuario en contexto...');
 
       // Establecer el usuario INMEDIATAMENTE con los datos que ya tenemos
-      // No esperar a cargar de nuevo desde la base de datos
-      setUsuario({
+      const usuarioParaEstablecer: Usuario = {
         id: usuarioData.id,
         nombre_completo: usuarioData.nombre_completo,
         nombre_usuario: usuarioData.nombre_usuario,
         correo: usuarioData.correo,
         rol: usuarioData.rol as Rol,
         activo: usuarioData.activo
-      });
+      };
+      
+      console.log('   Usuario a establecer:', usuarioParaEstablecer);
+      setUsuario(usuarioParaEstablecer);
+      console.log('   ✅ Usuario establecido en contexto');
       
       // Cargar usuario en segundo plano (no bloquea)
       cargarUsuarioDesdeAuth(usuarioData.correo).catch(() => {
         // Ignorar errores, ya tenemos los datos
       });
       
+      console.log('   Mostrando toast de bienvenida...');
       toast.success(`Bienvenido, ${usuarioData.nombre_completo}`);
+      console.log('   ✅ Login completado, retornando true');
       return true;
     } catch (error) {
       console.error('❌ Error en login:', error);
