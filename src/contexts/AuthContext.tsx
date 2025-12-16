@@ -150,14 +150,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       let usuarioData = null;
       let usuarioError = null;
       
-      // Intentar primero por nombre_usuario
+      // Intentar primero por nombre_usuario con timeout
       console.log('🔍 Buscando por nombre_usuario...');
-      const { data: dataPorUsuario, error: errorPorUsuario } = await supabase
-        .from('usuarios')
-        .select('*')
-        .eq('nombre_usuario', busqueda)
-        .eq('activo', true)
-        .maybeSingle();
+      let dataPorUsuario, errorPorUsuario;
+      try {
+        const usuarioPromise = supabase
+          .from('usuarios')
+          .select('*')
+          .eq('nombre_usuario', busqueda)
+          .eq('activo', true)
+          .maybeSingle();
+        
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Timeout buscando por nombre_usuario después de 5 segundos')), 5000);
+        });
+
+        const result = await Promise.race([usuarioPromise, timeoutPromise]) as any;
+        dataPorUsuario = result.data;
+        errorPorUsuario = result.error;
+        console.log('   Respuesta recibida de búsqueda por nombre_usuario');
+      } catch (timeoutError) {
+        console.error('❌ Timeout buscando por nombre_usuario:', timeoutError);
+        dataPorUsuario = null;
+        errorPorUsuario = timeoutError as any;
+      }
       
       if (dataPorUsuario && !errorPorUsuario) {
         console.log('✅ Usuario encontrado por nombre_usuario:', dataPorUsuario);
@@ -165,12 +181,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       } else {
         // Si no se encuentra por nombre_usuario, buscar por correo
         console.log('🔍 Buscando por correo...');
-        const { data: dataPorCorreo, error: errorPorCorreo } = await supabase
-          .from('usuarios')
-          .select('*')
-          .eq('correo', busqueda)
-          .eq('activo', true)
-          .maybeSingle();
+        let dataPorCorreo, errorPorCorreo;
+        try {
+          const correoPromise = supabase
+            .from('usuarios')
+            .select('*')
+            .eq('correo', busqueda)
+            .eq('activo', true)
+            .maybeSingle();
+          
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Timeout buscando por correo después de 5 segundos')), 5000);
+          });
+
+          const result = await Promise.race([correoPromise, timeoutPromise]) as any;
+          dataPorCorreo = result.data;
+          errorPorCorreo = result.error;
+          console.log('   Respuesta recibida de búsqueda por correo');
+        } catch (timeoutError) {
+          console.error('❌ Timeout buscando por correo:', timeoutError);
+          dataPorCorreo = null;
+          errorPorCorreo = timeoutError as any;
+        }
         
         usuarioData = dataPorCorreo;
         usuarioError = errorPorCorreo;
