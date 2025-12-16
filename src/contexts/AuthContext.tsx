@@ -60,27 +60,64 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const cargarUsuarioDesdeAuth = async (email: string) => {
-    if (!supabase || !email) {
-      console.warn('⚠️ No se puede cargar usuario: supabase o email no disponible');
+    if (!email) {
+      console.warn('⚠️ No se puede cargar usuario: email no disponible');
       setLoading(false);
       return;
     }
 
     try {
       console.log('📥 Cargando usuario desde tabla usuarios, email:', email);
-      setLoading(true); // Solo poner loading si realmente vamos a cargar
       
-      // Obtener usuario desde la tabla usuarios usando el email de auth
+      // Intentar usar función serverless primero (más confiable)
+      try {
+        const response = await Promise.race([
+          fetch('/api/get-user-by-email', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email }),
+          }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout')), 3000)
+          )
+        ]) as Response;
+
+        const result = await response.json();
+        
+        if (result.success && result.usuario) {
+          console.log('✅ Usuario cargado vía serverless:', result.usuario);
+          setUsuario({
+            id: result.usuario.id,
+            nombre_completo: result.usuario.nombre_completo,
+            nombre_usuario: result.usuario.nombre_usuario,
+            correo: result.usuario.correo,
+            rol: result.usuario.rol as Rol,
+            activo: result.usuario.activo
+          });
+          setLoading(false);
+          return;
+        }
+      } catch (serverlessError) {
+        console.warn('⚠️ Error con función serverless, intentando directo:', serverlessError);
+      }
+
+      // Fallback: intentar carga directa si serverless falla
+      if (!supabase) {
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('usuarios')
         .select('*')
         .eq('correo', email)
         .eq('activo', true)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('❌ Error cargando usuario:', error);
-        console.error('Detalles del error:', JSON.stringify(error, null, 2));
         setUsuario(null);
         setLoading(false);
         return;
@@ -93,7 +130,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return;
       }
 
-      console.log('✅ Usuario cargado exitosamente:', data);
+      console.log('✅ Usuario cargado exitosamente (directo):', data);
 
       setUsuario({
         id: data.id,
