@@ -148,56 +148,56 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const busqueda = usuarioOCorreo.toLowerCase().trim();
       console.log('🔐 Iniciando login para:', busqueda);
       
-      // Buscar usuario - intentar primero por nombre_usuario, luego por correo
+      // Buscar usuario usando función serverless (más confiable)
       console.log('🔍 Buscando usuario...');
       let usuarioData = null;
       let usuarioError = null;
       
-      // Intentar primero por nombre_usuario (más rápido)
       try {
-        console.log('   Buscando por nombre_usuario:', busqueda);
-        const { data: dataPorUsuario, error: errorPorUsuario } = await Promise.race([
-          supabase
-            .from('usuarios')
-            .select('*')
-            .eq('activo', true)
-            .eq('nombre_usuario', busqueda)
-            .maybeSingle(),
+        console.log('   Llamando a función serverless para buscar usuario...');
+        const searchResponse = await Promise.race([
+          fetch('/api/get-user-for-login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ busqueda }),
+          }),
           new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Timeout')), 3000)
+            setTimeout(() => reject(new Error('Timeout en búsqueda después de 5 segundos')), 5000)
           )
-        ]) as any;
+        ]) as Response;
+
+        const result = await searchResponse.json();
         
-        if (dataPorUsuario && !errorPorUsuario) {
-          console.log('✅ Usuario encontrado por nombre_usuario');
-          usuarioData = dataPorUsuario;
-        } else if (errorPorUsuario && errorPorUsuario.message !== 'Timeout') {
-          // Si no es timeout, intentar por correo
-          console.log('   No encontrado por nombre_usuario, buscando por correo...');
-          const { data: dataPorCorreo, error: errorPorCorreo } = await Promise.race([
-            supabase
-              .from('usuarios')
-              .select('*')
-              .eq('activo', true)
-              .eq('correo', busqueda)
-              .maybeSingle(),
-            new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Timeout')), 3000)
-            )
-          ]) as any;
-          
-          if (dataPorCorreo && !errorPorCorreo) {
-            console.log('✅ Usuario encontrado por correo');
-            usuarioData = dataPorCorreo;
-          } else {
-            usuarioError = errorPorCorreo || { message: 'Usuario no encontrado' };
-          }
+        if (result.success && result.usuario) {
+          console.log('✅ Usuario encontrado:', result.usuario);
+          usuarioData = result.usuario;
         } else {
-          usuarioError = errorPorUsuario || { message: 'Timeout en búsqueda' };
+          console.error('❌ Error en búsqueda:', result.error);
+          usuarioError = { message: result.error || 'Usuario no encontrado' };
         }
       } catch (timeoutError) {
         console.error('❌ Timeout en búsqueda:', timeoutError);
-        usuarioError = { message: 'La búsqueda está tardando demasiado. Verifica tu conexión.' };
+        // Fallback: intentar búsqueda directa si la función serverless falla
+        console.log('   Intentando búsqueda directa como fallback...');
+        try {
+          const { data, error } = await supabase
+            .from('usuarios')
+            .select('*')
+            .eq('activo', true)
+            .or(`nombre_usuario.eq.${busqueda},correo.eq.${busqueda}`)
+            .maybeSingle();
+          
+          if (data && !error) {
+            console.log('✅ Usuario encontrado (fallback directo)');
+            usuarioData = data;
+          } else {
+            usuarioError = error || { message: 'Usuario no encontrado' };
+          }
+        } catch (fallbackError) {
+          usuarioError = { message: 'Error al buscar usuario. Verifica tu conexión y las variables de entorno en Vercel.' };
+        }
       }
 
       if (usuarioError) {
