@@ -293,9 +293,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (authError) {
         console.error('❌ Error de autenticación:', authError);
-        console.log('   Email usado:', usuarioData.correo);
-        console.log('   Código de error:', authError.status);
-        console.log('   Mensaje:', authError.message);
         toast.error(authError.message || 'Usuario o contraseña incorrectos');
         return false;
       }
@@ -306,20 +303,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return false;
       }
 
-      console.log('✅ Autenticación exitosa con Supabase Auth');
+      console.log('✅ Autenticación exitosa');
       console.log('   User ID:', authData.user.id);
-      console.log('   Email confirmado:', authData.user.email_confirmed_at ? 'Sí' : 'No');
 
-      // Cargar usuario completo desde la tabla usuarios (sin timeout estricto)
-      console.log('📥 Cargando datos del usuario desde tabla usuarios...');
-      
-      // Cargar usuario de forma asíncrona, pero no bloquear el login
-      cargarUsuarioDesdeAuth(usuarioData.correo).catch(error => {
-        console.error('❌ Error cargando usuario (no crítico):', error);
-        // No es crítico, el usuario ya está autenticado
-      });
-      
-      // Establecer el usuario inmediatamente con los datos que ya tenemos
+      // Establecer el usuario INMEDIATAMENTE con los datos que ya tenemos
+      // No esperar a cargar de nuevo desde la base de datos
       setUsuario({
         id: usuarioData.id,
         nombre_completo: usuarioData.nombre_completo,
@@ -327,6 +315,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         correo: usuarioData.correo,
         rol: usuarioData.rol as Rol,
         activo: usuarioData.activo
+      });
+      
+      // Cargar usuario en segundo plano (no bloquea)
+      cargarUsuarioDesdeAuth(usuarioData.correo).catch(() => {
+        // Ignorar errores, ya tenemos los datos
       });
       
       toast.success(`Bienvenido, ${usuarioData.nombre_completo}`);

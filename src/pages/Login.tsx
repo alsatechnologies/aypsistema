@@ -19,15 +19,7 @@ const Login = () => {
     setLoading(true);
     
     try {
-      const success = await Promise.race([
-        login(usuarioOCorreo, contrasena),
-        new Promise<boolean>((resolve) => {
-          setTimeout(() => {
-            console.error('Login timeout después de 10 segundos');
-            resolve(false);
-          }, 10000); // Timeout de 10 segundos
-        })
-      ]);
+      const success = await login(usuarioOCorreo, contrasena);
       
       if (success) {
         const from = (location.state as any)?.from?.pathname || '/oficina';
