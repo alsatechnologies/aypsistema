@@ -322,7 +322,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       console.log('   Usuario a establecer:', usuarioParaEstablecer);
       setUsuario(usuarioParaEstablecer);
-      console.log('   ✅ Usuario establecido en contexto');
+      setLoading(false); // IMPORTANTE: Marcar como no cargando
+      console.log('   ✅ Usuario establecido en contexto, loading = false');
       
       // Cargar usuario en segundo plano (no bloquea)
       cargarUsuarioDesdeAuth(usuarioData.correo).catch(() => {
