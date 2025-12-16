@@ -227,39 +227,69 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log('🔑 Intentando autenticar con Supabase Auth...');
       console.log('   Email:', usuarioData.correo);
       console.log('   Contraseña proporcionada:', contrasena ? '***' : 'NO');
-      console.log('   Supabase URL:', supabase?.supabaseUrl || 'No disponible');
-      console.log('   Supabase Key:', supabase?.supabaseKey ? 'Configurada' : 'NO CONFIGURADA');
 
-      // Intentar iniciar sesión con Supabase Auth usando el correo
-      console.log('   Llamando a signInWithPassword...');
+      // Intentar autenticación usando función serverless (más confiable)
+      console.log('   Llamando a función serverless para autenticar...');
       
-      let authResult;
+      let authData = null;
+      let authError = null;
+      
       try {
-        const authPromise = supabase.auth.signInWithPassword({
-          email: usuarioData.correo,
-          password: contrasena
-        });
+        const authResponse = await Promise.race([
+          fetch('/api/auth-login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: usuarioData.correo,
+              password: contrasena,
+            }),
+          }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout en autenticación después de 15 segundos')), 15000)
+          )
+        ]) as Response;
 
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Timeout en signInWithPassword después de 10 segundos')), 10000);
-        });
-
-        authResult = await Promise.race([authPromise, timeoutPromise]) as any;
-        console.log('   Respuesta recibida de signInWithPassword');
-        console.log('   Resultado:', authResult ? 'OK' : 'NULL');
+        const result = await authResponse.json();
+        
+        if (result.success && result.user) {
+          console.log('✅ Autenticación exitosa vía serverless');
+          authData = { user: result.user, session: result.session };
+          
+          // Establecer la sesión en el cliente de Supabase
+          if (supabase && result.session) {
+            await supabase.auth.setSession(result.session);
+          }
+        } else {
+          console.error('❌ Error en autenticación:', result.error);
+          authError = { message: result.error || 'Error al autenticar' };
+        }
       } catch (timeoutError) {
         console.error('❌ Timeout en autenticación:', timeoutError);
-        console.error('   Esto puede indicar:');
-        console.error('   1. Problema de conexión a Supabase');
-        console.error('   2. La contraseña es incorrecta');
-        console.error('   3. El usuario no existe en auth.users');
-        console.error('   4. Variables de entorno no configuradas');
-        toast.error('La autenticación está tardando demasiado. Verifica tu conexión y que las variables de entorno estén configuradas en Vercel.');
-        return false;
+        // Fallback: intentar autenticación directa
+        console.log('   Intentando autenticación directa como fallback...');
+        try {
+          const directAuth = await Promise.race([
+            supabase.auth.signInWithPassword({
+              email: usuarioData.correo,
+              password: contrasena
+            }),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Timeout')), 10000)
+            )
+          ]) as any;
+          
+          if (directAuth.data && !directAuth.error) {
+            console.log('✅ Autenticación exitosa (fallback directo)');
+            authData = directAuth.data;
+          } else {
+            authError = directAuth.error || { message: 'Error al autenticar' };
+          }
+        } catch (fallbackError) {
+          authError = { message: 'Error al autenticar. Verifica tu conexión y que el usuario exista en auth.users.' };
+        }
       }
-
-      const authData = authResult?.data;
-      const authError = authResult?.error;
 
       if (authError) {
         console.error('❌ Error de autenticación:', authError);
