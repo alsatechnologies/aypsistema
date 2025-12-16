@@ -39,40 +39,84 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Verificar sesión al cargar
+  // Verificar sesión al cargar y escuchar cambios de autenticación
   useEffect(() => {
     verificarSesion();
+
+    // Escuchar cambios en el estado de autenticación
+    if (supabase) {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          await cargarUsuarioDesdeAuth(session.user.email || '');
+        } else if (event === 'SIGNED_OUT') {
+          setUsuario(null);
+        }
+      });
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    }
   }, []);
+
+  const cargarUsuarioDesdeAuth = async (email: string) => {
+    if (!supabase || !email) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Obtener usuario desde la tabla usuarios usando el email de auth
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('*')
+        .eq('correo', email)
+        .eq('activo', true)
+        .single();
+
+      if (error || !data) {
+        console.error('Error cargando usuario:', error);
+        setUsuario(null);
+        return;
+      }
+
+      setUsuario({
+        id: data.id,
+        nombre_completo: data.nombre_completo,
+        nombre_usuario: data.nombre_usuario,
+        correo: data.correo,
+        rol: data.rol as Rol,
+        activo: data.activo
+      });
+    } catch (error) {
+      console.error('Error cargando usuario:', error);
+      setUsuario(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const verificarSesion = async () => {
     try {
-      const usuarioId = localStorage.getItem('usuario_id');
-      if (!usuarioId) {
+      if (!supabase) {
         setLoading(false);
         return;
       }
 
-      // Obtener usuario desde Supabase
-      if (supabase) {
-        const { data, error } = await supabase
-          .from('usuarios')
-          .select('*')
-          .eq('id', parseInt(usuarioId))
-          .eq('activo', true)
-          .single();
+      // Obtener sesión actual de Supabase Auth
+      const { data: { session }, error } = await supabase.auth.getSession();
 
-        if (error || !data) {
-          localStorage.removeItem('usuario_id');
-          setUsuario(null);
-        } else {
-          setUsuario(data as Usuario);
-        }
+      if (error || !session || !session.user.email) {
+        setUsuario(null);
+        setLoading(false);
+        return;
       }
+
+      // Cargar usuario desde la tabla usuarios
+      await cargarUsuarioDesdeAuth(session.user.email);
     } catch (error) {
       console.error('Error verificando sesión:', error);
-      localStorage.removeItem('usuario_id');
       setUsuario(null);
-    } finally {
       setLoading(false);
     }
   };
@@ -86,7 +130,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       const busqueda = usuarioOCorreo.toLowerCase().trim();
       
-      // Buscar usuario por nombre_usuario O correo
+      // Primero buscar el usuario en la tabla usuarios para obtener el correo
       const { data: usuarioData, error: usuarioError } = await supabase
         .from('usuarios')
         .select('*')
@@ -99,15 +143,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return false;
       }
 
-      // Verificar contraseña
-      // NOTA: En producción deberías usar bcrypt.compare() o similar
-      // Por ahora, comparación directa (para desarrollo/testing)
-      // TODO: Implementar hash de contraseñas correctamente con bcrypt
-      if (usuarioData.contrasena_hash !== contrasena) {
-        toast.error('Usuario o contraseña incorrectos');
-        return false;
-      }
-
       // Validar que el rol sea válido
       const rolValido: Rol[] = ['Oficina', 'Portero', 'Báscula', 'Calidad', 'Laboratorio', 'Producción', 'Administrador'];
       if (!rolValido.includes(usuarioData.rol as Rol)) {
@@ -115,16 +150,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return false;
       }
 
-      // Guardar sesión
-      localStorage.setItem('usuario_id', usuarioData.id.toString());
-      setUsuario({
-        id: usuarioData.id,
-        nombre_completo: usuarioData.nombre_completo,
-        nombre_usuario: usuarioData.nombre_usuario,
-        correo: usuarioData.correo,
-        rol: usuarioData.rol as Rol,
-        activo: usuarioData.activo
+      // Intentar iniciar sesión con Supabase Auth usando el correo
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: usuarioData.correo,
+        password: contrasena
       });
+
+      if (authError || !authData.user) {
+        toast.error('Usuario o contraseña incorrectos');
+        return false;
+      }
+
+      // Cargar usuario completo desde la tabla usuarios
+      await cargarUsuarioDesdeAuth(usuarioData.correo);
+      
       toast.success(`Bienvenido, ${usuarioData.nombre_completo}`);
       return true;
     } catch (error) {
@@ -134,10 +173,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('usuario_id');
-    setUsuario(null);
-    toast.success('Sesión cerrada');
+  const logout = async () => {
+    try {
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
+      setUsuario(null);
+      toast.success('Sesión cerrada');
+    } catch (error) {
+      console.error('Error en logout:', error);
+      toast.error('Error al cerrar sesión');
+    }
   };
 
   const tienePermiso = (modulo: string): boolean => {
