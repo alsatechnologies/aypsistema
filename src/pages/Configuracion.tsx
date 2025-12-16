@@ -270,8 +270,8 @@ const Configuracion = () => {
 
   // CRUD Usuarios
   const handleSaveUsuario = async () => {
-    if (!nuevoUsuario.nombreCompleto || !nuevoUsuario.correo || !nuevoUsuario.rol) {
-      toast.error('Complete todos los campos requeridos');
+    if (!nuevoUsuario.nombreCompleto || !nuevoUsuario.rol) {
+      toast.error('Complete todos los campos requeridos (nombre completo y rol)');
       return;
     }
     if (!editingUsuario && !nuevoUsuario.contrasena) {
@@ -280,26 +280,86 @@ const Configuracion = () => {
     }
 
     try {
+      // Generar email automáticamente basado en nombre_usuario o nombre_completo
+      const emailFinal = nuevoUsuario.correo || 
+        (nuevoUsuario.nombreUsuario && nuevoUsuario.nombreUsuario.trim() !== ''
+          ? `${nuevoUsuario.nombreUsuario.toLowerCase().trim()}@apsistema.com`
+          : `${nuevoUsuario.nombreCompleto.toLowerCase().trim().replace(/\s+/g, '_')}@apsistema.com`);
+
       // En producción, deberías hashear la contraseña aquí
       const contrasenaHash = nuevoUsuario.contrasena || '********';
       
       if (editingUsuario) {
+        // Actualizar usuario existente
         const updateData: any = {
           nombre_completo: nuevoUsuario.nombreCompleto,
           nombre_usuario: nuevoUsuario.nombreUsuario || null,
-          correo: nuevoUsuario.correo,
+          correo: emailFinal,
           rol: nuevoUsuario.rol
         };
         if (nuevoUsuario.contrasena) {
           updateData.contrasena_hash = contrasenaHash;
+          
+          // Actualizar contraseña en auth.users
+          try {
+            const updateAuthResponse = await fetch('/api/update-auth-user', {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                email: editingUsuario.correo, // Email antiguo
+                password: nuevoUsuario.contrasena,
+                new_email: emailFinal !== editingUsuario.correo ? emailFinal : undefined
+              }),
+            });
+
+            if (!updateAuthResponse.ok) {
+              const errorData = await updateAuthResponse.json();
+              console.warn('Advertencia: No se pudo actualizar en auth.users:', errorData.error);
+              // Continuar de todas formas, el usuario puede actualizarse manualmente
+            }
+          } catch (authError) {
+            console.warn('Advertencia: Error al actualizar en auth.users:', authError);
+            // Continuar de todas formas
+          }
         }
+        
         await updateUsuarioDB(editingUsuario.id, updateData);
         toast.success('Usuario actualizado correctamente');
       } else {
+        // Crear nuevo usuario
+        // Primero crear en auth.users
+        try {
+          const createAuthResponse = await fetch('/api/create-auth-user', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: emailFinal,
+              password: nuevoUsuario.contrasena,
+              nombre_completo: nuevoUsuario.nombreCompleto,
+              nombre_usuario: nuevoUsuario.nombreUsuario || null,
+              rol: nuevoUsuario.rol
+            }),
+          });
+
+          if (!createAuthResponse.ok) {
+            const errorData = await createAuthResponse.json();
+            throw new Error(errorData.error || 'Error al crear usuario en auth.users');
+          }
+        } catch (authError) {
+          console.error('Error creando usuario en auth.users:', authError);
+          toast.error('Error al crear usuario en auth.users. Verifica que SUPABASE_SERVICE_ROLE_KEY esté configurada en Vercel.');
+          return;
+        }
+
+        // Luego crear en la tabla usuarios
         await addUsuarioDB({
           nombre_completo: nuevoUsuario.nombreCompleto,
           nombre_usuario: nuevoUsuario.nombreUsuario || null,
-          correo: nuevoUsuario.correo,
+          correo: emailFinal,
           contrasena_hash: contrasenaHash,
           rol: nuevoUsuario.rol,
           activo: true
@@ -312,7 +372,7 @@ const Configuracion = () => {
       setUsuarioDialogOpen(false);
     } catch (error) {
       console.error('Error saving usuario:', error);
-      toast.error('Error al guardar usuario');
+      toast.error(error instanceof Error ? error.message : 'Error al guardar usuario');
     }
   };
 
@@ -1003,13 +1063,20 @@ const Configuracion = () => {
               <p className="text-xs text-gray-500">Si no se especifica, se puede usar el correo para iniciar sesión</p>
             </div>
             <div className="space-y-2">
-              <Label>Correo Electrónico *</Label>
+              <Label>Correo Electrónico (Opcional)</Label>
               <Input 
                 type="email" 
-                placeholder="correo@empresa.com"
+                placeholder="Se generará automáticamente como nombre_usuario@apsistema.com"
                 value={nuevoUsuario.correo}
                 onChange={(e) => setNuevoUsuario(prev => ({ ...prev, correo: e.target.value }))}
               />
+              <p className="text-xs text-gray-500">
+                Si no se especifica, se generará automáticamente como: {nuevoUsuario.nombreUsuario 
+                  ? `${nuevoUsuario.nombreUsuario.toLowerCase().trim()}@apsistema.com`
+                  : nuevoUsuario.nombreCompleto 
+                    ? `${nuevoUsuario.nombreCompleto.toLowerCase().trim().replace(/\s+/g, '_')}@apsistema.com`
+                    : 'nombre_usuario@apsistema.com'}
+              </p>
             </div>
             <div className="space-y-2">
               <Label>{editingUsuario ? 'Nueva Contraseña (dejar vacío para no cambiar)' : 'Contraseña'}</Label>
