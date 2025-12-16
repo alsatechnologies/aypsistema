@@ -145,39 +145,56 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const busqueda = usuarioOCorreo.toLowerCase().trim();
       console.log('🔐 Iniciando login para:', busqueda);
       
-      // Buscar usuario por nombre_usuario O correo en una sola consulta (más eficiente)
-      console.log('🔍 Buscando usuario (nombre_usuario o correo)...');
+      // Buscar usuario - intentar primero por nombre_usuario, luego por correo
+      console.log('🔍 Buscando usuario...');
       let usuarioData = null;
       let usuarioError = null;
       
+      // Intentar primero por nombre_usuario (más rápido)
       try {
-        console.log('   Ejecutando consulta a Supabase...');
-        const searchPromise = supabase
-          .from('usuarios')
-          .select('*')
-          .eq('activo', true)
-          .or(`nombre_usuario.eq.${busqueda},correo.eq.${busqueda}`);
+        console.log('   Buscando por nombre_usuario:', busqueda);
+        const { data: dataPorUsuario, error: errorPorUsuario } = await Promise.race([
+          supabase
+            .from('usuarios')
+            .select('*')
+            .eq('activo', true)
+            .eq('nombre_usuario', busqueda)
+            .maybeSingle(),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout')), 3000)
+          )
+        ]) as any;
         
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Timeout en búsqueda de usuario después de 5 segundos')), 5000);
-        });
-
-        const result = await Promise.race([searchPromise, timeoutPromise]) as any;
-        console.log('   Respuesta recibida:', result);
-        
-        if (result.error) {
-          console.error('   Error en respuesta:', result.error);
-          usuarioError = result.error;
-        } else if (result.data && result.data.length > 0) {
-          usuarioData = result.data[0];
-          console.log('   Usuario encontrado:', usuarioData);
+        if (dataPorUsuario && !errorPorUsuario) {
+          console.log('✅ Usuario encontrado por nombre_usuario');
+          usuarioData = dataPorUsuario;
+        } else if (errorPorUsuario && errorPorUsuario.message !== 'Timeout') {
+          // Si no es timeout, intentar por correo
+          console.log('   No encontrado por nombre_usuario, buscando por correo...');
+          const { data: dataPorCorreo, error: errorPorCorreo } = await Promise.race([
+            supabase
+              .from('usuarios')
+              .select('*')
+              .eq('activo', true)
+              .eq('correo', busqueda)
+              .maybeSingle(),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Timeout')), 3000)
+            )
+          ]) as any;
+          
+          if (dataPorCorreo && !errorPorCorreo) {
+            console.log('✅ Usuario encontrado por correo');
+            usuarioData = dataPorCorreo;
+          } else {
+            usuarioError = errorPorCorreo || { message: 'Usuario no encontrado' };
+          }
         } else {
-          console.log('   No se encontraron usuarios');
-          usuarioError = { message: 'Usuario no encontrado' };
+          usuarioError = errorPorUsuario || { message: 'Timeout en búsqueda' };
         }
       } catch (timeoutError) {
         console.error('❌ Timeout en búsqueda:', timeoutError);
-        usuarioError = timeoutError as any;
+        usuarioError = { message: 'La búsqueda está tardando demasiado. Verifica tu conexión.' };
       }
 
       if (usuarioError) {
