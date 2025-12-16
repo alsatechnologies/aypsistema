@@ -29,6 +29,9 @@ import type { Recepcion as RecepcionDB } from '@/services/supabase/recepciones';
 import { formatDateTimeMST } from '@/utils/dateUtils';
 import { getCurrentDateTimeMST } from '@/utils/dateUtils';
 import { getScaleWeight, PREDEFINED_SCALES } from '@/services/api/scales';
+import { generateBoletaRecibaPDF, openPDF } from '@/services/api/certificate';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 interface Recepcion {
   id: number;
@@ -426,6 +429,133 @@ const Reciba = () => {
     } catch (error) {
       console.error('Error saving recepcion:', error);
       toast.error('Error al guardar boleta');
+    }
+  };
+
+  // Función para calcular descuentos (igual que DescuentosPanel)
+  const calcularDescuentos = () => {
+    if (!productoSeleccionado || !analisisProducto.length) {
+      return { totalDescuentoKg: 0, pesoNetoAnalizado: pesoNeto };
+    }
+
+    const descuentosActivos = analisisProducto.filter(a => a.generaDescuento);
+    let totalDescuentoKg = 0;
+
+    descuentosActivos.forEach(item => {
+      const valor = valoresAnalisis[item.nombre] || 0;
+      if (!item.rangosDescuento || item.rangosDescuento.length === 0 || !valor) return;
+      
+      // Ordenar rangos por porcentaje descendente
+      const rangosOrdenados = [...item.rangosDescuento].sort((a, b) => b.porcentaje - a.porcentaje);
+      const rangoAplicable = rangosOrdenados.find(rango => valor >= rango.porcentaje);
+      
+      if (rangoAplicable) {
+        // Convertir kg por tonelada a kg totales
+        const descuentoKg = (rangoAplicable.kgDescuentoTon * pesoNeto) / 1000;
+        totalDescuentoKg += descuentoKg;
+      }
+    });
+
+    const pesoNetoAnalizado = Math.max(0, pesoNeto - totalDescuentoKg);
+    return { totalDescuentoKg, pesoNetoAnalizado };
+  };
+
+  // Función para formatear fecha y hora según formato esperado por la API
+  const formatearFechaHora = (fechaHora: string | null) => {
+    if (!fechaHora) return { fecha: '', hora: '' };
+    try {
+      // fechaHora viene en formato ISO: YYYY-MM-DDTHH:mm:ss.mmm
+      const fecha = new Date(fechaHora);
+      const fechaStr = format(fecha, 'dd/MM/yyyy', { locale: es });
+      const horaStr = format(fecha, 'HH:mm', { locale: es });
+      return { fecha: fechaStr, hora: horaStr };
+    } catch {
+      return { fecha: '', hora: '' };
+    }
+  };
+
+  const handleImprimir = async () => {
+    if (!selectedRecepcion) return;
+    
+    // Validar que tenga los datos necesarios
+    if (!productoSeleccionado || !proveedorSeleccionado) {
+      toast.error('Debe completar producto y proveedor antes de imprimir');
+      return;
+    }
+
+    if (pesoBruto <= 0 || pesoTara <= 0) {
+      toast.error('Debe registrar los pesos antes de imprimir');
+      return;
+    }
+
+    try {
+      const producto = productosDB.find(p => p.id === productoSeleccionado);
+      const proveedor = proveedoresDB.find(p => p.id === proveedorSeleccionado);
+      
+      if (!producto || !proveedor) {
+        toast.error('Error al obtener datos del producto o proveedor');
+        return;
+      }
+
+      // Calcular descuentos
+      const { totalDescuentoKg, pesoNetoAnalizado } = calcularDescuentos();
+
+      // Preparar datos para la API
+      const fechaActual = format(new Date(), 'dd/MM/yyyy', { locale: es });
+      
+      // Formatear fechas y horas
+      const fechaHoraBruto = formatearFechaHora(horaPesoBruto);
+      const fechaHoraTara = formatearFechaHora(horaPesoTara);
+      const fechaHoraNeto = formatearFechaHora(horaPesoNeto);
+      
+      // Convertir análisis a formato esperado por la API
+      const analisisArray = Object.entries(valoresAnalisis).map(([nombre, valor]) => ({
+        nombre,
+        valor,
+        unidad: 'kg'
+      }));
+
+      const boletaData = {
+        boleta_no: selectedRecepcion.boleta.startsWith('TEMP-') ? 'PENDIENTE' : selectedRecepcion.boleta,
+        fecha: fechaActual,
+        lote: selectedRecepcion.codigoLote || '',
+        productor: proveedor.empresa,
+        producto: producto.nombre,
+        procedencia: selectedRecepcion.destino || 'N/A',
+        vehiculo: selectedRecepcion.tipoTransporte || 'N/A',
+        placas: selectedRecepcion.placas || 'N/A',
+        chofer: selectedRecepcion.chofer || 'N/A',
+        analisis: analisisArray,
+        pesos_info1: {
+          peso_bruto: pesoBruto,
+          peso_tara: pesoTara,
+          peso_neto: pesoNeto,
+          fechaneto: fechaHoraNeto.fecha,
+          fechabruto: fechaHoraBruto.fecha,
+          fechatara: fechaHoraTara.fecha,
+          horabruto: fechaHoraBruto.hora,
+          horatara: fechaHoraTara.hora
+        },
+        pesos_info2: {
+          deduccion: totalDescuentoKg,
+          peso_neto_analizado: pesoNetoAnalizado
+        },
+        observaciones: ''
+      };
+
+      toast.loading('Generando boleta PDF...', { id: 'generating-pdf' });
+      
+      const result = await generateBoletaRecibaPDF(boletaData);
+      
+      if (result.success) {
+        toast.success('Boleta generada correctamente', { id: 'generating-pdf' });
+        openPDF(result.pdf_url, result.pdf_base64);
+      } else {
+        toast.error(result.error || 'Error al generar boleta PDF', { id: 'generating-pdf' });
+      }
+    } catch (error) {
+      console.error('Error al imprimir boleta:', error);
+      toast.error('Error al comunicarse con la API de certificados', { id: 'generating-pdf' });
     }
   };
 
@@ -846,7 +976,11 @@ const Reciba = () => {
                     <BookmarkPlus className="h-4 w-4" />
                     Pre-Guardar
                   </Button>
-                  <Button variant="outline" className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center gap-2"
+                    onClick={handleImprimir}
+                  >
                     <Printer className="h-4 w-4" />
                     Imprimir
                   </Button>

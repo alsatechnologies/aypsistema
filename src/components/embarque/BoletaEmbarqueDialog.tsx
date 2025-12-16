@@ -1,10 +1,12 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Printer, X, Ship } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { generateBoletaEmbarquePDF, openPDF } from '@/services/api/certificate';
+import { toast } from 'sonner';
 
 interface Embarque {
   boleta: string;
@@ -22,6 +24,7 @@ interface Embarque {
   placas?: string;
   numeroCarro?: string;
   codigoLote?: string;
+  valoresAnalisis?: Record<string, number>;
   sellos?: {
     selloEntrada1?: string;
     selloEntrada2?: string;
@@ -38,8 +41,85 @@ interface BoletaEmbarqueDialogProps {
 
 const BoletaEmbarqueDialog: React.FC<BoletaEmbarqueDialogProps> = ({ open, onOpenChange, embarque }) => {
   const printRef = useRef<HTMLDivElement>(null);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
+    if (!embarque) return;
+
+    // Intentar usar la API de certificados primero
+    try {
+      setIsGeneratingPDF(true);
+      
+      // Convertir análisis a formato esperado por la API
+      const analisisArray = embarque.valoresAnalisis 
+        ? Object.entries(embarque.valoresAnalisis).map(([nombre, valor]) => ({
+            nombre,
+            valor,
+            unidad: 'kg'
+          }))
+        : [];
+
+      const fechaActual = format(new Date(), 'dd/MM/yyyy', { locale: es });
+      
+      const boletaData = {
+        boleta_no: embarque.boleta,
+        fecha: fechaActual,
+        lote: embarque.codigoLote || '',
+        cliente: embarque.cliente,
+        producto: embarque.producto,
+        destino: embarque.destino || 'N/A',
+        vehiculo: embarque.tipoTransporte || 'N/A',
+        placas: embarque.placas || '',
+        chofer: embarque.chofer || 'N/A',
+        tipo_transporte: embarque.tipoTransporte === 'Ferroviaria' ? 'Ferroviaria' : 'Camión',
+        tipo_embarque: embarque.tipoEmbarque === 'Exportación' ? 'Exportación' : 'Nacional',
+        analisis: analisisArray,
+        pesos_info1: {
+          peso_bruto: embarque.pesoBruto || 0,
+          peso_tara: embarque.pesoTara || 0,
+          peso_neto: embarque.pesoNeto || 0,
+          fechaneto: '',
+          fechabruto: '',
+          fechatara: '',
+          horabruto: '',
+          horatara: ''
+        },
+        pesos_info2: {
+          deduccion: 0,
+          peso_neto_analizado: embarque.pesoNeto || 0
+        },
+        observaciones: '',
+        sellos: embarque.sellos ? {
+          entrada1: embarque.sellos.selloEntrada1,
+          entrada2: embarque.sellos.selloEntrada2,
+          salida1: embarque.sellos.selloSalida1,
+          salida2: embarque.sellos.selloSalida2,
+        } : undefined,
+      };
+
+      toast.loading('Generando boleta PDF...', { id: 'generating-pdf-embarque' });
+      
+      const result = await generateBoletaEmbarquePDF(boletaData);
+      
+      if (result.success) {
+        toast.success('Boleta generada correctamente', { id: 'generating-pdf-embarque' });
+        openPDF(result.pdf_url, result.pdf_base64);
+      } else {
+        // Si falla la API, usar impresión tradicional como fallback
+        console.warn('API de certificados no disponible, usando impresión tradicional');
+        toast.error(result.error || 'Error al generar PDF, usando impresión tradicional', { id: 'generating-pdf-embarque' });
+        handlePrintTraditional();
+      }
+    } catch (error) {
+      console.error('Error al generar PDF:', error);
+      toast.error('Error al comunicarse con la API, usando impresión tradicional', { id: 'generating-pdf-embarque' });
+      handlePrintTraditional();
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
+  const handlePrintTraditional = () => {
     const printContent = printRef.current;
     if (!printContent) return;
 
@@ -241,9 +321,13 @@ const BoletaEmbarqueDialog: React.FC<BoletaEmbarqueDialogProps> = ({ open, onOpe
             <X className="h-4 w-4 mr-2" />
             Cerrar
           </Button>
-          <Button onClick={handlePrint} className="bg-primary hover:bg-primary/90">
+          <Button 
+            onClick={handlePrint} 
+            className="bg-primary hover:bg-primary/90"
+            disabled={isGeneratingPDF}
+          >
             <Printer className="h-4 w-4 mr-2" />
-            Imprimir
+            {isGeneratingPDF ? 'Generando PDF...' : 'Imprimir'}
           </Button>
         </DialogFooter>
       </DialogContent>
