@@ -151,21 +151,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       let usuarioError = null;
       
       try {
+        console.log('   Ejecutando consulta a Supabase...');
         const searchPromise = supabase
           .from('usuarios')
           .select('*')
           .eq('activo', true)
-          .or(`nombre_usuario.eq.${busqueda},correo.eq.${busqueda}`)
-          .maybeSingle();
+          .or(`nombre_usuario.eq.${busqueda},correo.eq.${busqueda}`);
         
         const timeoutPromise = new Promise((_, reject) => {
           setTimeout(() => reject(new Error('Timeout en búsqueda de usuario después de 5 segundos')), 5000);
         });
 
         const result = await Promise.race([searchPromise, timeoutPromise]) as any;
-        usuarioData = result.data;
-        usuarioError = result.error;
-        console.log('   Respuesta recibida de búsqueda');
+        console.log('   Respuesta recibida:', result);
+        
+        if (result.error) {
+          console.error('   Error en respuesta:', result.error);
+          usuarioError = result.error;
+        } else if (result.data && result.data.length > 0) {
+          usuarioData = result.data[0];
+          console.log('   Usuario encontrado:', usuarioData);
+        } else {
+          console.log('   No se encontraron usuarios');
+          usuarioError = { message: 'Usuario no encontrado' };
+        }
       } catch (timeoutError) {
         console.error('❌ Timeout en búsqueda:', timeoutError);
         usuarioError = timeoutError as any;
