@@ -310,20 +310,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log('   User ID:', authData.user.id);
       console.log('   Email confirmado:', authData.user.email_confirmed_at ? 'Sí' : 'No');
 
-      // Cargar usuario completo desde la tabla usuarios
+      // Cargar usuario completo desde la tabla usuarios (sin timeout estricto)
       console.log('📥 Cargando datos del usuario desde tabla usuarios...');
-      try {
-        await Promise.race([
-          cargarUsuarioDesdeAuth(usuarioData.correo),
-          new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Timeout cargando usuario después de 5 segundos')), 5000);
-          })
-        ]);
-        console.log('✅ Usuario cargado correctamente');
-      } catch (timeoutError) {
-        console.error('❌ Timeout cargando usuario:', timeoutError);
-        // Continuar de todas formas, el usuario ya está autenticado
-      }
+      
+      // Cargar usuario de forma asíncrona, pero no bloquear el login
+      cargarUsuarioDesdeAuth(usuarioData.correo).catch(error => {
+        console.error('❌ Error cargando usuario (no crítico):', error);
+        // No es crítico, el usuario ya está autenticado
+      });
+      
+      // Establecer el usuario inmediatamente con los datos que ya tenemos
+      setUsuario({
+        id: usuarioData.id,
+        nombre_completo: usuarioData.nombre_completo,
+        nombre_usuario: usuarioData.nombre_usuario,
+        correo: usuarioData.correo,
+        rol: usuarioData.rol as Rol,
+        activo: usuarioData.activo
+      });
       
       toast.success(`Bienvenido, ${usuarioData.nombre_completo}`);
       return true;
