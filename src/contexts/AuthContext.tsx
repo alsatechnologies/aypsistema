@@ -138,7 +138,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (usuarioOCorreo: string, contrasena: string): Promise<boolean> => {
     try {
       if (!supabase) {
-        toast.error('Supabase no está configurado');
+        console.error('❌ Supabase no está configurado');
+        console.error('   VITE_SUPABASE_URL:', import.meta.env.VITE_SUPABASE_URL);
+        console.error('   VITE_SUPABASE_ANON_KEY:', import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Configurada' : 'NO CONFIGURADA');
+        toast.error('Supabase no está configurado. Verifica las variables de entorno en Vercel.');
         return false;
       }
 
