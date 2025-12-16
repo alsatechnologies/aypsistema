@@ -489,7 +489,7 @@ const EmbarquePage = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Ship className="h-5 w-5" />
-              Embarques del Día
+              Historial de embarques
             </CardTitle>
             <CardDescription>Haz clic en una fila para abrir el formulario de báscula</CardDescription>
           </CardHeader>
