@@ -1,8 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-// URL de la API de certificados - puede configurarse mediante variable de entorno
-// Por defecto usa localhost para desarrollo local, pero en producción debería ser la URL del túnel o servidor
-const CERTIFICATE_API_URL = process.env.CERTIFICATE_API_URL || 'http://localhost:8001';
+// URL de la API de certificados - DEBE configurarse mediante variable de entorno en Vercel
+// En producción, esta variable es obligatoria (URL del túnel de Cloudflare o servidor)
+const CERTIFICATE_API_URL = process.env.CERTIFICATE_API_URL;
+
+if (!CERTIFICATE_API_URL) {
+  console.error('❌ CERTIFICATE_API_URL no está configurada. Por favor, configura esta variable de entorno en Vercel.');
+}
 
 export default async function handler(
   req: VercelRequest,
@@ -22,6 +26,14 @@ export default async function handler(
   }
 
   try {
+    if (!CERTIFICATE_API_URL) {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      return res.status(500).json({
+        success: false,
+        error: 'CERTIFICATE_API_URL no está configurada. Por favor, configura esta variable de entorno en Vercel con la URL de tu API de certificados.',
+      });
+    }
+
     console.log('Generando certificado PDF, URL:', `${CERTIFICATE_API_URL}/generate-certificate`);
     
     // Hacer la solicitud al servidor de certificados
