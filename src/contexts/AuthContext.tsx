@@ -140,16 +140,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         .single();
 
       if (usuarioError || !usuarioData) {
+        console.error('Error buscando usuario:', usuarioError);
+        console.log('Búsqueda realizada:', busqueda);
         toast.error('Usuario o contraseña incorrectos');
         return false;
       }
 
+      console.log('Usuario encontrado:', usuarioData);
+
       // Validar que el rol sea válido
       const rolValido: Rol[] = ['Oficina', 'Portero', 'Báscula', 'Calidad', 'Laboratorio', 'Producción', 'Administrador'];
       if (!rolValido.includes(usuarioData.rol as Rol)) {
+        console.error('Rol inválido:', usuarioData.rol);
         toast.error('Rol de usuario no válido');
         return false;
       }
+
+      console.log('Intentando autenticar con:', usuarioData.correo);
 
       // Intentar iniciar sesión con Supabase Auth usando el correo
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
@@ -158,9 +165,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
 
       if (authError || !authData.user) {
+        console.error('Error de autenticación:', authError);
+        console.log('Email usado:', usuarioData.correo);
         toast.error('Usuario o contraseña incorrectos');
         return false;
       }
+
+      console.log('Autenticación exitosa:', authData.user);
 
       // Cargar usuario completo desde la tabla usuarios
       await cargarUsuarioDesdeAuth(usuarioData.correo);
