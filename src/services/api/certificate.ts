@@ -3,8 +3,9 @@
  * La URL puede configurarse mediante variable de entorno o usar localhost por defecto
  */
 
-// URL de la API de certificados - puede ser configurada mediante variable de entorno
-const CERTIFICATE_API_URL = import.meta.env.VITE_CERTIFICATE_API_URL || 'http://localhost:8001';
+// Usar la función serverless de Vercel como proxy para evitar problemas de CORS
+// La URL real de la API se configura en la variable de entorno CERTIFICATE_API_URL en Vercel
+const CERTIFICATE_API_URL = '/api/generate-certificate';
 
 export interface AnalisisItem {
   nombre: string;
@@ -81,7 +82,7 @@ export interface CertificateResponse {
  */
 export async function generateBoletaRecibaPDF(data: BoletaRecibaRequest): Promise<CertificateResponse> {
   try {
-    const response = await fetch(`${CERTIFICATE_API_URL}/generate-certificate`, {
+    const response = await fetch(CERTIFICATE_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -94,28 +95,15 @@ export async function generateBoletaRecibaPDF(data: BoletaRecibaRequest): Promis
       throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
     }
 
-    // La API puede devolver el PDF como blob, base64, o URL
-    const contentType = response.headers.get('content-type');
-    
-    if (contentType?.includes('application/pdf')) {
-      // Si devuelve PDF directamente, convertirlo a blob y crear URL
-      const blob = await response.blob();
-      const pdfUrl = URL.createObjectURL(blob);
-      return {
-        success: true,
-        pdf_url: pdfUrl,
-        message: 'Boleta generada correctamente',
-      };
-    } else {
-      // Si devuelve JSON con datos del PDF
-      const result = await response.json();
-      return {
-        success: result.success || true,
-        pdf_url: result.pdf_url,
-        pdf_base64: result.pdf_base64,
-        message: result.message || 'Boleta generada correctamente',
-      };
-    }
+    // La función serverless siempre devuelve JSON
+    const result = await response.json();
+    return {
+      success: result.success !== false,
+      pdf_url: result.pdf_url,
+      pdf_base64: result.pdf_base64,
+      message: result.message || 'Boleta generada correctamente',
+      error: result.error,
+    };
   } catch (error) {
     console.error('Error al generar boleta PDF:', error);
     return {
@@ -130,7 +118,7 @@ export async function generateBoletaRecibaPDF(data: BoletaRecibaRequest): Promis
  */
 export async function generateBoletaEmbarquePDF(data: BoletaEmbarqueRequest): Promise<CertificateResponse> {
   try {
-    const response = await fetch(`${CERTIFICATE_API_URL}/generate-certificate`, {
+    const response = await fetch(CERTIFICATE_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -143,28 +131,15 @@ export async function generateBoletaEmbarquePDF(data: BoletaEmbarqueRequest): Pr
       throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
     }
 
-    // La API puede devolver el PDF como blob, base64, o URL
-    const contentType = response.headers.get('content-type');
-    
-    if (contentType?.includes('application/pdf')) {
-      // Si devuelve PDF directamente, convertirlo a blob y crear URL
-      const blob = await response.blob();
-      const pdfUrl = URL.createObjectURL(blob);
-      return {
-        success: true,
-        pdf_url: pdfUrl,
-        message: 'Boleta generada correctamente',
-      };
-    } else {
-      // Si devuelve JSON con datos del PDF
-      const result = await response.json();
-      return {
-        success: result.success || true,
-        pdf_url: result.pdf_url,
-        pdf_base64: result.pdf_base64,
-        message: result.message || 'Boleta generada correctamente',
-      };
-    }
+    // La función serverless siempre devuelve JSON
+    const result = await response.json();
+    return {
+      success: result.success !== false,
+      pdf_url: result.pdf_url,
+      pdf_base64: result.pdf_base64,
+      message: result.message || 'Boleta generada correctamente',
+      error: result.error,
+    };
   } catch (error) {
     console.error('Error al generar boleta PDF:', error);
     return {
