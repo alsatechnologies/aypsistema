@@ -21,10 +21,12 @@ export interface Orden {
   proveedor?: { id: number; empresa: string };
 }
 
-// Obtener todas las órdenes
+// Obtener todas las órdenes (con paginación opcional)
 export async function getOrdenes(filters?: {
   estatus?: string;
   tipo_operacion?: string;
+  limit?: number;
+  offset?: number;
 }) {
   if (!supabase) {
     throw new Error('Supabase no está configurado');
@@ -37,7 +39,7 @@ export async function getOrdenes(filters?: {
       producto:productos(id, nombre),
       cliente:clientes(id, empresa),
       proveedor:proveedores(id, empresa)
-    `)
+    `, { count: 'exact' })
     .order('fecha_hora_ingreso', { ascending: false });
   
   if (filters?.estatus) {
@@ -47,9 +49,24 @@ export async function getOrdenes(filters?: {
     query = query.eq('tipo_operacion', filters.tipo_operacion);
   }
   
-  const { data, error } = await query;
+  // Aplicar paginación si se proporciona
+  if (filters?.limit) {
+    query = query.limit(filters.limit);
+  }
+  if (filters?.offset !== undefined && filters?.limit) {
+    query = query.range(filters.offset, filters.offset + filters.limit - 1);
+  }
+  
+  const { data, error, count } = await query;
   if (error) throw error;
-  return data;
+  
+  // Si no hay paginación, devolver directamente el array (compatibilidad hacia atrás)
+  if (filters?.limit === undefined && filters?.offset === undefined) {
+    return data || [];
+  }
+  
+  // Si hay paginación, devolver objeto con data y count
+  return { data: data || [], count: count || 0 };
 }
 
 // Crear orden

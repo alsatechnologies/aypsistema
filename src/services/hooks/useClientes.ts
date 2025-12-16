@@ -2,27 +2,62 @@ import { useState, useEffect } from 'react';
 import * as clientesService from '../supabase/clientes';
 import type { Cliente } from '../supabase/clientes';
 
+const ITEMS_POR_PAGINA = 50;
+
 export function useClientes() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
 
-  const loadClientes = async () => {
+  const loadClientes = async (reset: boolean = true) => {
     try {
-      setLoading(true);
+      if (reset) {
+        setLoading(true);
+        setClientes([]);
+      } else {
+        setLoadingMore(true);
+      }
       setError(null);
-      const data = await clientesService.getClientes();
-      setClientes(data);
+      
+      const offset = reset ? 0 : clientes.length;
+      const result = await clientesService.getClientes({
+        limit: ITEMS_POR_PAGINA,
+        offset: offset
+      });
+      
+      // Manejar tanto el formato antiguo (array) como el nuevo ({ data, count })
+      const data = Array.isArray(result) ? result : (result.data || []);
+      const count = Array.isArray(result) ? result.length : (result.count || 0);
+      
+      if (reset) {
+        setClientes(data);
+      } else {
+        setClientes(prev => [...prev, ...data]);
+      }
+      
+      setTotalCount(count);
+      const currentLength = reset ? data.length : clientes.length + data.length;
+      setHasMore(currentLength < count);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Error al cargar clientes'));
       console.error('Error loading clientes:', err);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const loadMore = async () => {
+    if (!loadingMore && hasMore) {
+      await loadClientes(false);
     }
   };
 
   useEffect(() => {
-    loadClientes();
+    loadClientes(true);
   }, []);
 
   const addCliente = async (cliente: Omit<Cliente, 'id' | 'created_at' | 'updated_at' | 'productos'>, productosIds?: number[]) => {
@@ -60,8 +95,12 @@ export function useClientes() {
   return {
     clientes,
     loading,
+    loadingMore,
     error,
+    hasMore,
+    totalCount,
     loadClientes,
+    loadMore,
     addCliente,
     updateCliente,
     deleteCliente

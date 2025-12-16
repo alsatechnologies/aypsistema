@@ -18,12 +18,14 @@ export interface Movimiento {
   producto?: { id: number; nombre: string };
 }
 
-// Obtener todos los movimientos
+// Obtener todos los movimientos (con paginación opcional)
 export async function getMovimientos(filters?: {
   fechaDesde?: string;
   fechaHasta?: string;
   tipo?: string;
   producto_id?: number;
+  limit?: number;
+  offset?: number;
 }) {
   if (!supabase) {
     throw new Error('Supabase no está configurado');
@@ -34,7 +36,7 @@ export async function getMovimientos(filters?: {
     .select(`
       *,
       producto:productos(id, nombre)
-    `)
+    `, { count: 'exact' })
     .order('fecha', { ascending: false });
   
   if (filters?.fechaDesde) {
@@ -50,9 +52,24 @@ export async function getMovimientos(filters?: {
     query = query.eq('producto_id', filters.producto_id);
   }
   
-  const { data, error } = await query;
+  // Aplicar paginación si se proporciona
+  if (filters?.limit) {
+    query = query.limit(filters.limit);
+  }
+  if (filters?.offset !== undefined && filters?.limit) {
+    query = query.range(filters.offset, filters.offset + filters.limit - 1);
+  }
+  
+  const { data, error, count } = await query;
   if (error) throw error;
-  return data;
+  
+  // Si no hay paginación, devolver directamente el array (compatibilidad hacia atrás)
+  if (filters?.limit === undefined && filters?.offset === undefined) {
+    return data || [];
+  }
+  
+  // Si hay paginación, devolver objeto con data y count
+  return { data: data || [], count: count || 0 };
 }
 
 // Crear movimiento

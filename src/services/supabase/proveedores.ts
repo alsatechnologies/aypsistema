@@ -12,19 +12,38 @@ export interface Proveedor {
   updated_at?: string;
 }
 
-// Obtener todos los proveedores
-export async function getProveedores() {
+// Obtener todos los proveedores (con paginación opcional)
+export async function getProveedores(filters?: {
+  limit?: number;
+  offset?: number;
+}) {
   if (!supabase) {
     throw new Error('Supabase no está configurado');
   }
   
-  const { data, error } = await supabase
+  let query = supabase
     .from('proveedores')
-    .select('*')
+    .select('*', { count: 'exact' })
     .order('empresa');
   
+  // Aplicar paginación si se proporciona
+  if (filters?.limit) {
+    query = query.limit(filters.limit);
+  }
+  if (filters?.offset !== undefined && filters?.limit) {
+    query = query.range(filters.offset, filters.offset + filters.limit - 1);
+  }
+  
+  const { data, error, count } = await query;
   if (error) throw error;
-  return data;
+  
+  // Si no hay paginación, devolver directamente el array (compatibilidad hacia atrás)
+  if (filters?.limit === undefined && filters?.offset === undefined) {
+    return data || [];
+  }
+  
+  // Si hay paginación, devolver objeto con data y count
+  return { data: data || [], count: count || 0 };
 }
 
 // Crear proveedor

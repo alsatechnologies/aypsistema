@@ -28,12 +28,14 @@ export interface Recepcion {
   almacen_id?: number | null; // Para generar código de lote
 }
 
-// Obtener todas las recepciones
+// Obtener todas las recepciones (con paginación opcional)
 export async function getRecepciones(filters?: {
   fechaDesde?: string;
   fechaHasta?: string;
   estatus?: string;
   producto_id?: number;
+  limit?: number;
+  offset?: number;
 }) {
   if (!supabase) {
     throw new Error('Supabase no está configurado');
@@ -45,7 +47,7 @@ export async function getRecepciones(filters?: {
       *,
       producto:productos(id, nombre),
       proveedor:proveedores(id, empresa)
-    `)
+    `, { count: 'exact' })
     .order('fecha', { ascending: false })
     .order('created_at', { ascending: false });
   
@@ -62,9 +64,24 @@ export async function getRecepciones(filters?: {
     query = query.eq('producto_id', filters.producto_id);
   }
   
-  const { data, error } = await query;
+  // Aplicar paginación si se proporciona
+  if (filters?.limit) {
+    query = query.limit(filters.limit);
+  }
+  if (filters?.offset !== undefined && filters?.limit) {
+    query = query.range(filters.offset, filters.offset + filters.limit - 1);
+  }
+  
+  const { data, error, count } = await query;
   if (error) throw error;
-  return data;
+  
+  // Si no hay paginación, devolver directamente el array (compatibilidad hacia atrás)
+  if (filters?.limit === undefined && filters?.offset === undefined) {
+    return data || [];
+  }
+  
+  // Si hay paginación, devolver objeto con data y count
+  return { data: data || [], count: count || 0 };
 }
 
 // Crear recepción

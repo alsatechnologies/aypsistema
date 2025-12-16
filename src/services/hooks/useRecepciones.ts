@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import * as recepcionesService from '../supabase/recepciones';
 import type { Recepcion } from '../supabase/recepciones';
 
+const ITEMS_POR_PAGINA = 50;
+
 export function useRecepciones(filters?: {
   fechaDesde?: string;
   fechaHasta?: string;
@@ -10,24 +12,58 @@ export function useRecepciones(filters?: {
 }) {
   const [recepciones, setRecepciones] = useState<Recepcion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
 
-  const loadRecepciones = async () => {
+  const loadRecepciones = async (reset: boolean = true) => {
     try {
-      setLoading(true);
+      if (reset) {
+        setLoading(true);
+        setRecepciones([]);
+      } else {
+        setLoadingMore(true);
+      }
       setError(null);
-      const data = await recepcionesService.getRecepciones(filters);
-      setRecepciones(data);
+      
+      const offset = reset ? 0 : recepciones.length;
+      const result = await recepcionesService.getRecepciones({
+        ...filters,
+        limit: ITEMS_POR_PAGINA,
+        offset: offset
+      });
+      
+      // Manejar tanto el formato antiguo (array) como el nuevo ({ data, count })
+      const data = Array.isArray(result) ? result : (result.data || []);
+      const count = Array.isArray(result) ? result.length : (result.count || 0);
+      
+      if (reset) {
+        setRecepciones(data);
+      } else {
+        setRecepciones(prev => [...prev, ...data]);
+      }
+      
+      setTotalCount(count);
+      const currentLength = reset ? data.length : recepciones.length + data.length;
+      setHasMore(currentLength < count);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Error al cargar recepciones'));
       console.error('Error loading recepciones:', err);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const loadMore = async () => {
+    if (!loadingMore && hasMore) {
+      await loadRecepciones(false);
     }
   };
 
   useEffect(() => {
-    loadRecepciones();
+    loadRecepciones(true);
   }, [filters?.fechaDesde, filters?.fechaHasta, filters?.estatus, filters?.producto_id]);
 
   const addRecepcion = async (recepcion: Omit<Recepcion, 'id' | 'created_at' | 'updated_at' | 'producto' | 'proveedor'>) => {
@@ -65,8 +101,12 @@ export function useRecepciones(filters?: {
   return {
     recepciones,
     loading,
+    loadingMore,
     error,
+    hasMore,
+    totalCount,
     loadRecepciones,
+    loadMore,
     addRecepcion,
     updateRecepcion,
     deleteRecepcion

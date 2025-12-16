@@ -56,7 +56,7 @@ interface Recepcion {
 }
 
 const Reciba = () => {
-  const { recepciones: recepcionesDB, loading, addRecepcion, updateRecepcion, loadRecepciones } = useRecepciones();
+  const { recepciones: recepcionesDB, loading, loadingMore, hasMore, addRecepcion, updateRecepcion, loadRecepciones, loadMore } = useRecepciones();
   const { productos: productosDB } = useProductos();
   const { proveedores: proveedoresDB, addProveedor } = useProveedores();
   const { almacenes: almacenesDB } = useAlmacenes();
@@ -687,6 +687,17 @@ const Reciba = () => {
                 )}
               </TableBody>
             </Table>
+            {hasMore && (
+              <div className="flex justify-center mt-4 pb-4">
+                <Button 
+                  variant="outline" 
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                >
+                  {loadingMore ? 'Cargando...' : 'Cargar más'}
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 

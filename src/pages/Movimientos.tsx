@@ -49,7 +49,7 @@ const Movimientos = () => {
     producto_id: filtroProducto !== 'todos' ? parseInt(filtroProducto) : undefined
   }), [fechaDesde, fechaHasta, filtroTipo, filtroProducto]);
   
-  const { movimientos: movimientosDB, loading, loadMovimientos } = useMovimientos(filters);
+  const { movimientos: movimientosDB, loading, loadingMore, hasMore, loadMovimientos, loadMore } = useMovimientos(filters);
   const [selectedMovimiento, setSelectedMovimiento] = useState<Movimiento | null>(null);
   const [isDetalleOpen, setIsDetalleOpen] = useState(false);
 
@@ -371,6 +371,17 @@ const Movimientos = () => {
                 ))}
               </TableBody>
             </Table>
+            {hasMore && (
+              <div className="flex justify-center mt-4 pb-4">
+                <Button 
+                  variant="outline" 
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                >
+                  {loadingMore ? 'Cargando...' : 'Cargar más'}
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 

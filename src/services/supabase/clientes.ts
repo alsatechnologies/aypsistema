@@ -15,22 +15,35 @@ export interface Cliente {
   productos?: number[]; // IDs de productos
 }
 
-// Obtener todos los clientes
-export async function getClientes() {
+// Obtener todos los clientes (con paginación opcional)
+export async function getClientes(filters?: {
+  limit?: number;
+  offset?: number;
+}) {
   if (!supabase) {
     throw new Error('Supabase no está configurado');
   }
   
-  const { data: clientes, error: clientesError } = await supabase
+  let query = supabase
     .from('clientes')
-    .select('*')
+    .select('*', { count: 'exact' })
     .order('empresa');
+  
+  // Aplicar paginación si se proporciona
+  if (filters?.limit) {
+    query = query.limit(filters.limit);
+  }
+  if (filters?.offset !== undefined && filters?.limit) {
+    query = query.range(filters.offset, filters.offset + filters.limit - 1);
+  }
+  
+  const { data: clientes, error: clientesError, count } = await query;
   
   if (clientesError) throw clientesError;
   
   // Obtener productos de cada cliente
   const clientesConProductos = await Promise.all(
-    clientes.map(async (cliente) => {
+    (clientes || []).map(async (cliente) => {
       const { data: productos } = await supabase
         .from('clientes_productos')
         .select('producto_id')
@@ -43,7 +56,13 @@ export async function getClientes() {
     })
   );
   
-  return clientesConProductos;
+  // Si no hay paginación, devolver directamente el array (compatibilidad hacia atrás)
+  if (filters?.limit === undefined && filters?.offset === undefined) {
+    return clientesConProductos;
+  }
+  
+  // Si hay paginación, devolver objeto con data y count
+  return { data: clientesConProductos, count: count || 0 };
 }
 
 // Obtener un cliente con sus productos

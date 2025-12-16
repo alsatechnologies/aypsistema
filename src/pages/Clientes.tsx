@@ -29,7 +29,7 @@ interface Cliente {
 }
 
 const Clientes = () => {
-  const { clientes: clientesDB, loading, addCliente, updateCliente, loadClientes } = useClientes();
+  const { clientes: clientesDB, loading, loadingMore, hasMore, addCliente, updateCliente, loadClientes, loadMore } = useClientes();
   const { productos: productosDB } = useProductos();
   
   const [search, setSearch] = useState('');
@@ -295,6 +295,17 @@ const Clientes = () => {
                 ))}
               </TableBody>
             </Table>
+            {hasMore && (
+              <div className="flex justify-center mt-4 pb-4">
+                <Button 
+                  variant="outline" 
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                >
+                  {loadingMore ? 'Cargando...' : 'Cargar más'}
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 

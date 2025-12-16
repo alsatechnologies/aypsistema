@@ -34,7 +34,7 @@ interface Ingreso {
 }
 
 const Ingreso = () => {
-  const { ingresos: ingresosDB, loading, addIngreso, updateIngreso, loadIngresos } = useIngresos();
+  const { ingresos: ingresosDB, loading, loadingMore, hasMore, addIngreso, updateIngreso, loadIngresos, loadMore } = useIngresos();
   const { addOrden } = useOrdenes();
   
   const [search, setSearch] = useState('');
@@ -284,6 +284,17 @@ const Ingreso = () => {
                 </TableBody>
               </Table>
             </div>
+            {hasMore && (
+              <div className="flex justify-center mt-4 pb-4">
+                <Button 
+                  variant="outline" 
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                >
+                  {loadingMore ? 'Cargando...' : 'Cargar más'}
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 

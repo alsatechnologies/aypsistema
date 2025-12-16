@@ -29,12 +29,14 @@ export interface Embarque {
   almacen_id?: number | null; // Para generar código de lote
 }
 
-// Obtener todos los embarques
+// Obtener todos los embarques (con paginación opcional)
 export async function getEmbarques(filters?: {
   fechaDesde?: string;
   fechaHasta?: string;
   estatus?: string;
   tipo_embarque?: string;
+  limit?: number;
+  offset?: number;
 }) {
   if (!supabase) {
     throw new Error('Supabase no está configurado');
@@ -46,7 +48,7 @@ export async function getEmbarques(filters?: {
       *,
       producto:productos(id, nombre),
       cliente:clientes(id, empresa)
-    `)
+    `, { count: 'exact' })
     .order('fecha', { ascending: false })
     .order('created_at', { ascending: false });
   
@@ -63,9 +65,24 @@ export async function getEmbarques(filters?: {
     query = query.eq('tipo_embarque', filters.tipo_embarque);
   }
   
-  const { data, error } = await query;
+  // Aplicar paginación si se proporciona
+  if (filters?.limit) {
+    query = query.limit(filters.limit);
+  }
+  if (filters?.offset !== undefined && filters?.limit) {
+    query = query.range(filters.offset, filters.offset + filters.limit - 1);
+  }
+  
+  const { data, error, count } = await query;
   if (error) throw error;
-  return data;
+  
+  // Si no hay paginación, devolver directamente el array (compatibilidad hacia atrás)
+  if (filters?.limit === undefined && filters?.offset === undefined) {
+    return data || [];
+  }
+  
+  // Si hay paginación, devolver objeto con data y count
+  return { data: data || [], count: count || 0 };
 }
 
 // Crear embarque

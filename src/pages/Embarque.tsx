@@ -59,7 +59,7 @@ interface Embarque {
 }
 
 const EmbarquePage = () => {
-  const { embarques: embarquesDB, loading, addEmbarque, updateEmbarque, loadEmbarques } = useEmbarques();
+  const { embarques: embarquesDB, loading, loadingMore, hasMore, addEmbarque, updateEmbarque, loadEmbarques, loadMore } = useEmbarques();
   const { productos: productosDB } = useProductos();
   const { clientes: clientesDB } = useClientes();
   const { almacenes: almacenesDB } = useAlmacenes();
@@ -521,6 +521,17 @@ const EmbarquePage = () => {
                 ))}
               </TableBody>
             </Table>
+            {hasMore && (
+              <div className="flex justify-center mt-4 pb-4">
+                <Button 
+                  variant="outline" 
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                >
+                  {loadingMore ? 'Cargando...' : 'Cargar más'}
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 

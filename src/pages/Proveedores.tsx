@@ -23,7 +23,7 @@ interface Proveedor {
 }
 
 const Proveedores = () => {
-  const { proveedores: proveedoresDB, loading, addProveedor, loadProveedores } = useProveedores();
+  const { proveedores: proveedoresDB, loading, loadingMore, hasMore, addProveedor, loadProveedores, loadMore } = useProveedores();
   
   const [search, setSearch] = useState('');
   const [isNuevoDialogOpen, setIsNuevoDialogOpen] = useState(false);
@@ -211,6 +211,17 @@ const Proveedores = () => {
                 ))}
               </TableBody>
             </Table>
+            {hasMore && (
+              <div className="flex justify-center mt-4 pb-4">
+                <Button 
+                  variant="outline" 
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                >
+                  {loadingMore ? 'Cargando...' : 'Cargar más'}
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 

@@ -20,12 +20,14 @@ export interface Ingreso {
   updated_at?: string;
 }
 
-// Obtener todos los ingresos
+// Obtener todos los ingresos (con paginación opcional)
 export async function getIngresos(filters?: {
   fechaDesde?: string;
   fechaHasta?: string;
   motivo?: string;
   enviado_a_oficina?: boolean;
+  limit?: number;
+  offset?: number;
 }) {
   if (!supabase) {
     throw new Error('Supabase no está configurado');
@@ -33,7 +35,7 @@ export async function getIngresos(filters?: {
   
   let query = supabase
     .from('ingresos')
-    .select('*')
+    .select('*', { count: 'exact' })
     .order('fecha_hora_ingreso', { ascending: false });
   
   if (filters?.fechaDesde) {
@@ -49,9 +51,24 @@ export async function getIngresos(filters?: {
     query = query.eq('enviado_a_oficina', filters.enviado_a_oficina);
   }
   
-  const { data, error } = await query;
+  // Aplicar paginación si se proporciona
+  if (filters?.limit) {
+    query = query.limit(filters.limit);
+  }
+  if (filters?.offset !== undefined && filters?.limit) {
+    query = query.range(filters.offset, filters.offset + filters.limit - 1);
+  }
+  
+  const { data, error, count } = await query;
   if (error) throw error;
-  return data;
+  
+  // Si no hay paginación, devolver directamente el array (compatibilidad hacia atrás)
+  if (filters?.limit === undefined && filters?.offset === undefined) {
+    return data || [];
+  }
+  
+  // Si hay paginación, devolver objeto con data y count
+  return { data: data || [], count: count || 0 };
 }
 
 // Crear ingreso

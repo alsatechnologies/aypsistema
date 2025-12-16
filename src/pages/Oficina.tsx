@@ -40,7 +40,7 @@ interface Orden {
 }
 
 const Oficina = () => {
-  const { ordenes: ordenesDB, loading, loadOrdenes, updateOrden } = useOrdenes();
+  const { ordenes: ordenesDB, loading, loadingMore, hasMore, loadOrdenes, loadMore, updateOrden } = useOrdenes();
   const { productos } = useProductos();
   const { clientes } = useClientes();
   const { proveedores } = useProveedores();
@@ -717,6 +717,17 @@ const Oficina = () => {
                 ))}
               </TableBody>
             </Table>
+            {hasMore && (
+              <div className="flex justify-center mt-4 pb-4">
+                <Button 
+                  variant="outline" 
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                >
+                  {loadingMore ? 'Cargando...' : 'Cargar más'}
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
