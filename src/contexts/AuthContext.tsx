@@ -68,6 +68,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     try {
       console.log('📥 Cargando usuario desde tabla usuarios, email:', email);
+      setLoading(true); // Solo poner loading si realmente vamos a cargar
       
       // Obtener usuario desde la tabla usuarios usando el email de auth
       const { data, error } = await supabase
@@ -325,10 +326,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setLoading(false); // IMPORTANTE: Marcar como no cargando
       console.log('   ✅ Usuario establecido en contexto, loading = false');
       
-      // Cargar usuario en segundo plano (no bloquea)
-      cargarUsuarioDesdeAuth(usuarioData.correo).catch(() => {
-        // Ignorar errores, ya tenemos los datos
-      });
+      // NO llamar a cargarUsuarioDesdeAuth aquí - ya tenemos todos los datos
+      // Solo se llama automáticamente cuando hay cambios en la sesión de auth
       
       console.log('   Mostrando toast de bienvenida...');
       toast.success(`Bienvenido, ${usuarioData.nombre_completo}`);
