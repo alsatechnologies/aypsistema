@@ -74,12 +74,23 @@ export default async function handler(
     }
 
     console.log('Autenticación exitosa:', result.data.user.id);
+    console.log('Session tokens:', {
+      access_token: result.data.session?.access_token ? 'Presente' : 'Faltante',
+      refresh_token: result.data.session?.refresh_token ? 'Presente' : 'Faltante',
+    });
 
     res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(200).json({
       success: true,
       user: result.data.user,
-      session: result.data.session,
+      session: {
+        access_token: result.data.session?.access_token,
+        refresh_token: result.data.session?.refresh_token,
+        expires_in: result.data.session?.expires_in,
+        expires_at: result.data.session?.expires_at,
+        token_type: result.data.session?.token_type,
+        user: result.data.session?.user,
+      },
     });
   } catch (error) {
     console.error('Error en auth-login:', error);
