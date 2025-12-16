@@ -130,7 +130,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       const busqueda = usuarioOCorreo.toLowerCase().trim();
       
-      // Primero buscar el usuario en la tabla usuarios para obtener el correo
+      // Buscar usuario por nombre_usuario PRIMERO (prioridad), luego por correo
+      // Esto permite que el usuario ingrese solo su nombre de usuario
       const { data: usuarioData, error: usuarioError } = await supabase
         .from('usuarios')
         .select('*')

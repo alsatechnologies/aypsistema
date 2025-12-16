@@ -44,7 +44,7 @@ const Login = () => {
             <div>
               <Input 
                 type="text" 
-                placeholder="Usuario o correo electrónico" 
+                placeholder="Nombre de usuario" 
                 value={usuarioOCorreo} 
                 onChange={(e) => setUsuarioOCorreo(e.target.value)} 
                 className="w-full mb-4"
