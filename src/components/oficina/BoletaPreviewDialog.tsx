@@ -7,6 +7,7 @@ import { Printer, X } from 'lucide-react';
 import { formatDateTimeMST } from '@/utils/dateUtils';
 import { printTicket } from '@/services/api/printer';
 import { toast } from 'sonner';
+import { getCompanyLogo } from '@/utils/logoUtils';
 
 interface Orden {
   id: number;
@@ -40,6 +41,9 @@ const BoletaPreviewDialog: React.FC<BoletaPreviewDialogProps> = ({ open, onOpenC
       // Formatear fecha actual
       const fechaActual = format(new Date(), 'dd/MM/yyyy HH:mm', { locale: es });
 
+      // Cargar logo en base64
+      const logoBase64 = await getCompanyLogo();
+
       // Preparar datos para la API
       const printData = {
         printer_config: {
@@ -55,6 +59,7 @@ const BoletaPreviewDialog: React.FC<BoletaPreviewDialogProps> = ({ open, onOpenC
         vehiculo: orden.vehiculo || '',
         chofer: orden.nombreChofer || '',
         copias: 2,
+        ...(logoBase64 && { logo: logoBase64 }), // Incluir logo solo si se pudo cargar
       };
 
       const result = await printTicket(printData);

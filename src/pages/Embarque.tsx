@@ -811,15 +811,16 @@ const EmbarquePage = () => {
             producto: selectedEmbarque.producto,
             cliente: selectedEmbarque.cliente,
             destino: selectedEmbarque.destino,
-            chofer: selectedEmbarque.chofer,
+            chofer: selectedEmbarque.chofer || '',
             fecha: selectedEmbarque.fecha,
-            tipoTransporte: selectedEmbarque.tipoTransporte,
-            tipoEmbarque: selectedEmbarque.tipoEmbarque,
+            tipoTransporte: selectedEmbarque.tipoTransporte || 'Camión',
+            tipoEmbarque: selectedEmbarque.tipoEmbarque || 'Nacional',
             estatus: selectedEmbarque.estatus,
             pesoBruto: formData.pesoBruto,
             pesoTara: formData.pesoTara,
             pesoNeto: formData.pesoBruto - formData.pesoTara,
             codigoLote: selectedEmbarque.codigoLote,
+            valoresAnalisis: formData.valoresAnalisis,
             sellos: formData.sellos
           } : null}
         />

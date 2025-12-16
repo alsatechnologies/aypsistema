@@ -17,6 +17,7 @@ export interface PrintTicketRequest {
   vehiculo: string;
   chofer: string;
   copias: number;
+  logo?: string; // Logo en formato base64 (opcional)
 }
 
 export interface PrintTicketResponse {
