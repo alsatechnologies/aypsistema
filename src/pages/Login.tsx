@@ -18,14 +18,26 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     
-    const success = await login(usuarioOCorreo, contrasena);
-    
-    if (success) {
-      const from = (location.state as any)?.from?.pathname || '/oficina';
-      navigate(from, { replace: true });
+    try {
+      const success = await Promise.race([
+        login(usuarioOCorreo, contrasena),
+        new Promise<boolean>((resolve) => {
+          setTimeout(() => {
+            console.error('Login timeout después de 10 segundos');
+            resolve(false);
+          }, 10000); // Timeout de 10 segundos
+        })
+      ]);
+      
+      if (success) {
+        const from = (location.state as any)?.from?.pathname || '/oficina';
+        navigate(from, { replace: true });
+      }
+    } catch (error) {
+      console.error('Error en handleLogin:', error);
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   return (
