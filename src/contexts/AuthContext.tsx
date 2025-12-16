@@ -196,27 +196,67 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return false;
       }
 
-      console.log('🔑 Intentando autenticar con Supabase Auth, email:', usuarioData.correo);
+      console.log('🔑 Intentando autenticar con Supabase Auth...');
+      console.log('   Email:', usuarioData.correo);
+      console.log('   Contraseña proporcionada:', contrasena ? '***' : 'NO');
 
       // Intentar iniciar sesión con Supabase Auth usando el correo
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      console.log('   Llamando a signInWithPassword...');
+      const authPromise = supabase.auth.signInWithPassword({
         email: usuarioData.correo,
         password: contrasena
       });
 
-      if (authError || !authData.user) {
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Timeout en signInWithPassword después de 8 segundos')), 8000);
+      });
+
+      let authResult;
+      try {
+        authResult = await Promise.race([authPromise, timeoutPromise]) as any;
+        console.log('   Respuesta recibida de signInWithPassword');
+      } catch (timeoutError) {
+        console.error('❌ Timeout en autenticación:', timeoutError);
+        toast.error('La autenticación está tardando demasiado. Verifica tu conexión.');
+        return false;
+      }
+
+      const authData = authResult?.data;
+      const authError = authResult?.error;
+
+      if (authError) {
         console.error('❌ Error de autenticación:', authError);
-        console.log('Email usado:', usuarioData.correo);
-        console.log('Detalles del error:', JSON.stringify(authError, null, 2));
-        toast.error(authError?.message || 'Usuario o contraseña incorrectos');
+        console.log('   Email usado:', usuarioData.correo);
+        console.log('   Código de error:', authError.status);
+        console.log('   Mensaje:', authError.message);
+        toast.error(authError.message || 'Usuario o contraseña incorrectos');
+        return false;
+      }
+
+      if (!authData?.user) {
+        console.error('❌ No se recibió usuario de Supabase Auth');
+        toast.error('Error al autenticar. Intenta de nuevo.');
         return false;
       }
 
       console.log('✅ Autenticación exitosa con Supabase Auth');
+      console.log('   User ID:', authData.user.id);
+      console.log('   Email confirmado:', authData.user.email_confirmed_at ? 'Sí' : 'No');
 
       // Cargar usuario completo desde la tabla usuarios
-      console.log('📥 Cargando datos del usuario...');
-      await cargarUsuarioDesdeAuth(usuarioData.correo);
+      console.log('📥 Cargando datos del usuario desde tabla usuarios...');
+      try {
+        await Promise.race([
+          cargarUsuarioDesdeAuth(usuarioData.correo),
+          new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Timeout cargando usuario después de 5 segundos')), 5000);
+          })
+        ]);
+        console.log('✅ Usuario cargado correctamente');
+      } catch (timeoutError) {
+        console.error('❌ Timeout cargando usuario:', timeoutError);
+        // Continuar de todas formas, el usuario ya está autenticado
+      }
       
       toast.success(`Bienvenido, ${usuarioData.nombre_completo}`);
       return true;
