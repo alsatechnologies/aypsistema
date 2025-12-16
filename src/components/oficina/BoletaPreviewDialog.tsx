@@ -7,7 +7,7 @@ import { Printer, X } from 'lucide-react';
 import { formatDateTimeMST } from '@/utils/dateUtils';
 import { printTicket } from '@/services/api/printer';
 import { toast } from 'sonner';
-import { getCompanyLogo } from '@/utils/logoUtils';
+// Logo se carga desde el servidor (logo_escpos.bin)
 
 interface Orden {
   id: number;
@@ -41,10 +41,7 @@ const BoletaPreviewDialog: React.FC<BoletaPreviewDialogProps> = ({ open, onOpenC
       // Formatear fecha actual
       const fechaActual = format(new Date(), 'dd/MM/yyyy HH:mm', { locale: es });
 
-      // Cargar logo en base64
-      const logoBase64 = await getCompanyLogo();
-
-      // Preparar datos para la API
+      // Preparar datos para la API (el logo se carga desde el servidor)
       const printData = {
         printer_config: {
           connection_type: 'usb' as const,
@@ -59,7 +56,7 @@ const BoletaPreviewDialog: React.FC<BoletaPreviewDialogProps> = ({ open, onOpenC
         vehiculo: orden.vehiculo || '',
         chofer: orden.nombreChofer || '',
         copias: 2,
-        ...(logoBase64 && { logo: logoBase64 }), // Incluir logo solo si se pudo cargar
+        // Logo se carga desde logo_escpos.bin en el servidor
       };
 
       const result = await printTicket(printData);
