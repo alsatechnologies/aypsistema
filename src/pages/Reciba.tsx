@@ -53,6 +53,9 @@ interface Recepcion {
   proveedorId?: number | null;
   productoId?: number | null;
   almacenId?: number | null;
+  horaPesoBruto?: string | null;
+  horaPesoTara?: string | null;
+  horaPesoNeto?: string | null;
 }
 
 const Reciba = () => {
@@ -101,7 +104,10 @@ const Reciba = () => {
     codigoLote: r.codigo_lote,
     proveedorId: r.proveedor_id,
     productoId: r.producto_id,
-    almacenId: r.almacen_id || null
+    almacenId: r.almacen_id || null,
+    horaPesoBruto: r.hora_peso_bruto || null,
+    horaPesoTara: r.hora_peso_tara || null,
+    horaPesoNeto: r.hora_peso_neto || null
   }));
 
   // Cargar análisis cuando se selecciona un producto
@@ -138,10 +144,10 @@ const Reciba = () => {
       setValoresAnalisis(selectedRecepcion.analisis || {});
       setTipoBascula((selectedRecepcion.tipoBascula || selectedRecepcion.tipoTransporte || 'Camión') as 'Camión' | 'Ferroviaria');
       setAlmacenSeleccionado(selectedRecepcion.almacenId || null);
-      // Resetear horas de captura
-      setHoraPesoBruto(null);
-      setHoraPesoTara(null);
-      setHoraPesoNeto(null);
+      // Cargar horas de captura desde la base de datos
+      setHoraPesoBruto(selectedRecepcion.horaPesoBruto || null);
+      setHoraPesoTara(selectedRecepcion.horaPesoTara || null);
+      setHoraPesoNeto(selectedRecepcion.horaPesoNeto || null);
     }
   }, [selectedRecepcion]);
 
@@ -251,7 +257,10 @@ const Reciba = () => {
         peso_neto: pesoNeto > 0 ? pesoNeto : null,
         analisis: Object.keys(valoresAnalisis).length > 0 ? valoresAnalisis : null,
         estatus: nuevoEstatus,
-        tipo_bascula: tipoBascula
+        tipo_bascula: tipoBascula,
+        hora_peso_bruto: horaPesoBruto || null,
+        hora_peso_tara: horaPesoTara || null,
+        hora_peso_neto: horaPesoNeto || null
       });
       
       await loadRecepciones();
@@ -396,7 +405,10 @@ const Reciba = () => {
         estatus: 'Completado',
         tipo_bascula: tipoBascula,
         almacen_id: almacenSeleccionado || null,
-        placas: selectedRecepcion.placas || null
+        placas: selectedRecepcion.placas || null,
+        hora_peso_bruto: horaPesoBruto || null,
+        hora_peso_tara: horaPesoTara || null,
+        hora_peso_neto: horaPesoNeto || null
       });
       
       const mensajeLote = recepcionActualizada?.codigo_lote ? ` - Lote: ${recepcionActualizada.codigo_lote}` : '';

@@ -56,6 +56,9 @@ interface Embarque {
   clienteId?: number | null;
   productoId?: number | null;
   almacenId?: number | null;
+  horaPesoBruto?: string | null;
+  horaPesoTara?: string | null;
+  horaPesoNeto?: string | null;
 }
 
 const EmbarquePage = () => {
@@ -97,7 +100,10 @@ const EmbarquePage = () => {
     codigoLote: e.codigo_lote,
     clienteId: e.cliente_id,
     productoId: e.producto_id,
-    almacenId: e.almacen_id
+    almacenId: e.almacen_id,
+    horaPesoBruto: e.hora_peso_bruto || null,
+    horaPesoTara: e.hora_peso_tara || null,
+    horaPesoNeto: e.hora_peso_neto || null
   }));
 
   const [formData, setFormData] = useState({
@@ -167,10 +173,10 @@ const EmbarquePage = () => {
       almacenId: embarque.almacenId || null,
       placas: embarque.placas || ''
     });
-    // Resetear horas de captura
-    setHoraPesoTara(null);
-    setHoraPesoBruto(null);
-    setHoraPesoNeto(null);
+    // Cargar horas de captura desde la base de datos
+    setHoraPesoTara(embarque.horaPesoTara || null);
+    setHoraPesoBruto(embarque.horaPesoBruto || null);
+    setHoraPesoNeto(embarque.horaPesoNeto || null);
     setIsDialogOpen(true);
   };
 
@@ -315,7 +321,10 @@ const EmbarquePage = () => {
         valores_analisis: Object.keys(formData.valoresAnalisis).length > 0 ? formData.valoresAnalisis : null,
         estatus: nuevoEstatus,
         almacen_id: formData.almacenId || null,
-        placas: formData.placas || null
+        placas: formData.placas || null,
+        hora_peso_bruto: horaPesoBruto || null,
+        hora_peso_tara: horaPesoTara || null,
+        hora_peso_neto: horaPesoNeto || null
       });
       
       await loadEmbarques();
@@ -362,6 +371,9 @@ const EmbarquePage = () => {
         valores_analisis: Object.keys(formData.valoresAnalisis).length > 0 ? formData.valoresAnalisis : null,
         estatus: 'Completado',
         codigo_lote: codigoLote || null,
+        hora_peso_bruto: horaPesoBruto || null,
+        hora_peso_tara: horaPesoTara || null,
+        hora_peso_neto: horaPesoNeto || null,
         almacen_id: formData.almacenId || null,
         placas: formData.placas || null
       });

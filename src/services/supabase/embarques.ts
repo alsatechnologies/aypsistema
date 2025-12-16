@@ -22,6 +22,9 @@ export interface Embarque {
   sello_salida_1?: string | null;
   sello_salida_2?: string | null;
   valores_analisis?: Record<string, number> | null;
+  hora_peso_bruto?: string | null;
+  hora_peso_tara?: string | null;
+  hora_peso_neto?: string | null;
   created_at?: string;
   updated_at?: string;
   producto?: { id: number; nombre: string };
