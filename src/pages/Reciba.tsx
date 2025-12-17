@@ -1044,9 +1044,11 @@ const Reciba = () => {
                       </div>
                       <Separator className="my-3" />
                       <div className="flex justify-between text-lg font-bold">
-                        <span>Peso Neto Recibido:</span>
+                        <span>Peso Neto a Liquidar:</span>
                         <span className="text-primary">
-                          {pesoNeto > 0 ? pesoNeto.toLocaleString('es-MX') : 0} Kg
+                          {calcularDescuentos().pesoNetoAnalizado > 0 
+                            ? calcularDescuentos().pesoNetoAnalizado.toLocaleString('es-MX') 
+                            : pesoNeto > 0 ? pesoNeto.toLocaleString('es-MX') : 0} Kg
                         </span>
                       </div>
                     </div>
