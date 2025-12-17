@@ -896,7 +896,13 @@ const Reciba = () => {
                             type="number" 
                             className="text-2xl font-bold text-center h-14"
                             value={pesoBruto || ''}
-                            onChange={(e) => setPesoBruto(parseInt(e.target.value) || 0)}
+                            onChange={(e) => {
+                              const valor = parseInt(e.target.value) || 0;
+                              setPesoBruto(valor);
+                              if (valor > 0 && !horaPesoBruto) {
+                                setHoraPesoBruto(getCurrentDateTimeMST());
+                              }
+                            }}
                             placeholder="0"
                           />
                           <Button 
@@ -923,7 +929,13 @@ const Reciba = () => {
                             type="number" 
                             className="text-2xl font-bold text-center h-14"
                             value={pesoTara || ''}
-                            onChange={(e) => setPesoTara(parseInt(e.target.value) || 0)}
+                            onChange={(e) => {
+                              const valor = parseInt(e.target.value) || 0;
+                              setPesoTara(valor);
+                              if (valor > 0 && !horaPesoTara) {
+                                setHoraPesoTara(getCurrentDateTimeMST());
+                              }
+                            }}
                             placeholder="0"
                           />
                           <Button 
