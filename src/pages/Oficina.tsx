@@ -111,6 +111,17 @@ const Oficina = () => {
     }
   };
 
+  const handleMarcarCompletado = async (orden: Orden) => {
+    try {
+      await updateOrden(orden.id, { estatus: 'Completado' });
+      await loadOrdenes();
+      toast.success(`Orden ${orden.boleta} marcada como completada`);
+    } catch (error) {
+      console.error('Error al marcar como completado:', error);
+      toast.error('Error al actualizar el estatus');
+    }
+  };
+
   const handleCrearNuevaOrden = async () => {
     // Validaciones básicas
     if (!nuevaOrdenData.productoId) {
@@ -691,7 +702,7 @@ const Oficina = () => {
                           Completar Orden
                         </Button>
                       ) : (
-                        <>
+                        <div className="flex items-center justify-end gap-1">
                           <Button 
                             variant="ghost" 
                             size="icon" 
@@ -710,7 +721,19 @@ const Oficina = () => {
                           >
                             <Printer className="h-4 w-4" />
                           </Button>
-                        </>
+                          {orden.estatus === 'En Proceso' && (
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => handleMarcarCompletado(orden)}
+                              className="ml-2 border-green-500 text-green-600 hover:bg-green-50"
+                              title="Marcar como completado"
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Completar
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>
