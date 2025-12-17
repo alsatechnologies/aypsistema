@@ -668,6 +668,11 @@ const EmbarquePage = () => {
                   <DialogTitle className="flex items-center gap-2 flex-wrap">
                     <Scale className="h-5 w-5" />
                     Boleta de Embarque - {selectedEmbarque.boleta}
+                    {selectedEmbarque.codigoLote && (
+                      <span className="text-sm font-normal text-muted-foreground">
+                        | Lote: <span className="text-primary font-semibold">{selectedEmbarque.codigoLote}</span>
+                      </span>
+                    )}
                     <span className="ml-2">{getEstatusBadge(selectedEmbarque.estatus)}</span>
                     <span className="flex items-center gap-1">
                       {getTransporteIcon(selectedEmbarque.tipoTransporte)}
@@ -688,17 +693,9 @@ const EmbarquePage = () => {
                         {formatDateTimeMST(selectedEmbarque.created_at || selectedEmbarque.fecha)}
                       </p>
                     </div>
-                    <div className="flex items-start gap-6">
-                      <div>
-                        <Label className="text-xs text-muted-foreground">Boleta</Label>
-                        <p className="font-medium font-mono text-primary">{selectedEmbarque.boleta}</p>
-                      </div>
-                      {selectedEmbarque.codigoLote && (
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Código de Lote</Label>
-                          <p className="font-medium font-mono text-primary">{selectedEmbarque.codigoLote}</p>
-                        </div>
-                      )}
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Boleta</Label>
+                      <p className="font-medium font-mono text-primary">{selectedEmbarque.boleta}</p>
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">Producto</Label>
