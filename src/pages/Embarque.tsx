@@ -663,9 +663,14 @@ const EmbarquePage = () => {
             {selectedEmbarque && (
               <>
                 <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
+                  <DialogTitle className="flex items-center gap-2 flex-wrap">
                     <Scale className="h-5 w-5" />
-                    Boleta de Embarque - {selectedEmbarque.boleta}
+                    Boleta de Embarque - <span className="text-primary">{selectedEmbarque.boleta}</span>
+                    {selectedEmbarque.codigoLote && (
+                      <span className="text-sm font-normal">
+                        | Lote: <span className="text-primary font-semibold">{selectedEmbarque.codigoLote}</span>
+                      </span>
+                    )}
                     {selectedEmbarque.tipoEmbarque === 'Exportación' && (
                       <Badge className="bg-purple-500 text-white ml-2">Exportación</Badge>
                     )}
