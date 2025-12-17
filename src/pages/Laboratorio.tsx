@@ -303,48 +303,6 @@ const Laboratorio = () => {
     <Layout>
       <Header title="Laboratorio" subtitle="Reportes diarios de análisis de laboratorio" />
       <div className="p-6">
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Reportes Hoy</CardTitle>
-              <FileText className="h-5 w-5 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">
-                {reportes.filter(r => r.fecha === new Date().toISOString().split('T')[0]).length}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Pendientes</CardTitle>
-              <Clock className="h-5 w-5 text-yellow-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{reportes.filter(r => r.estatus === 'Pendiente').length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">En Proceso</CardTitle>
-              <FlaskConical className="h-5 w-5 text-blue-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{reportes.filter(r => r.estatus === 'En proceso').length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Completados</CardTitle>
-              <CheckCircle className="h-5 w-5 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-600">{reportes.filter(r => r.estatus === 'Completado').length}</div>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Search and Actions */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div className="relative w-full sm:w-96">

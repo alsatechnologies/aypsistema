@@ -594,46 +594,6 @@ const Reciba = () => {
     <Layout>
       <Header title="Reciba" subtitle="Báscula - Recepción de materia prima" />
       <div className="p-6">
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">En Espera</CardTitle>
-              <Clock className="h-5 w-5 text-yellow-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{recepciones.filter(r => r.estatus === 'Pendiente').length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">En Báscula</CardTitle>
-              <Scale className="h-5 w-5 text-blue-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{recepciones.filter(r => r.estatus === 'Peso Bruto' || r.estatus === 'Peso Tara').length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">En Descarga</CardTitle>
-              <Truck className="h-5 w-5 text-orange-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{recepciones.filter(r => r.estatus === 'En Descarga').length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Completados Hoy</CardTitle>
-              <CheckCircle className="h-5 w-5 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{recepciones.filter(r => r.estatus === 'Completado').length}</div>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Search y Nueva Operación */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div className="relative w-full sm:w-96">

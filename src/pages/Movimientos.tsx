@@ -172,42 +172,6 @@ const Movimientos = () => {
     <Layout>
       <Header title="Movimientos" subtitle="Historial de entradas y salidas" />
       <div className="p-6">
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Entradas</CardTitle>
-              <ArrowDown className="h-5 w-5 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{formatNumber(totalEntradas)} Kg</div>
-              <p className="text-xs text-muted-foreground">{filteredMovimientos.filter(m => m.tipo === 'Entrada').length} movimientos</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Salidas</CardTitle>
-              <ArrowUp className="h-5 w-5 text-blue-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{formatNumber(totalSalidas)} Kg</div>
-              <p className="text-xs text-muted-foreground">{filteredMovimientos.filter(m => m.tipo === 'Salida').length} movimientos</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Balance</CardTitle>
-              <Calendar className="h-5 w-5 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold ${totalEntradas - totalSalidas >= 0 ? 'text-green-600' : 'text-destructive'}`}>
-                {totalEntradas - totalSalidas >= 0 ? '+' : ''}{formatNumber(totalEntradas - totalSalidas)} Kg
-              </div>
-              <p className="text-xs text-muted-foreground">Este período</p>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Search and Filters */}
         <div className="space-y-4 mb-6">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

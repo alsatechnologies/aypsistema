@@ -166,37 +166,6 @@ const Ingreso = () => {
     <Layout>
       <Header title="Ingreso" subtitle="Control de acceso - Portero" />
       <div className="p-6">
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Vehículos en Planta</CardTitle>
-              <Car className="h-5 w-5 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{vehiculosEnPlanta}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Ingresos Hoy</CardTitle>
-              <Clock className="h-5 w-5 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{ingresos.length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Salidas Hoy</CardTitle>
-              <LogOut className="h-5 w-5 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{ingresos.filter(i => i.fechaHoraSalida).length}</div>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Search and New */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div className="relative w-full sm:w-80">

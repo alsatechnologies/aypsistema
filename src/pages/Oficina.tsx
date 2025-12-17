@@ -313,46 +313,10 @@ const Oficina = () => {
     (o.nombreChofer && o.nombreChofer.toLowerCase().includes(search.toLowerCase()))
   );
 
-  const stats = {
-    pendientes: ordenes.filter(o => o.estatus === 'Nuevo').length,
-    enProceso: ordenes.filter(o => o.estatus === 'En Proceso').length,
-    completados: ordenes.filter(o => o.estatus === 'Completado').length,
-  };
   return (
     <Layout>
       <Header title="Oficina" subtitle="Gestión de órdenes y documentación" />
       <div className="p-6">
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Nuevas</CardTitle>
-              <Clock className="h-5 w-5 text-yellow-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{stats.pendientes}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">En Proceso</CardTitle>
-              <Truck className="h-5 w-5 text-blue-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{stats.enProceso}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Completados Hoy</CardTitle>
-              <CheckCircle className="h-5 w-5 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{stats.completados}</div>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Search and New */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div className="relative w-full sm:w-80">
