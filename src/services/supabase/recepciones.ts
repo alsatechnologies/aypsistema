@@ -24,6 +24,7 @@ export interface Recepcion {
   hora_peso_bruto?: string | null;
   hora_peso_tara?: string | null;
   hora_peso_neto?: string | null;
+  observaciones?: string | null;
   created_at?: string;
   updated_at?: string;
   producto?: { id: number; nombre: string };

@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Search, Scale, Truck, Train, Clock, CheckCircle, FileText, Printer, Save, BookmarkPlus, Plus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -56,6 +57,7 @@ interface Recepcion {
   horaPesoBruto?: string | null;
   horaPesoTara?: string | null;
   horaPesoNeto?: string | null;
+  observaciones?: string | null;
 }
 
 const Reciba = () => {
@@ -83,6 +85,7 @@ const Reciba = () => {
   const [valoresAnalisis, setValoresAnalisis] = useState<Record<string, number>>({});
   const [analisisProducto, setAnalisisProducto] = useState<any[]>([]);
   const [almacenSeleccionado, setAlmacenSeleccionado] = useState<number | null>(null);
+  const [observaciones, setObservaciones] = useState<string>('');
 
   // Mapear recepciones de DB a formato local
   const recepciones: Recepcion[] = recepcionesDB.map(r => ({
@@ -107,7 +110,8 @@ const Reciba = () => {
     almacenId: r.almacen_id || null,
     horaPesoBruto: r.hora_peso_bruto || null,
     horaPesoTara: r.hora_peso_tara || null,
-    horaPesoNeto: r.hora_peso_neto || null
+    horaPesoNeto: r.hora_peso_neto || null,
+    observaciones: r.observaciones || null
   }));
 
   // Cargar análisis cuando se selecciona un producto
@@ -148,6 +152,7 @@ const Reciba = () => {
       setHoraPesoBruto(selectedRecepcion.horaPesoBruto || null);
       setHoraPesoTara(selectedRecepcion.horaPesoTara || null);
       setHoraPesoNeto(selectedRecepcion.horaPesoNeto || null);
+      setObservaciones(selectedRecepcion.observaciones || '');
     }
   }, [selectedRecepcion]);
 
@@ -260,7 +265,8 @@ const Reciba = () => {
         tipo_bascula: tipoBascula,
         hora_peso_bruto: horaPesoBruto || null,
         hora_peso_tara: horaPesoTara || null,
-        hora_peso_neto: horaPesoNeto || null
+        hora_peso_neto: horaPesoNeto || null,
+        observaciones: observaciones || null
       });
       
       await loadRecepciones();
@@ -408,7 +414,8 @@ const Reciba = () => {
         placas: selectedRecepcion.placas || null,
         hora_peso_bruto: horaPesoBruto || null,
         hora_peso_tara: horaPesoTara || null,
-        hora_peso_neto: horaPesoNeto || null
+        hora_peso_neto: horaPesoNeto || null,
+        observaciones: observaciones || null
       });
       
       const mensajeLote = recepcionActualizada?.codigo_lote ? ` - Lote: ${recepcionActualizada.codigo_lote}` : '';
@@ -555,7 +562,7 @@ const Reciba = () => {
           deduccion: totalDescuentoKg,
           peso_neto_analizado: pesoNetoAnalizado
         },
-        observaciones: ''
+        observaciones: observaciones || ''
       };
 
       toast.loading('Generando boleta PDF...', { id: 'generating-pdf' });
@@ -1000,6 +1007,20 @@ const Reciba = () => {
                       pesoNeto={pesoNeto > 0 ? pesoNeto : 0}
                     />
                   )}
+
+                  <Separator />
+
+                  {/* Observaciones */}
+                  <div className="space-y-2">
+                    <Label htmlFor="observaciones">Observaciones</Label>
+                    <Textarea
+                      id="observaciones"
+                      placeholder="Ingrese observaciones adicionales..."
+                      value={observaciones}
+                      onChange={(e) => setObservaciones(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
                 </div>
 
                 <DialogFooter className="mt-6 gap-2">

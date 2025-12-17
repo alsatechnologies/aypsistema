@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Search, Scale, Truck, Train, Clock, CheckCircle, FileText, Printer, Save, Ship, Plus, Eye, BookmarkPlus } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -62,6 +63,7 @@ interface Embarque {
   horaPesoBruto?: string | null;
   horaPesoTara?: string | null;
   horaPesoNeto?: string | null;
+  observaciones?: string | null;
 }
 
 const EmbarquePage = () => {
@@ -106,7 +108,8 @@ const EmbarquePage = () => {
     almacenId: e.almacen_id,
     horaPesoBruto: e.hora_peso_bruto || null,
     horaPesoTara: e.hora_peso_tara || null,
-    horaPesoNeto: e.hora_peso_neto || null
+    horaPesoNeto: e.hora_peso_neto || null,
+    observaciones: e.observaciones || null
   }));
 
   const [formData, setFormData] = useState({
@@ -123,6 +126,7 @@ const EmbarquePage = () => {
   const [horaPesoBruto, setHoraPesoBruto] = useState<string | null>(null);
   const [horaPesoNeto, setHoraPesoNeto] = useState<string | null>(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [observaciones, setObservaciones] = useState<string>('');
 
   // Cargar análisis cuando se selecciona un embarque
   useEffect(() => {
@@ -181,6 +185,7 @@ const EmbarquePage = () => {
     setHoraPesoTara(embarque.horaPesoTara || null);
     setHoraPesoBruto(embarque.horaPesoBruto || null);
     setHoraPesoNeto(embarque.horaPesoNeto || null);
+    setObservaciones(embarque.observaciones || '');
     setIsDialogOpen(true);
   };
 
@@ -328,7 +333,8 @@ const EmbarquePage = () => {
         placas: formData.placas || null,
         hora_peso_bruto: horaPesoBruto || null,
         hora_peso_tara: horaPesoTara || null,
-        hora_peso_neto: horaPesoNeto || null
+        hora_peso_neto: horaPesoNeto || null,
+        observaciones: observaciones || null
       });
       
       await loadEmbarques();
@@ -379,7 +385,8 @@ const EmbarquePage = () => {
         hora_peso_tara: horaPesoTara || null,
         hora_peso_neto: horaPesoNeto || null,
         almacen_id: formData.almacenId || null,
-        placas: formData.placas || null
+        placas: formData.placas || null,
+        observaciones: observaciones || null
       });
       
       const codigoLoteFinal = embarqueActualizado?.codigo_lote || codigoLote;
@@ -494,7 +501,7 @@ const EmbarquePage = () => {
           deduccion: 0,
           peso_neto_analizado: pesoNeto
         },
-        observaciones: ''
+        observaciones: observaciones || ''
       };
 
       toast.loading('Generando boleta PDF...', { id: 'generating-pdf' });
@@ -861,6 +868,20 @@ const EmbarquePage = () => {
                       sellos={formData.sellos}
                       onChange={(sellos) => setFormData({ ...formData, sellos })}
                       simple={true}
+                    />
+                  </div>
+
+                  <Separator />
+
+                  {/* Observaciones */}
+                  <div className="space-y-2">
+                    <Label htmlFor="observaciones-embarque">Observaciones</Label>
+                    <Textarea
+                      id="observaciones-embarque"
+                      placeholder="Ingrese observaciones adicionales..."
+                      value={observaciones}
+                      onChange={(e) => setObservaciones(e.target.value)}
+                      rows={3}
                     />
                   </div>
 
