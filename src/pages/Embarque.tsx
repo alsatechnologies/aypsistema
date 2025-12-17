@@ -666,11 +666,6 @@ const EmbarquePage = () => {
                   <DialogTitle className="flex items-center gap-2 flex-wrap">
                     <Scale className="h-5 w-5" />
                     Boleta de Embarque - {selectedEmbarque.boleta}
-                    {selectedEmbarque.codigoLote && (
-                      <span className="text-sm font-normal">
-                        | Lote: <span className="text-primary font-semibold">{selectedEmbarque.codigoLote}</span>
-                      </span>
-                    )}
                     {selectedEmbarque.tipoEmbarque === 'Exportación' && (
                       <Badge className="bg-purple-500 text-white ml-2">Exportación</Badge>
                     )}
@@ -684,9 +679,17 @@ const EmbarquePage = () => {
                       <Label className="text-xs text-muted-foreground">Fecha/Hora</Label>
                       <p className="font-medium">{selectedEmbarque.fecha} 14:30</p>
                     </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Boleta</Label>
-                      <p className="font-medium font-mono text-primary">{selectedEmbarque.boleta}</p>
+                    <div className="flex items-start gap-6">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Boleta</Label>
+                        <p className="font-medium font-mono text-primary">{selectedEmbarque.boleta}</p>
+                      </div>
+                      {selectedEmbarque.codigoLote && (
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Código de Lote</Label>
+                          <p className="font-medium font-mono text-primary">{selectedEmbarque.codigoLote}</p>
+                        </div>
+                      )}
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">Producto</Label>

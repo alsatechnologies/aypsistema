@@ -735,9 +735,14 @@ const Reciba = () => {
             {selectedRecepcion && (
               <>
                 <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
+                  <DialogTitle className="flex items-center gap-2 flex-wrap">
                     <Scale className="h-5 w-5" />
                     Boleta de Recepción - {selectedRecepcion.boleta.startsWith('TEMP-') ? '-' : selectedRecepcion.boleta}
+                    {selectedRecepcion.codigoLote && (
+                      <span className="text-sm font-normal">
+                        | Lote: <span className="text-primary font-semibold">{selectedRecepcion.codigoLote}</span>
+                      </span>
+                    )}
                     <span className="ml-2">{getEstatusBadge(selectedRecepcion.estatus)}</span>
                     <span className="flex items-center gap-1">
                       {getTransporteIcon(selectedRecepcion.tipoTransporte)}
