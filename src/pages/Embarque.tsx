@@ -665,7 +665,7 @@ const EmbarquePage = () => {
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2 flex-wrap">
                     <Scale className="h-5 w-5" />
-                    Boleta de Embarque - <span className="text-primary">{selectedEmbarque.boleta}</span>
+                    Boleta de Embarque - {selectedEmbarque.boleta}
                     {selectedEmbarque.codigoLote && (
                       <span className="text-sm font-normal">
                         | Lote: <span className="text-primary font-semibold">{selectedEmbarque.codigoLote}</span>
@@ -686,7 +686,7 @@ const EmbarquePage = () => {
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">Boleta</Label>
-                      <p className="font-medium font-mono">{selectedEmbarque.boleta}</p>
+                      <p className="font-medium font-mono text-primary">{selectedEmbarque.boleta}</p>
                     </div>
                     <div>
                       <Label className="text-xs text-muted-foreground">Producto</Label>

@@ -737,7 +737,7 @@ const Reciba = () => {
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
                     <Scale className="h-5 w-5" />
-                    Boleta de Recepción - <span className="text-primary">{selectedRecepcion.boleta.startsWith('TEMP-') ? '-' : selectedRecepcion.boleta}</span>
+                    Boleta de Recepción - {selectedRecepcion.boleta.startsWith('TEMP-') ? '-' : selectedRecepcion.boleta}
                     <span className="ml-2">{getEstatusBadge(selectedRecepcion.estatus)}</span>
                     <span className="flex items-center gap-1">
                       {getTransporteIcon(selectedRecepcion.tipoTransporte)}
