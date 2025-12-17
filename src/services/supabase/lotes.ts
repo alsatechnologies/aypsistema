@@ -53,7 +53,7 @@ export interface ConsecutivoLote {
 }
 
 // Generar código de lote según el formato: AC-17160525-003
-// Consecutivo es GLOBAL por tipo_operacion + año (no por combinación completa)
+// Consecutivo es POR COMBINACIÓN COMPLETA (tipo + origen + producto + almacén + año)
 export async function generarCodigoLote(
   tipoOperacionCodigo: string, // 'AC-', 'VN-', 'VE-'
   origenCodigo: string, // '17'
@@ -70,26 +70,29 @@ export async function generarCodigoLote(
     return { codigo, consecutivo };
   }
 
-  // Consecutivo GLOBAL por tipo_operacion + año (no por combinación completa)
+  // Consecutivo POR COMBINACIÓN COMPLETA (tipo + origen + producto + almacén + año)
   const { data: consecutivoData, error: consecutivoError } = await supabase
     .from('consecutivos_lotes')
-    .select('consecutivo')
+    .select('id, consecutivo')
     .eq('tipo_operacion_codigo', tipoOperacionCodigo)
+    .eq('origen_codigo', origenCodigo)
+    .eq('producto_codigo', productoCodigo)
+    .eq('almacen_codigo', almacenCodigo)
     .eq('anio', anio)
     .single();
 
   let nuevoConsecutivo: number;
 
   if (consecutivoError && consecutivoError.code === 'PGRST116') {
-    // No existe, crear nuevo con consecutivo 1
+    // No existe esta combinación, crear nuevo con consecutivo 1
     nuevoConsecutivo = 1;
     const { error: insertError } = await supabase
       .from('consecutivos_lotes')
       .insert({
         tipo_operacion_codigo: tipoOperacionCodigo,
-        origen_codigo: origenCodigo, // Guardamos pero no usamos para el consecutivo
-        producto_codigo: productoCodigo, // Guardamos pero no usamos para el consecutivo
-        almacen_codigo: almacenCodigo, // Guardamos pero no usamos para el consecutivo
+        origen_codigo: origenCodigo,
+        producto_codigo: productoCodigo,
+        almacen_codigo: almacenCodigo,
         anio_codigo: anioCodigo,
         anio: anio,
         consecutivo: 1
@@ -99,13 +102,12 @@ export async function generarCodigoLote(
   } else if (consecutivoError) {
     throw consecutivoError;
   } else {
-    // Existe, incrementar
+    // Existe esta combinación, incrementar
     nuevoConsecutivo = consecutivoData.consecutivo + 1;
     const { error: updateError } = await supabase
       .from('consecutivos_lotes')
       .update({ consecutivo: nuevoConsecutivo })
-      .eq('tipo_operacion_codigo', tipoOperacionCodigo)
-      .eq('anio', anio);
+      .eq('id', consecutivoData.id);
 
     if (updateError) throw updateError;
   }
