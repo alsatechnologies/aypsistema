@@ -64,6 +64,7 @@ interface Embarque {
   horaPesoTara?: string | null;
   horaPesoNeto?: string | null;
   observaciones?: string | null;
+  created_at?: string | null;
 }
 
 const EmbarquePage = () => {
@@ -109,7 +110,8 @@ const EmbarquePage = () => {
     horaPesoBruto: e.hora_peso_bruto || null,
     horaPesoTara: e.hora_peso_tara || null,
     horaPesoNeto: e.hora_peso_neto || null,
-    observaciones: e.observaciones || null
+    observaciones: e.observaciones || null,
+    created_at: e.created_at || null
   }));
 
   const [formData, setFormData] = useState({
@@ -682,7 +684,9 @@ const EmbarquePage = () => {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
                     <div>
                       <Label className="text-xs text-muted-foreground">Fecha/Hora</Label>
-                      <p className="font-medium">{selectedEmbarque.fecha} 14:30</p>
+                      <p className="font-medium">
+                        {formatDateTimeMST(selectedEmbarque.created_at || selectedEmbarque.fecha)}
+                      </p>
                     </div>
                     <div className="flex items-start gap-6">
                       <div>

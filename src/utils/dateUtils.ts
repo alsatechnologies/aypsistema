@@ -33,26 +33,35 @@ export function formatDateTimeMST(isoString: string | null | undefined): string 
   
   try {
     // Si el string ya está en formato local (sin timezone), parsearlo directamente
-    // Formato esperado: YYYY-MM-DDTHH:mm:ss.mmm
+    // Formato esperado: YYYY-MM-DDTHH:mm:ss.mmm o YYYY-MM-DD
     const parts = isoString.split('T');
-    if (parts.length === 2) {
-      const [datePart, timePart] = parts;
-      const [year, month, day] = datePart.split('-');
-      const [time, milliseconds] = timePart.split('.');
-      const [hours, minutes, seconds] = time.split(':');
-      
+    const [datePart, timePart] = parts;
+    const [year, month, day] = datePart.split('-');
+    
+    // Si tiene parte de hora
+    if (parts.length === 2 && timePart) {
+      const [time] = timePart.split('.');
+      const [hours, minutes] = time.split(':');
       return `${day}/${month}/${year} ${hours}:${minutes}`;
     }
     
-    // Si viene con timezone, usar Date para parsearlo
-    const date = new Date(isoString);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
+    // Si solo es fecha (YYYY-MM-DD), mostrar sin hora
+    if (year && month && day && !timePart) {
+      return `${day}/${month}/${year}`;
+    }
     
-    return `${day}/${month}/${year} ${hours}:${minutes}`;
+    // Si viene con timezone o formato desconocido, usar Date para parsearlo
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) {
+      return isoString; // Si no se puede parsear, devolver original
+    }
+    const d = String(date.getDate()).padStart(2, '0');
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const y = date.getFullYear();
+    const h = String(date.getHours()).padStart(2, '0');
+    const min = String(date.getMinutes()).padStart(2, '0');
+    
+    return `${d}/${m}/${y} ${h}:${min}`;
   } catch (error) {
     console.error('Error formatting date:', error);
     return isoString;
