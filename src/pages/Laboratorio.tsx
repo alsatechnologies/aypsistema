@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Search, Plus, FlaskConical, Clock, CheckCircle, Eye, FileText, Trash2 } from 'lucide-react';
+import { Search, Plus, FlaskConical, Clock, CheckCircle, Eye, FileText, Trash2, Calendar, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLaboratorio } from '@/services/hooks/useLaboratorio';
 import type { ReporteLab as ReporteLabDB } from '@/services/supabase/laboratorio';
@@ -78,6 +78,8 @@ const Laboratorio = () => {
   const [isNuevoReporteOpen, setIsNuevoReporteOpen] = useState(false);
   const [isDetalleOpen, setIsDetalleOpen] = useState(false);
   const [selectedReporte, setSelectedReporte] = useState<ReporteLab | null>(null);
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
 
   const [formData, setFormData] = useState({
     turno: 'Matutino' as 'Matutino' | 'Vespertino' | 'Nocturno',
@@ -192,11 +194,21 @@ const Laboratorio = () => {
     return <Badge className={`flex items-center w-fit ${className}`}>{icon}{estatus}</Badge>;
   };
 
-  const filteredReportes = reportes.filter(r =>
-    r.id.toLowerCase().includes(search.toLowerCase()) ||
-    r.responsable.toLowerCase().includes(search.toLowerCase()) ||
-    r.fecha.includes(search)
-  );
+  const filteredReportes = reportes.filter(r => {
+    const matchesSearch = 
+      r.id.toLowerCase().includes(search.toLowerCase()) ||
+      r.responsable.toLowerCase().includes(search.toLowerCase()) ||
+      r.fecha.includes(search);
+    
+    let matchesDate = true;
+    if (fechaDesde || fechaHasta) {
+      const reporteFecha = r.fecha || '';
+      if (fechaDesde && reporteFecha < fechaDesde) matchesDate = false;
+      if (fechaHasta && reporteFecha > fechaHasta) matchesDate = false;
+    }
+    
+    return matchesSearch && matchesDate;
+  });
 
   const handleNuevoReporte = async () => {
     if (!formData.responsable) {
@@ -303,16 +315,44 @@ const Laboratorio = () => {
     <Layout>
       <Header title="Laboratorio" subtitle="Reportes diarios de análisis de laboratorio" />
       <div className="p-6">
-        {/* Search and Actions */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <div className="relative w-full sm:w-96">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Buscar por ID, responsable o fecha..." 
-              className="pl-10"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+        {/* Search, Filters and Actions */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="Buscar por ID, responsable..." 
+                className="pl-10"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <Input 
+                type="date" 
+                className="w-36"
+                value={fechaDesde}
+                onChange={(e) => setFechaDesde(e.target.value)}
+              />
+              <span className="text-muted-foreground">-</span>
+              <Input 
+                type="date" 
+                className="w-36"
+                value={fechaHasta}
+                onChange={(e) => setFechaHasta(e.target.value)}
+              />
+              {(fechaDesde || fechaHasta) && (
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => { setFechaDesde(''); setFechaHasta(''); }}
+                  title="Limpiar filtros"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
           <Button onClick={() => setIsNuevoReporteOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />

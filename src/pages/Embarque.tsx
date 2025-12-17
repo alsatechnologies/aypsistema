@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Search, Scale, Truck, Train, Clock, CheckCircle, FileText, Printer, Save, Ship, Plus, Eye, BookmarkPlus } from 'lucide-react';
+import { Search, Scale, Truck, Train, Clock, CheckCircle, FileText, Printer, Save, Ship, Plus, Eye, BookmarkPlus, Calendar, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -79,6 +79,8 @@ const EmbarquePage = () => {
   const [isNuevoDialogOpen, setIsNuevoDialogOpen] = useState(false);
   const [isBoletaDialogOpen, setIsBoletaDialogOpen] = useState(false);
   const [consecutivo, setConsecutivo] = useState(5);
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
 
   // Mapear embarques de DB a formato local
   const embarques: Embarque[] = embarquesDB.map(e => ({
@@ -524,12 +526,22 @@ const EmbarquePage = () => {
     }
   };
 
-  const filteredEmbarques = embarques.filter(e => 
-    e.producto.toLowerCase().includes(search.toLowerCase()) ||
-    e.cliente.toLowerCase().includes(search.toLowerCase()) ||
-    e.boleta.includes(search) ||
-    e.chofer.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredEmbarques = embarques.filter(e => {
+    const matchesSearch = 
+      e.producto.toLowerCase().includes(search.toLowerCase()) ||
+      e.cliente.toLowerCase().includes(search.toLowerCase()) ||
+      e.boleta.includes(search) ||
+      e.chofer.toLowerCase().includes(search.toLowerCase());
+    
+    let matchesDate = true;
+    if (fechaDesde || fechaHasta) {
+      const embarqueFecha = e.fecha || '';
+      if (fechaDesde && embarqueFecha < fechaDesde) matchesDate = false;
+      if (fechaHasta && embarqueFecha > fechaHasta) matchesDate = false;
+    }
+    
+    return matchesSearch && matchesDate;
+  });
 
   const formatNumber = (num?: number) => num ? num.toLocaleString('es-MX') : '-';
 
@@ -537,16 +549,44 @@ const EmbarquePage = () => {
     <Layout>
       <Header title="Embarque" subtitle="Báscula - Salida de producto terminado" />
       <div className="p-6">
-        {/* Search and New Button */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <div className="relative w-full sm:w-96">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Buscar por boleta, producto, cliente o chofer..." 
-              className="pl-10"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+        {/* Search, Filters and New Button */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="Buscar por boleta, producto, cliente..." 
+                className="pl-10"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <Input 
+                type="date" 
+                className="w-36"
+                value={fechaDesde}
+                onChange={(e) => setFechaDesde(e.target.value)}
+              />
+              <span className="text-muted-foreground">-</span>
+              <Input 
+                type="date" 
+                className="w-36"
+                value={fechaHasta}
+                onChange={(e) => setFechaHasta(e.target.value)}
+              />
+              {(fechaDesde || fechaHasta) && (
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => { setFechaDesde(''); setFechaHasta(''); }}
+                  title="Limpiar filtros"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
           <Button onClick={() => setIsNuevoDialogOpen(true)} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />

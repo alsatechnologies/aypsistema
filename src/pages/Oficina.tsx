@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, FileText, Clock, CheckCircle, Printer, Eye, Truck, Ship } from 'lucide-react';
+import { Plus, Search, FileText, Clock, CheckCircle, Printer, Eye, Truck, Ship, Calendar, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -51,6 +51,8 @@ const Oficina = () => {
   const [showCompletarDialog, setShowCompletarDialog] = useState(false);
   const [ordenParaCompletar, setOrdenParaCompletar] = useState<OrdenDB | null>(null);
   const [isNuevaOrdenOpen, setIsNuevaOrdenOpen] = useState(false);
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
   
   // Estado para el formulario de nueva orden
   const [nuevaOrdenData, setNuevaOrdenData] = useState({
@@ -306,27 +308,69 @@ const Oficina = () => {
     return <Badge className={colors[tipo] || 'bg-gray-500 text-white'}>{tipo}</Badge>;
   };
 
-  const filteredOrdenes = ordenes.filter(o => 
-    o.producto.toLowerCase().includes(search.toLowerCase()) ||
-    (o.cliente && o.cliente.toLowerCase().includes(search.toLowerCase())) ||
-    o.boleta.includes(search) ||
-    (o.nombreChofer && o.nombreChofer.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filteredOrdenes = ordenes.filter(o => {
+    // Filtro de búsqueda
+    const matchesSearch = 
+      o.producto.toLowerCase().includes(search.toLowerCase()) ||
+      (o.cliente && o.cliente.toLowerCase().includes(search.toLowerCase())) ||
+      o.boleta.includes(search) ||
+      (o.nombreChofer && o.nombreChofer.toLowerCase().includes(search.toLowerCase()));
+    
+    // Filtro de fecha
+    let matchesDate = true;
+    if (fechaDesde || fechaHasta) {
+      const ordenFecha = o.fechaHoraIngreso ? o.fechaHoraIngreso.split('T')[0] : '';
+      if (fechaDesde && ordenFecha < fechaDesde) matchesDate = false;
+      if (fechaHasta && ordenFecha > fechaHasta) matchesDate = false;
+    }
+    
+    return matchesSearch && matchesDate;
+  });
 
   return (
     <Layout>
       <Header title="Oficina" subtitle="Gestión de órdenes y documentación" />
       <div className="p-6">
-        {/* Search and New */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <div className="relative w-full sm:w-80">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Buscar por boleta, producto, cliente..." 
-              className="pl-10"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+        {/* Search, Filters and New */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="Buscar por boleta, producto, cliente..." 
+                className="pl-10"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <Input 
+                type="date" 
+                className="w-36"
+                value={fechaDesde}
+                onChange={(e) => setFechaDesde(e.target.value)}
+                placeholder="Desde"
+              />
+              <span className="text-muted-foreground">-</span>
+              <Input 
+                type="date" 
+                className="w-36"
+                value={fechaHasta}
+                onChange={(e) => setFechaHasta(e.target.value)}
+                placeholder="Hasta"
+              />
+              {(fechaDesde || fechaHasta) && (
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => { setFechaDesde(''); setFechaHasta(''); }}
+                  title="Limpiar filtros"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
           <Dialog open={isNuevaOrdenOpen} onOpenChange={setIsNuevaOrdenOpen}>
             <DialogTrigger asChild>

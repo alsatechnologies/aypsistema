@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Search, Scale, Truck, Train, Clock, CheckCircle, FileText, Printer, Save, BookmarkPlus, Plus } from 'lucide-react';
+import { Search, Scale, Truck, Train, Clock, CheckCircle, FileText, Printer, Save, BookmarkPlus, Plus, Calendar, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -71,6 +71,8 @@ const Reciba = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isNuevaOperacionOpen, setIsNuevaOperacionOpen] = useState(false);
   const [tipoBascula, setTipoBascula] = useState<'Camión' | 'Ferroviaria'>('Camión');
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
   
   // Estado del formulario
   const [productoSeleccionado, setProductoSeleccionado] = useState<number | null>(null);
@@ -581,12 +583,22 @@ const Reciba = () => {
     }
   };
 
-  const filteredRecepciones = recepciones.filter(r => 
-    r.producto.toLowerCase().includes(search.toLowerCase()) ||
-    r.proveedor.toLowerCase().includes(search.toLowerCase()) ||
-    (r.boleta && !r.boleta.startsWith('TEMP-') && r.boleta.includes(search)) ||
-    r.chofer.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredRecepciones = recepciones.filter(r => {
+    const matchesSearch = 
+      r.producto.toLowerCase().includes(search.toLowerCase()) ||
+      r.proveedor.toLowerCase().includes(search.toLowerCase()) ||
+      (r.boleta && !r.boleta.startsWith('TEMP-') && r.boleta.includes(search)) ||
+      r.chofer.toLowerCase().includes(search.toLowerCase());
+    
+    let matchesDate = true;
+    if (fechaDesde || fechaHasta) {
+      const recepcionFecha = r.fecha || '';
+      if (fechaDesde && recepcionFecha < fechaDesde) matchesDate = false;
+      if (fechaHasta && recepcionFecha > fechaHasta) matchesDate = false;
+    }
+    
+    return matchesSearch && matchesDate;
+  });
 
   const formatNumber = (num?: number) => num ? num.toLocaleString('es-MX') : '-';
 
@@ -594,16 +606,44 @@ const Reciba = () => {
     <Layout>
       <Header title="Reciba" subtitle="Báscula - Recepción de materia prima" />
       <div className="p-6">
-        {/* Search y Nueva Operación */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <div className="relative w-full sm:w-96">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Buscar por boleta, producto, proveedor o chofer..." 
-              className="pl-10"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+        {/* Search, Filters y Nueva Operación */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="Buscar por boleta, producto, proveedor..." 
+                className="pl-10"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <Input 
+                type="date" 
+                className="w-36"
+                value={fechaDesde}
+                onChange={(e) => setFechaDesde(e.target.value)}
+              />
+              <span className="text-muted-foreground">-</span>
+              <Input 
+                type="date" 
+                className="w-36"
+                value={fechaHasta}
+                onChange={(e) => setFechaHasta(e.target.value)}
+              />
+              {(fechaDesde || fechaHasta) && (
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => { setFechaDesde(''); setFechaHasta(''); }}
+                  title="Limpiar filtros"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
           <Button onClick={() => setIsNuevaOperacionOpen(true)} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />

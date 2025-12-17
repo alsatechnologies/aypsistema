@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, LogOut, Car, Clock, MapPin, User } from 'lucide-react';
+import { Plus, Search, LogOut, Car, Clock, MapPin, User, Calendar, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import NuevoIngresoDialog, { NuevoIngresoData, MotivoVisita } from '@/components/ingreso/NuevoIngresoDialog';
@@ -39,6 +39,8 @@ const Ingreso = () => {
   
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
   
   // Mapear ingresos de DB a formato local
   const ingresos: Ingreso[] = ingresosDB.map(i => ({
@@ -154,11 +156,21 @@ const Ingreso = () => {
     }
   };
 
-  const filteredIngresos = ingresos.filter(ing => 
-    ing.nombreChofer.toLowerCase().includes(search.toLowerCase()) ||
-    ing.empresa.toLowerCase().includes(search.toLowerCase()) ||
-    ing.placas.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredIngresos = ingresos.filter(ing => {
+    const matchesSearch = 
+      ing.nombreChofer.toLowerCase().includes(search.toLowerCase()) ||
+      ing.empresa.toLowerCase().includes(search.toLowerCase()) ||
+      ing.placas.toLowerCase().includes(search.toLowerCase());
+    
+    let matchesDate = true;
+    if (fechaDesde || fechaHasta) {
+      const ingresoFecha = ing.fechaHoraIngreso ? ing.fechaHoraIngreso.split('T')[0] : '';
+      if (fechaDesde && ingresoFecha < fechaDesde) matchesDate = false;
+      if (fechaHasta && ingresoFecha > fechaHasta) matchesDate = false;
+    }
+    
+    return matchesSearch && matchesDate;
+  });
 
   const vehiculosEnPlanta = ingresos.filter(ing => !ing.fechaHoraSalida).length;
 
@@ -166,16 +178,44 @@ const Ingreso = () => {
     <Layout>
       <Header title="Ingreso" subtitle="Control de acceso - Portero" />
       <div className="p-6">
-        {/* Search and New */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <div className="relative w-full sm:w-80">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Buscar por chofer, empresa o placas..." 
-              className="pl-10"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+        {/* Search, Filters and New */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="Buscar por chofer, empresa, placas..." 
+                className="pl-10"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <Input 
+                type="date" 
+                className="w-36"
+                value={fechaDesde}
+                onChange={(e) => setFechaDesde(e.target.value)}
+              />
+              <span className="text-muted-foreground">-</span>
+              <Input 
+                type="date" 
+                className="w-36"
+                value={fechaHasta}
+                onChange={(e) => setFechaHasta(e.target.value)}
+              />
+              {(fechaDesde || fechaHasta) && (
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  onClick={() => { setFechaDesde(''); setFechaHasta(''); }}
+                  title="Limpiar filtros"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
           <Button 
             className="bg-primary hover:bg-primary/90"
