@@ -108,34 +108,6 @@ const Proveedores = () => {
     <Layout>
       <Header title="Proveedores" subtitle="Gestión de proveedores de materia prima" />
       <div className="p-6">
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Proveedores</CardTitle>
-              <Building2 className="h-5 w-5 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{proveedores.length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Nuevos este mes</CardTitle>
-              <Calendar className="h-5 w-5 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-green-600">
-                {proveedores.filter(p => {
-                  const fecha = new Date(p.fechaAlta);
-                  const now = new Date();
-                  return fecha.getMonth() === now.getMonth() && fecha.getFullYear() === now.getFullYear();
-                }).length}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Search and Actions */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div className="relative w-full sm:w-96">

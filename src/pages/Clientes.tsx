@@ -187,37 +187,6 @@ const Clientes = () => {
     <Layout>
       <Header title="Clientes" subtitle="Gestión de clientes nacionales y de exportación" />
       <div className="p-6">
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Clientes</CardTitle>
-              <Users className="h-5 w-5 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{clientes.length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Nacionales</CardTitle>
-              <Building2 className="h-5 w-5 text-blue-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-blue-600">{clientes.filter(c => c.tipoCliente === 'Nacional').length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Exportación</CardTitle>
-              <Ship className="h-5 w-5 text-purple-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-purple-600">{clientes.filter(c => c.tipoCliente === 'Exportación').length}</div>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Search and Actions */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div className="relative w-full sm:w-96">
