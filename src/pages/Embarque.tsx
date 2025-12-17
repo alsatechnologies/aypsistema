@@ -666,6 +666,11 @@ const EmbarquePage = () => {
                   <DialogTitle className="flex items-center gap-2 flex-wrap">
                     <Scale className="h-5 w-5" />
                     Boleta de Embarque - {selectedEmbarque.boleta}
+                    <span className="ml-2">{getEstatusBadge(selectedEmbarque.estatus)}</span>
+                    <span className="flex items-center gap-1">
+                      {getTransporteIcon(selectedEmbarque.tipoTransporte)}
+                      {selectedEmbarque.tipoTransporte}
+                    </span>
                     {selectedEmbarque.tipoEmbarque === 'Exportación' && (
                       <Badge className="bg-purple-500 text-white ml-2">Exportación</Badge>
                     )}
