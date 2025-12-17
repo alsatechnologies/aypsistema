@@ -1021,6 +1021,36 @@ const Reciba = () => {
                       rows={3}
                     />
                   </div>
+
+                  <Separator />
+
+                  {/* Resumen */}
+                  <div className="space-y-4">
+                    <h4 className="font-medium">Resumen de Recepción</h4>
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="flex justify-between">
+                          <span>Producto:</span>
+                          <span className="font-medium">
+                            {productosDB.find(p => p.id === productoSeleccionado)?.nombre || '-'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Proveedor:</span>
+                          <span className="font-medium">
+                            {proveedoresDB.find(p => p.id === proveedorSeleccionado)?.empresa || '-'}
+                          </span>
+                        </div>
+                      </div>
+                      <Separator className="my-3" />
+                      <div className="flex justify-between text-lg font-bold">
+                        <span>Peso Neto Recibido:</span>
+                        <span className="text-primary">
+                          {pesoNeto > 0 ? pesoNeto.toLocaleString('es-MX') : 0} Kg
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <DialogFooter className="mt-6 gap-2">
