@@ -198,11 +198,15 @@ export function validarProducto(data: {
 
 /**
  * Validar que un registro no esté completado antes de permitir modificaciones
+ * Permite modificación si el usuario es Administrador u Oficina
  */
-export function puedeModificarRegistro(estatus: string): ValidationResult {
+export function puedeModificarRegistro(estatus: string, rolUsuario?: string): ValidationResult {
   const errors: string[] = [];
 
-  if (estatus === 'Completado') {
+  // Administrador y Oficina pueden modificar registros completados
+  const puedeModificarCompletados = rolUsuario === 'Administrador' || rolUsuario === 'Oficina';
+
+  if (estatus === 'Completado' && !puedeModificarCompletados) {
     errors.push('No se puede modificar un registro completado. Contacte al administrador si necesita hacer cambios.');
   }
 

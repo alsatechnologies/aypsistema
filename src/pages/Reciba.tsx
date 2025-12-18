@@ -35,6 +35,10 @@ import { getScaleWeight, PREDEFINED_SCALES } from '@/services/api/scales';
 import { generateBoletaRecibaPDF, openPDF } from '@/services/api/certificate';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useAuth } from '@/contexts/AuthContext';
+import { deleteRecepcion } from '@/services/supabase/recepciones';
+import { Trash2, Edit } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface Recepcion {
   id: number;
@@ -63,6 +67,7 @@ interface Recepcion {
 }
 
 const Reciba = () => {
+  const { usuario } = useAuth();
   const { recepciones: recepcionesDB, loading, loadingMore, hasMore, addRecepcion, updateRecepcion, loadRecepciones, loadMore } = useRecepciones();
   const { productos: productosDB } = useProductos();
   const { proveedores: proveedoresDB, addProveedor } = useProveedores();
@@ -90,6 +95,11 @@ const Reciba = () => {
   const [analisisProducto, setAnalisisProducto] = useState<any[]>([]);
   const [almacenSeleccionado, setAlmacenSeleccionado] = useState<number | null>(null);
   const [observaciones, setObservaciones] = useState<string>('');
+  const [recepcionAEliminar, setRecepcionAEliminar] = useState<Recepcion | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  // Verificar si el usuario puede editar/eliminar
+  const puedeEditarEliminar = usuario?.rol === 'Administrador' || usuario?.rol === 'Oficina';
 
   // Mapear recepciones de DB a formato local
   const recepciones: Recepcion[] = recepcionesDB.map(r => ({
@@ -233,8 +243,8 @@ const Reciba = () => {
   const handlePreGuardar = async () => {
     if (!selectedRecepcion) return;
     
-    // Validar que no esté completado
-    const validacionEstatus = puedeModificarRegistro(selectedRecepcion.estatus);
+    // Validar que no esté completado (o que el usuario tenga permisos)
+    const validacionEstatus = puedeModificarRegistro(selectedRecepcion.estatus, usuario?.rol);
     if (!validacionEstatus.valid) {
       toast.error(validacionEstatus.errors[0]);
       return;
@@ -342,8 +352,8 @@ const Reciba = () => {
   const handleGuardarBoleta = async () => {
     if (!selectedRecepcion) return;
     
-    // Validar que no esté completado
-    const validacionEstatus = puedeModificarRegistro(selectedRecepcion.estatus);
+    // Validar que no esté completado (o que el usuario tenga permisos)
+    const validacionEstatus = puedeModificarRegistro(selectedRecepcion.estatus, usuario?.rol);
     if (!validacionEstatus.valid) {
       toast.error(validacionEstatus.errors[0]);
       return;
@@ -507,6 +517,34 @@ const Reciba = () => {
       return { fecha: fechaStr, hora: horaStr };
     } catch {
       return { fecha: '', hora: '' };
+    }
+  };
+
+  const handleEliminar = async (recepcion: Recepcion) => {
+    if (!puedeEditarEliminar) {
+      toast.error('No tienes permisos para eliminar recepciones');
+      return;
+    }
+    setRecepcionAEliminar(recepcion);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmarEliminar = async () => {
+    if (!recepcionAEliminar) return;
+    
+    try {
+      await deleteRecepcion(recepcionAEliminar.id);
+      await loadRecepciones();
+      toast.success('Recepción eliminada correctamente');
+      setShowDeleteDialog(false);
+      setRecepcionAEliminar(null);
+      if (selectedRecepcion?.id === recepcionAEliminar.id) {
+        setIsDialogOpen(false);
+        setSelectedRecepcion(null);
+      }
+    } catch (error) {
+      handleError(error, { module: 'Reciba', action: 'eliminar' });
+      toast.error('Error al eliminar recepción');
     }
   };
 
@@ -684,6 +722,7 @@ const Reciba = () => {
                   <TableHead>Transporte</TableHead>
                   <TableHead>Fecha</TableHead>
                   <TableHead>Estatus</TableHead>
+                  {puedeEditarEliminar && <TableHead className="text-right">Acciones</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -708,6 +747,36 @@ const Reciba = () => {
                     </TableCell>
                     <TableCell>{recepcion.fecha}</TableCell>
                     <TableCell>{getEstatusBadge(recepcion.estatus)}</TableCell>
+                    {puedeEditarEliminar && (
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRowClick(recepcion);
+                            }}
+                            title="Editar"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEliminar(recepcion);
+                            }}
+                            title="Eliminar"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 )) : (
                   <TableRow>
@@ -1113,6 +1182,35 @@ const Reciba = () => {
             );
           })()}
         </Dialog>
+
+        {/* Diálogo de confirmación de eliminación */}
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Eliminar recepción?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta acción marcará la recepción como eliminada (soft delete). 
+                El registro permanecerá en la base de datos pero no será visible en las listas.
+                {recepcionAEliminar && (
+                  <div className="mt-2 p-2 bg-muted rounded">
+                    <p className="font-medium">Boleta: {recepcionAEliminar.boleta}</p>
+                    <p>Producto: {recepcionAEliminar.producto}</p>
+                    <p>Proveedor: {recepcionAEliminar.proveedor}</p>
+                  </div>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmarEliminar}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Eliminar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </Layout>
   );

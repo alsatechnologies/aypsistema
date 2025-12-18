@@ -35,6 +35,10 @@ import { getScaleWeight, PREDEFINED_SCALES } from '@/services/api/scales';
 import { generateBoletaEmbarquePDF, openPDF } from '@/services/api/certificate';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useAuth } from '@/contexts/AuthContext';
+import { deleteEmbarque } from '@/services/supabase/embarques';
+import { Trash2, Edit } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface Embarque {
   id: number;
@@ -70,6 +74,7 @@ interface Embarque {
 }
 
 const EmbarquePage = () => {
+  const { usuario } = useAuth();
   const { embarques: embarquesDB, loading, loadingMore, hasMore, addEmbarque, updateEmbarque, loadEmbarques, loadMore } = useEmbarques();
   const { productos: productosDB } = useProductos();
   const { clientes: clientesDB } = useClientes();
@@ -83,6 +88,11 @@ const EmbarquePage = () => {
   const [consecutivo, setConsecutivo] = useState(5);
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
+  const [embarqueAEliminar, setEmbarqueAEliminar] = useState<Embarque | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  // Verificar si el usuario puede editar/eliminar
+  const puedeEditarEliminar = usuario?.rol === 'Administrador' || usuario?.rol === 'Oficina';
 
   // Mapear embarques de DB a formato local
   const embarques: Embarque[] = embarquesDB.map(e => ({
@@ -316,8 +326,8 @@ const EmbarquePage = () => {
   const handlePreGuardar = async () => {
     if (!selectedEmbarque) return;
     
-    // Validar que no esté completado
-    const validacionEstatus = puedeModificarRegistro(selectedEmbarque.estatus);
+    // Validar que no esté completado (o que el usuario tenga permisos)
+    const validacionEstatus = puedeModificarRegistro(selectedEmbarque.estatus, usuario?.rol);
     if (!validacionEstatus.valid) {
       toast.error(validacionEstatus.errors[0]);
       return;
@@ -359,8 +369,8 @@ const EmbarquePage = () => {
   const handleGuardar = async () => {
     if (!selectedEmbarque) return;
     
-    // Validar que no esté completado
-    const validacionEstatus = puedeModificarRegistro(selectedEmbarque.estatus);
+    // Validar que no esté completado (o que el usuario tenga permisos)
+    const validacionEstatus = puedeModificarRegistro(selectedEmbarque.estatus, usuario?.rol);
     if (!validacionEstatus.valid) {
       toast.error(validacionEstatus.errors[0]);
       return;
@@ -467,6 +477,34 @@ const EmbarquePage = () => {
       };
     } catch {
       return { fecha: '', hora: '' };
+    }
+  };
+
+  const handleEliminar = async (embarque: Embarque) => {
+    if (!puedeEditarEliminar) {
+      toast.error('No tienes permisos para eliminar embarques');
+      return;
+    }
+    setEmbarqueAEliminar(embarque);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmarEliminar = async () => {
+    if (!embarqueAEliminar) return;
+    
+    try {
+      await deleteEmbarque(embarqueAEliminar.id);
+      await loadEmbarques();
+      toast.success('Embarque eliminado correctamente');
+      setShowDeleteDialog(false);
+      setEmbarqueAEliminar(null);
+      if (selectedEmbarque?.id === embarqueAEliminar.id) {
+        setIsDialogOpen(false);
+        setSelectedEmbarque(null);
+      }
+    } catch (error) {
+      handleError(error, { module: 'Embarque', action: 'eliminar' });
+      toast.error('Error al eliminar embarque');
     }
   };
 
@@ -644,6 +682,7 @@ const EmbarquePage = () => {
                   <TableHead>Chofer</TableHead>
                   <TableHead>Fecha</TableHead>
                   <TableHead>Estatus</TableHead>
+                  {puedeEditarEliminar && <TableHead className="text-right">Acciones</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -668,6 +707,36 @@ const EmbarquePage = () => {
                     <TableCell>{embarque.chofer}</TableCell>
                     <TableCell>{embarque.fecha}</TableCell>
                     <TableCell>{getEstatusBadge(embarque.estatus)}</TableCell>
+                    {puedeEditarEliminar && (
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRowClick(embarque);
+                            }}
+                            title="Editar"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEliminar(embarque);
+                            }}
+                            title="Eliminar"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
@@ -994,6 +1063,35 @@ const EmbarquePage = () => {
           productos={productosDB}
           clientes={clientesDB}
         />
+
+        {/* Diálogo de confirmación de eliminación */}
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Eliminar embarque?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta acción marcará el embarque como eliminado (soft delete). 
+                El registro permanecerá en la base de datos pero no será visible en las listas.
+                {embarqueAEliminar && (
+                  <div className="mt-2 p-2 bg-muted rounded">
+                    <p className="font-medium">Boleta: {embarqueAEliminar.boleta}</p>
+                    <p>Producto: {embarqueAEliminar.producto}</p>
+                    <p>Cliente: {embarqueAEliminar.cliente}</p>
+                  </div>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmarEliminar}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Eliminar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Boleta Preview Dialog */}
         <BoletaEmbarqueDialog

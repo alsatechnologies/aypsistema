@@ -22,8 +22,11 @@ import CompletarOrdenDialog from '@/components/oficina/CompletarOrdenDialog';
 import { toast } from 'sonner';
 import { formatDateTimeMST } from '@/utils/dateUtils';
 import { createEmbarque } from '@/services/supabase/embarques';
-import { createOrden } from '@/services/supabase/ordenes';
+import { createOrden, deleteOrden } from '@/services/supabase/ordenes';
 import { getCurrentDateTimeMST } from '@/utils/dateUtils';
+import { useAuth } from '@/contexts/AuthContext';
+import { Trash2, Edit } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface Orden {
   id: number;
@@ -40,6 +43,7 @@ interface Orden {
 }
 
 const Oficina = () => {
+  const { usuario } = useAuth();
   const { ordenes: ordenesDB, loading, loadingMore, hasMore, loadOrdenes, loadMore, updateOrden } = useOrdenes();
   const { productos } = useProductos();
   const { clientes } = useClientes();
@@ -53,6 +57,11 @@ const Oficina = () => {
   const [isNuevaOrdenOpen, setIsNuevaOrdenOpen] = useState(false);
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
+  const [ordenAEliminar, setOrdenAEliminar] = useState<Orden | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  // Verificar si el usuario puede editar/eliminar
+  const puedeEditarEliminar = usuario?.rol === 'Administrador' || usuario?.rol === 'Oficina';
   
   // Estado para el formulario de nueva orden
   const [nuevaOrdenData, setNuevaOrdenData] = useState({
@@ -701,14 +710,27 @@ const Oficina = () => {
                     <TableCell>{getEstatusBadge(orden.estatus)}</TableCell>
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       {orden.estatus === 'Nuevo' && orden.boleta.startsWith('TEMP-') ? (
-                        <Button 
-                          variant="default" 
-                          size="sm"
-                          onClick={() => handleCompletarOrden(orden)}
-                          className="bg-primary hover:bg-primary/90"
-                        >
-                          Completar Orden
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button 
+                            variant="default" 
+                            size="sm"
+                            onClick={() => handleCompletarOrden(orden)}
+                            className="bg-primary hover:bg-primary/90"
+                          >
+                            Completar Orden
+                          </Button>
+                          {puedeEditarEliminar && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => handleEliminar(orden)}
+                              title="Eliminar"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       ) : (
                         <div className="flex items-center justify-end gap-1">
                           <Button 
@@ -729,6 +751,39 @@ const Oficina = () => {
                           >
                             <Printer className="h-4 w-4" />
                           </Button>
+                          {puedeEditarEliminar && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  // Permitir editar abriendo el diálogo de completar
+                                  if (orden.estatus === 'Nuevo' && orden.boleta.startsWith('TEMP-')) {
+                                    handleCompletarOrden(orden);
+                                  } else {
+                                    handleViewTicket(orden);
+                                  }
+                                }}
+                                title="Editar"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEliminar(orden);
+                                }}
+                                title="Eliminar"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
                           {orden.estatus === 'En Proceso' && (
                             <Button 
                               variant="outline" 
@@ -778,6 +833,35 @@ const Oficina = () => {
             onSave={handleSaveOrden}
           />
         )}
+
+        {/* Diálogo de confirmación de eliminación */}
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Eliminar orden?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta acción marcará la orden como eliminada (soft delete). 
+                El registro permanecerá en la base de datos pero no será visible en las listas.
+                {ordenAEliminar && (
+                  <div className="mt-2 p-2 bg-muted rounded">
+                    <p className="font-medium">Boleta: {ordenAEliminar.boleta}</p>
+                    <p>Producto: {ordenAEliminar.producto || '-'}</p>
+                    <p>Cliente/Proveedor: {ordenAEliminar.cliente || '-'}</p>
+                  </div>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmarEliminar}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Eliminar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </Layout>
   );
