@@ -657,7 +657,7 @@ const Oficina = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              Órdenes del Día
+              Historial de Ordenes
             </CardTitle>
             <CardDescription>Gestión de órdenes de reciba y embarque</CardDescription>
           </CardHeader>
