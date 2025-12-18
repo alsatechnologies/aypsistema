@@ -47,7 +47,7 @@ const Oficina = () => {
   const { usuario } = useAuth();
   const { ordenes: ordenesDB, loading, loadingMore, hasMore, loadOrdenes, loadMore, updateOrden } = useOrdenes();
   const { productos } = useProductos();
-  const { clientes: clientesDB } = useClientes();
+  const { clientes: clientesDB = [] } = useClientes();
   const { proveedores } = useProveedores();
   
   const [search, setSearch] = useState('');
