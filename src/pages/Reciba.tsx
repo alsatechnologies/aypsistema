@@ -1005,7 +1005,13 @@ const Reciba = () => {
                             }}
                             placeholder="0"
                           />
-                          {!(selectedRecepcion?.estatus === 'Completado' && pesoBruto > 0 && pesoTara > 0) && (
+                          {!(
+                            (selectedRecepcion?.estatus === 'Peso Bruto' || 
+                             selectedRecepcion?.estatus === 'En Descarga' || 
+                             selectedRecepcion?.estatus === 'Peso Tara' || 
+                             selectedRecepcion?.estatus === 'Completado') && 
+                            pesoBruto > 0
+                          ) && (
                             <Button 
                               className="w-full mt-2" 
                               size="sm"
@@ -1040,7 +1046,11 @@ const Reciba = () => {
                             }}
                             placeholder="0"
                           />
-                          {!(selectedRecepcion?.estatus === 'Completado' && pesoBruto > 0 && pesoTara > 0) && (
+                          {!(
+                            (selectedRecepcion?.estatus === 'Peso Tara' || 
+                             selectedRecepcion?.estatus === 'Completado') && 
+                            pesoTara > 0
+                          ) && (
                             <Button 
                               className="w-full mt-2" 
                               size="sm" 

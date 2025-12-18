@@ -904,7 +904,13 @@ const EmbarquePage = () => {
                             onChange={(e) => handlePesoTaraChange(Number(e.target.value))}
                             placeholder="0"
                           />
-                          {!(selectedEmbarque?.estatus === 'Completado' && formData.pesoBruto > 0 && formData.pesoTara > 0) && (
+                          {!(
+                            (selectedEmbarque?.estatus === 'Peso Tara' || 
+                             selectedEmbarque?.estatus === 'En Carga' || 
+                             selectedEmbarque?.estatus === 'Peso Bruto' || 
+                             selectedEmbarque?.estatus === 'Completado') && 
+                            formData.pesoTara > 0
+                          ) && (
                             <Button className="w-full mt-2" size="sm" onClick={handleCapturarPesoTara}>
                               Capturar Peso
                             </Button>
@@ -929,7 +935,11 @@ const EmbarquePage = () => {
                             onChange={(e) => handlePesoBrutoChange(Number(e.target.value))}
                             placeholder="0"
                           />
-                          {!(selectedEmbarque?.estatus === 'Completado' && formData.pesoBruto > 0 && formData.pesoTara > 0) && (
+                          {!(
+                            (selectedEmbarque?.estatus === 'Peso Bruto' || 
+                             selectedEmbarque?.estatus === 'Completado') && 
+                            formData.pesoBruto > 0
+                          ) && (
                             <Button className="w-full mt-2" size="sm" variant="outline" onClick={handleCapturarPesoBruto}>
                               Capturar Peso
                             </Button>
