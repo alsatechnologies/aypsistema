@@ -236,7 +236,7 @@ const CompletarOrdenDialog: React.FC<CompletarOrdenDialogProps> = ({
             className="bg-primary hover:bg-primary/90"
             disabled={loading}
           >
-            {loading ? 'Guardando...' : 'Guardar y Generar Boleta'}
+            {loading ? 'Guardando...' : orden.boleta.startsWith('TEMP-') ? 'Guardar y Generar Boleta' : 'Guardar Cambios'}
           </Button>
         </DialogFooter>
       </DialogContent>
