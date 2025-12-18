@@ -83,7 +83,8 @@ const Configuracion = () => {
     loading: usuariosLoading,
     addUsuario: addUsuarioDB,
     updateUsuario: updateUsuarioDB,
-    deleteUsuario: deleteUsuarioDB
+    deleteUsuario: deleteUsuarioDB,
+    loadUsuarios
   } = useUsuarios();
 
   // Estado local para productos con análisis cargados
@@ -275,7 +276,11 @@ const Configuracion = () => {
       return;
     }
     if (!editingUsuario && !nuevoUsuario.contrasena) {
-      toast.error('La contraseña es requerida');
+      toast.error('La contraseña es requerida para nuevos usuarios');
+      return;
+    }
+    if (!editingUsuario && nuevoUsuario.contrasena && nuevoUsuario.contrasena.length < 6) {
+      toast.error('La contraseña debe tener al menos 6 caracteres');
       return;
     }
 
@@ -285,6 +290,35 @@ const Configuracion = () => {
         (nuevoUsuario.nombreUsuario && nuevoUsuario.nombreUsuario.trim() !== ''
           ? `${nuevoUsuario.nombreUsuario.toLowerCase().trim()}@apsistema.com`
           : `${nuevoUsuario.nombreCompleto.toLowerCase().trim().replace(/\s+/g, '_')}@apsistema.com`);
+
+      // Validar formato de email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(emailFinal)) {
+        toast.error('El formato del correo electrónico no es válido');
+        return;
+      }
+
+      // Verificar si el email ya existe (solo para nuevos usuarios)
+      if (!editingUsuario) {
+        const emailExiste = usuariosDB.some(u => u.correo.toLowerCase() === emailFinal.toLowerCase() && u.activo);
+        if (emailExiste) {
+          toast.error('Ya existe un usuario activo con este correo electrónico');
+          return;
+        }
+      }
+
+      // Verificar si el nombre_usuario ya existe (solo para nuevos usuarios y si se proporciona)
+      if (!editingUsuario && nuevoUsuario.nombreUsuario && nuevoUsuario.nombreUsuario.trim() !== '') {
+        const usuarioExiste = usuariosDB.some(u => 
+          u.nombre_usuario && 
+          u.nombre_usuario.toLowerCase() === nuevoUsuario.nombreUsuario.toLowerCase().trim() && 
+          u.activo
+        );
+        if (usuarioExiste) {
+          toast.error('Ya existe un usuario activo con este nombre de usuario');
+          return;
+        }
+      }
 
       // En producción, deberías hashear la contraseña aquí
       const contrasenaHash = nuevoUsuario.contrasena || '********';
@@ -374,9 +408,15 @@ const Configuracion = () => {
         }
         
         await updateUsuarioDB(editingUsuario.id, updateData);
+        
+        // Recargar lista de usuarios
+        await loadUsuarios();
+        
         toast.success('Usuario actualizado correctamente');
       } else {
         // Crear nuevo usuario
+        let authUserCreated = false;
+        
         // Primero crear en auth.users
         try {
           const createAuthResponse = await fetch('/api/create-auth-user', {
@@ -393,26 +433,49 @@ const Configuracion = () => {
             }),
           });
 
-          if (!createAuthResponse.ok) {
+          if (createAuthResponse.ok) {
+            authUserCreated = true;
+          } else {
             const errorData = await createAuthResponse.json();
-            throw new Error(errorData.error || 'Error al crear usuario en auth.users');
+            // Si el error es que el usuario ya existe, continuar de todas formas
+            if (errorData.error && errorData.error.includes('already registered')) {
+              console.warn('Usuario ya existe en auth.users, continuando...');
+              authUserCreated = true; // Considerar como éxito si ya existe
+            } else {
+              console.error('Error creando usuario en auth.users:', errorData.error);
+              // Continuar de todas formas pero mostrar advertencia
+              toast.warning('Advertencia: No se pudo crear en auth.users. El usuario se creará en la base de datos pero el login puede fallar hasta que se cree manualmente en auth.users.');
+            }
           }
         } catch (authError) {
           console.error('Error creando usuario en auth.users:', authError);
-          toast.error('Error al crear usuario en auth.users. Verifica que SUPABASE_SERVICE_ROLE_KEY esté configurada en Vercel.');
-          return;
+          toast.warning('Advertencia: Error al crear usuario en auth.users. El usuario se creará en la base de datos pero el login puede fallar hasta que se cree manualmente en auth.users.');
         }
 
-        // Luego crear en la tabla usuarios
-        await addUsuarioDB({
-          nombre_completo: nuevoUsuario.nombreCompleto,
-          nombre_usuario: nuevoUsuario.nombreUsuario || null,
-          correo: emailFinal,
-          contrasena_hash: contrasenaHash,
-          rol: nuevoUsuario.rol,
-          activo: true
-        });
-        toast.success('Usuario creado correctamente');
+        // Crear en la tabla usuarios (siempre, incluso si auth.users falla)
+        try {
+          await addUsuarioDB({
+            nombre_completo: nuevoUsuario.nombreCompleto,
+            nombre_usuario: nuevoUsuario.nombreUsuario || null,
+            correo: emailFinal,
+            contrasena_hash: contrasenaHash,
+            rol: nuevoUsuario.rol,
+            activo: true
+          });
+          
+          // Recargar lista de usuarios
+          await loadUsuarios();
+          
+          if (authUserCreated) {
+            toast.success('Usuario creado correctamente');
+          } else {
+            toast.success('Usuario creado en la base de datos. Nota: Puede que necesite ser creado manualmente en auth.users para poder iniciar sesión.');
+          }
+        } catch (dbError) {
+          console.error('Error creando usuario en base de datos:', dbError);
+          toast.error('Error al crear usuario en la base de datos: ' + (dbError instanceof Error ? dbError.message : 'Error desconocido'));
+          throw dbError; // Re-lanzar para que el catch general lo maneje
+        }
       }
 
       setNuevoUsuario({ nombreCompleto: '', nombreUsuario: '', correo: '', contrasena: '', rol: '' });
