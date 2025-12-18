@@ -121,6 +121,30 @@ export async function createEmbarque(embarque: Omit<Embarque, 'id' | 'created_at
   return data;
 }
 
+// Obtener embarque por boleta
+export async function getEmbarqueByBoleta(boleta: string) {
+  if (!supabase) {
+    throw new Error('Supabase no está configurado');
+  }
+  
+  const { data, error } = await supabase
+    .from('embarques')
+    .select(`
+      *,
+      producto:productos(id, nombre),
+      cliente:clientes(id, empresa)
+    `)
+    .eq('boleta', boleta)
+    .eq('activo', true)
+    .single();
+  
+  if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+    throw error;
+  }
+  
+  return data || null;
+}
+
 // Actualizar embarque
 export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
   if (!supabase) {

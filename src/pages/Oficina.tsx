@@ -21,7 +21,7 @@ import type { Orden as OrdenDB } from '@/services/supabase/ordenes';
 import CompletarOrdenDialog from '@/components/oficina/CompletarOrdenDialog';
 import { toast } from 'sonner';
 import { formatDateTimeMST } from '@/utils/dateUtils';
-import { createEmbarque } from '@/services/supabase/embarques';
+import { createEmbarque, getEmbarqueByBoleta, updateEmbarque } from '@/services/supabase/embarques';
 import { createOrden, deleteOrden } from '@/services/supabase/ordenes';
 import { getCurrentDateTimeMST } from '@/utils/dateUtils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -281,27 +281,40 @@ const Oficina = () => {
 
       await updateOrden(ordenId, updateData);
 
-      // Si es una orden de Embarque, crear también el registro en embarques
+      // Si es una orden de Embarque, crear o actualizar el registro en embarques
       if (orden.tipo_operacion === 'Embarque Nacional' || orden.tipo_operacion === 'Embarque Exportación') {
         if (data.cliente_id && data.producto_id) {
           try {
             const fechaActual = new Date();
             const fechaMST = `${fechaActual.getFullYear()}-${String(fechaActual.getMonth() + 1).padStart(2, '0')}-${String(fechaActual.getDate()).padStart(2, '0')}`;
             
-            await createEmbarque({
-              boleta: ticketFinal,
+            // Verificar si ya existe un embarque con esta boleta
+            const embarqueExistente = await getEmbarqueByBoleta(ticketFinal);
+            
+            const embarqueData = {
               producto_id: data.producto_id,
               cliente_id: data.cliente_id,
               chofer: orden.nombre_chofer || null,
               placas: orden.placas || null,
               destino: orden.destino || null,
               fecha: fechaMST,
-              estatus: 'Pendiente',
               tipo_transporte: data.tipo_transporte || null,
               tipo_embarque: orden.tipo_operacion === 'Embarque Nacional' ? 'Nacional' : 'Exportación'
-            });
+            };
+            
+            if (embarqueExistente) {
+              // Actualizar embarque existente
+              await updateEmbarque(embarqueExistente.id, embarqueData);
+            } else {
+              // Crear nuevo embarque
+              await createEmbarque({
+                boleta: ticketFinal,
+                estatus: 'Pendiente',
+                ...embarqueData
+              });
+            }
           } catch (error) {
-            console.error('Error creating embarque:', error);
+            console.error('Error creating/updating embarque:', error);
             // No lanzamos error para no interrumpir el flujo, solo lo registramos
           }
         }
