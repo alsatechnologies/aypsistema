@@ -1075,7 +1075,7 @@ const EmbarquePage = () => {
         <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>¿Eliminar embarque?</AlertDialogTitle>
+              <AlertDialogTitle className="text-destructive">⚠️ Eliminación Permanente</AlertDialogTitle>
               <AlertDialogDescription>
                 <div className="space-y-3">
                   <p className="font-semibold text-destructive">
