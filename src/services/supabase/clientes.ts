@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { registrarAuditoria } from './auditoria';
 
 export interface Cliente {
   id: number;
@@ -27,6 +28,7 @@ export async function getClientes(filters?: {
   let query = supabase
     .from('clientes')
     .select('*', { count: 'exact' })
+    .eq('activo', true)
     .order('empresa');
   
   // Aplicar paginación si se proporciona
@@ -120,6 +122,14 @@ export async function createCliente(cliente: Omit<Cliente, 'id' | 'created_at' |
     if (productosError) throw productosError;
   }
   
+  // Registrar en auditoría
+  await registrarAuditoria({
+    tabla: 'clientes',
+    registro_id: clienteCreado.id,
+    accion: 'INSERT',
+    datos_nuevos: clienteCreado,
+  });
+  
   return clienteCreado;
 }
 
@@ -128,6 +138,13 @@ export async function updateCliente(id: number, cliente: Partial<Cliente>, produ
   if (!supabase) {
     throw new Error('Supabase no está configurado');
   }
+  
+  // Obtener datos anteriores para auditoría
+  const { data: clienteAnterior } = await supabase
+    .from('clientes')
+    .select('*')
+    .eq('id', id)
+    .single();
   
   const { productos, ...clienteData } = cliente;
   
@@ -139,6 +156,15 @@ export async function updateCliente(id: number, cliente: Partial<Cliente>, produ
     .single();
   
   if (clienteError) throw clienteError;
+  
+  // Registrar en auditoría
+  await registrarAuditoria({
+    tabla: 'clientes',
+    registro_id: id,
+    accion: 'UPDATE',
+    datos_anteriores: clienteAnterior || null,
+    datos_nuevos: clienteActualizado,
+  });
   
   // Actualizar productos si se proporcionaron
   if (productosIds !== undefined) {
@@ -166,18 +192,33 @@ export async function updateCliente(id: number, cliente: Partial<Cliente>, produ
   return clienteActualizado;
 }
 
-// Eliminar cliente
+// Eliminar cliente (soft delete)
 export async function deleteCliente(id: number) {
   if (!supabase) {
     throw new Error('Supabase no está configurado');
   }
   
+  // Obtener datos anteriores para auditoría
+  const { data: clienteAnterior } = await supabase
+    .from('clientes')
+    .select('*')
+    .eq('id', id)
+    .single();
+  
   const { error } = await supabase
     .from('clientes')
-    .delete()
+    .update({ activo: false, updated_at: new Date().toISOString() })
     .eq('id', id);
   
   if (error) throw error;
+  
+  // Registrar en auditoría
+  await registrarAuditoria({
+    tabla: 'clientes',
+    registro_id: id,
+    accion: 'DELETE',
+    datos_anteriores: clienteAnterior || null,
+  });
 }
 
 

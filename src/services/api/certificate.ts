@@ -79,13 +79,26 @@ export async function generateBoletaRecibaPDF(data: BoletaRecibaRequest): Promis
   try {
     console.log('Generando boleta de ENTRADA (Reciba):', data.boleta_no);
     
+    // Timeout de 35 segundos en frontend (el servidor tiene 30s)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 35000);
+    
     const response = await fetch(CERTIFICATE_ENTRADA_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(data),
+      signal: controller.signal,
+    }).catch((fetchError: any) => {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        throw new Error('Timeout al generar PDF de entrada (más de 35 segundos)');
+      }
+      throw fetchError;
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }));
@@ -117,13 +130,26 @@ export async function generateBoletaEmbarquePDF(data: BoletaEmbarqueRequest): Pr
   try {
     console.log('Generando boleta de SALIDA (Embarque):', data.boleta_no);
     
+    // Timeout de 35 segundos en frontend (el servidor tiene 30s)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 35000);
+    
     const response = await fetch(CERTIFICATE_SALIDA_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(data),
+      signal: controller.signal,
+    }).catch((fetchError: any) => {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        throw new Error('Timeout al generar PDF de salida (más de 35 segundos)');
+      }
+      throw fetchError;
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }));

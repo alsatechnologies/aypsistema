@@ -40,6 +40,7 @@ export async function getOrdenes(filters?: {
       cliente:clientes(id, empresa),
       proveedor:proveedores(id, empresa)
     `, { count: 'exact' })
+    .eq('activo', true)
     .order('fecha_hora_ingreso', { ascending: false });
   
   if (filters?.estatus) {
@@ -112,7 +113,7 @@ export async function updateOrden(id: number, orden: Partial<Orden>) {
   return data;
 }
 
-// Eliminar orden
+// Eliminar orden (soft delete)
 export async function deleteOrden(id: number) {
   if (!supabase) {
     throw new Error('Supabase no está configurado');
@@ -120,7 +121,7 @@ export async function deleteOrden(id: number) {
   
   const { error } = await supabase
     .from('ordenes')
-    .delete()
+    .update({ activo: false, updated_at: new Date().toISOString() })
     .eq('id', id);
   
   if (error) throw error;

@@ -1,5 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { generarCodigoLoteParaOperacion } from './lotes';
+import { registrarAuditoria } from './auditoria';
+import { logger } from '@/services/logger';
 
 export interface Embarque {
   id: number;
@@ -53,6 +55,7 @@ export async function getEmbarques(filters?: {
       producto:productos(id, nombre),
       cliente:clientes(id, empresa)
     `, { count: 'exact' })
+    .eq('activo', true)
     .order('fecha', { ascending: false })
     .order('created_at', { ascending: false });
   
@@ -106,6 +109,15 @@ export async function createEmbarque(embarque: Omit<Embarque, 'id' | 'created_at
     .single();
   
   if (error) throw error;
+  
+  // Registrar en auditoría
+  await registrarAuditoria({
+    tabla: 'embarques',
+    registro_id: data.id,
+    accion: 'INSERT',
+    datos_nuevos: data,
+  });
+  
   return data;
 }
 
@@ -114,6 +126,13 @@ export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
   if (!supabase) {
     throw new Error('Supabase no está configurado');
   }
+  
+  // Obtener datos anteriores para auditoría
+  const { data: embarqueAnterior } = await supabase
+    .from('embarques')
+    .select('*')
+    .eq('id', id)
+    .single();
   
   // Si se está completando y no tiene código de lote, generarlo
   if (embarque.estatus === 'Completado' && !embarque.codigo_lote && embarque.cliente_id && embarque.producto_id && embarque.almacen_id) {
@@ -128,7 +147,7 @@ export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
       );
       embarque.codigo_lote = codigo;
     } catch (error) {
-      console.error('Error al generar código de lote:', error);
+      logger.error('Error al generar código de lote', error, 'Embarques');
     }
   }
   
@@ -144,21 +163,46 @@ export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
     .single();
   
   if (error) throw error;
+  
+  // Registrar en auditoría
+  await registrarAuditoria({
+    tabla: 'embarques',
+    registro_id: id,
+    accion: 'UPDATE',
+    datos_anteriores: embarqueAnterior || null,
+    datos_nuevos: data,
+  });
+  
   return data;
 }
 
-// Eliminar embarque
+// Eliminar embarque (soft delete)
 export async function deleteEmbarque(id: number) {
   if (!supabase) {
     throw new Error('Supabase no está configurado');
   }
   
+  // Obtener datos anteriores para auditoría
+  const { data: embarqueAnterior } = await supabase
+    .from('embarques')
+    .select('*')
+    .eq('id', id)
+    .single();
+  
   const { error } = await supabase
     .from('embarques')
-    .delete()
+    .update({ activo: false, updated_at: new Date().toISOString() })
     .eq('id', id);
   
   if (error) throw error;
+  
+  // Registrar en auditoría
+  await registrarAuditoria({
+    tabla: 'embarques',
+    registro_id: id,
+    accion: 'DELETE',
+    datos_anteriores: embarqueAnterior || null,
+  });
 }
 
 

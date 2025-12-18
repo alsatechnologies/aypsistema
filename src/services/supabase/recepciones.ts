@@ -1,5 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { generarCodigoLoteParaOperacion } from './lotes';
+import { registrarAuditoria } from './auditoria';
+import { logger } from '@/services/logger';
 
 export interface Recepcion {
   id: number;
@@ -52,6 +54,7 @@ export async function getRecepciones(filters?: {
       producto:productos(id, nombre),
       proveedor:proveedores(id, empresa)
     `, { count: 'exact' })
+    .eq('activo', true)
     .order('fecha', { ascending: false })
     .order('created_at', { ascending: false });
   
@@ -94,7 +97,7 @@ export async function createRecepcion(recepcion: Omit<Recepcion, 'id' | 'created
     throw new Error('Supabase no está configurado');
   }
   
-  console.log('createRecepcion - Datos recibidos:', recepcion);
+  logger.debug('Creando recepción', recepcion, 'Recepciones');
   
   const { data, error } = await supabase
     .from('recepciones')
@@ -107,14 +110,20 @@ export async function createRecepcion(recepcion: Omit<Recepcion, 'id' | 'created
     .single();
   
   if (error) {
-    console.error('Error de Supabase al crear recepción:', error);
-    console.error('Código de error:', error.code);
-    console.error('Mensaje de error:', error.message);
-    console.error('Detalles:', error.details);
+    logger.error('Error al crear recepción', error, 'Recepciones');
     throw new Error(`Error al crear recepción: ${error.message} (${error.code})`);
   }
   
-  console.log('createRecepcion - Recepción creada exitosamente:', data);
+  logger.info('Recepción creada exitosamente', { id: data.id, boleta: data.boleta }, 'Recepciones');
+  
+  // Registrar en auditoría
+  await registrarAuditoria({
+    tabla: 'recepciones',
+    registro_id: data.id,
+    accion: 'INSERT',
+    datos_nuevos: data,
+  });
+  
   return data;
 }
 
@@ -123,6 +132,13 @@ export async function updateRecepcion(id: number, recepcion: Partial<Recepcion>)
   if (!supabase) {
     throw new Error('Supabase no está configurado');
   }
+  
+  // Obtener datos anteriores para auditoría
+  const { data: recepcionAnterior } = await supabase
+    .from('recepciones')
+    .select('*')
+    .eq('id', id)
+    .single();
   
   // Si se está completando y no tiene código de lote, generarlo
   if (recepcion.estatus === 'Completado' && !recepcion.codigo_lote && recepcion.proveedor_id && recepcion.producto_id && recepcion.almacen_id) {
@@ -136,7 +152,7 @@ export async function updateRecepcion(id: number, recepcion: Partial<Recepcion>)
       );
       recepcion.codigo_lote = codigo;
     } catch (error) {
-      console.error('Error al generar código de lote:', error);
+      logger.error('Error al generar código de lote', error, 'Recepciones');
     }
   }
   
@@ -152,20 +168,45 @@ export async function updateRecepcion(id: number, recepcion: Partial<Recepcion>)
     .single();
   
   if (error) throw error;
+  
+  // Registrar en auditoría
+  await registrarAuditoria({
+    tabla: 'recepciones',
+    registro_id: id,
+    accion: 'UPDATE',
+    datos_anteriores: recepcionAnterior || null,
+    datos_nuevos: data,
+  });
+  
   return data;
 }
 
-// Eliminar recepción
+// Eliminar recepción (soft delete)
 export async function deleteRecepcion(id: number) {
   if (!supabase) {
     throw new Error('Supabase no está configurado');
   }
   
+  // Obtener datos anteriores para auditoría
+  const { data: recepcionAnterior } = await supabase
+    .from('recepciones')
+    .select('*')
+    .eq('id', id)
+    .single();
+  
   const { error } = await supabase
     .from('recepciones')
-    .delete()
+    .update({ activo: false, updated_at: new Date().toISOString() })
     .eq('id', id);
   
   if (error) throw error;
+  
+  // Registrar en auditoría
+  await registrarAuditoria({
+    tabla: 'recepciones',
+    registro_id: id,
+    accion: 'DELETE',
+    datos_anteriores: recepcionAnterior || null,
+  });
 }
 

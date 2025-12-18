@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -5,32 +6,62 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import Proveedores from "./pages/Proveedores";
-import NuevoProveedor from "./pages/NuevoProveedor";
-import Clientes from "./pages/Clientes";
-import NuevoCliente from "./pages/NuevoCliente";
-import NotFound from "./pages/NotFound";
-import Login from "./pages/Login";
-import Reportes from "./pages/Reportes";
-import Oficina from "./pages/Oficina";
-import Reciba from "./pages/Reciba";
-import Embarque from "./pages/Embarque";
-import Movimientos from "./pages/Movimientos";
-import Ingreso from "./pages/Ingreso";
-import ControlCalidad from "./pages/ControlCalidad";
-import Laboratorio from "./pages/Laboratorio";
-import Configuracion from "./pages/Configuracion";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import { Loader2 } from "lucide-react";
 
-const queryClient = new QueryClient();
+// Lazy load de páginas (carga solo cuando se necesitan)
+const Login = lazy(() => import("./pages/Login"));
+const Proveedores = lazy(() => import("./pages/Proveedores"));
+const NuevoProveedor = lazy(() => import("./pages/NuevoProveedor"));
+const Clientes = lazy(() => import("./pages/Clientes"));
+const NuevoCliente = lazy(() => import("./pages/NuevoCliente"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Reportes = lazy(() => import("./pages/Reportes"));
+const Oficina = lazy(() => import("./pages/Oficina"));
+const Reciba = lazy(() => import("./pages/Reciba"));
+const Embarque = lazy(() => import("./pages/Embarque"));
+const Movimientos = lazy(() => import("./pages/Movimientos"));
+const Ingreso = lazy(() => import("./pages/Ingreso"));
+const ControlCalidad = lazy(() => import("./pages/ControlCalidad"));
+const Laboratorio = lazy(() => import("./pages/Laboratorio"));
+const Configuracion = lazy(() => import("./pages/Configuracion"));
+
+// Componente de carga
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="flex flex-col items-center gap-2">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <p className="text-sm text-muted-foreground">Cargando...</p>
+    </div>
+  </div>
+);
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutos - los datos se consideran frescos por 5 min
+      cacheTime: 10 * 60 * 1000, // 10 minutos - mantener en caché por 10 min
+      refetchOnWindowFocus: false, // No refetch al cambiar de ventana
+      refetchOnMount: true, // Refetch al montar el componente
+      retry: 1, // Reintentar 1 vez en caso de error
+      retryDelay: 1000, // Esperar 1 segundo antes de reintentar
+    },
+    mutations: {
+      retry: 0, // No reintentar mutaciones
+    },
+  },
+});
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
             <Route path="/" element={<Navigate to="/login" />} />
             <Route path="/login" element={<Login />} />
             
@@ -155,12 +186,14 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Suspense>
         </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

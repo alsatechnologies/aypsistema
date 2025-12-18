@@ -20,6 +20,7 @@ export async function getAlmacenes() {
   const { data, error } = await supabase
     .from('almacenes')
     .select('*')
+    .eq('activo', true)
     .order('nombre');
   
   if (error) throw error;
@@ -59,7 +60,7 @@ export async function updateAlmacen(id: number, almacen: Partial<Almacen>) {
   return data;
 }
 
-// Eliminar almacén
+// Eliminar almacén (soft delete)
 export async function deleteAlmacen(id: number) {
   if (!supabase) {
     throw new Error('Supabase no está configurado');
@@ -67,7 +68,7 @@ export async function deleteAlmacen(id: number) {
   
   const { error } = await supabase
     .from('almacenes')
-    .delete()
+    .update({ activo: false, updated_at: new Date().toISOString() })
     .eq('id', id);
   
   if (error) throw error;

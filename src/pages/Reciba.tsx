@@ -28,6 +28,8 @@ import { getProductoConAnalisis } from '@/services/supabase/productos';
 import { createMovimiento } from '@/services/supabase/movimientos';
 import type { Recepcion as RecepcionDB } from '@/services/supabase/recepciones';
 import { formatDateTimeMST } from '@/utils/dateUtils';
+import { validarRecepcion, puedeModificarRegistro } from '@/utils/validations';
+import { handleError } from '@/utils/errorHandler';
 import { getCurrentDateTimeMST } from '@/utils/dateUtils';
 import { getScaleWeight, PREDEFINED_SCALES } from '@/services/api/scales';
 import { generateBoletaRecibaPDF, openPDF } from '@/services/api/certificate';
@@ -127,7 +129,7 @@ const Reciba = () => {
           console.log('Análisis recibidos:', productoCompleto.analisis);
           setAnalisisProducto(productoCompleto.analisis || []);
         } catch (error) {
-          console.error('Error loading analisis:', error);
+          handleError(error, { module: 'Reciba', action: 'loadAnalisis' });
           setAnalisisProducto([]);
         }
       } else {
@@ -224,13 +226,19 @@ const Reciba = () => {
       await loadRecepciones();
       toast.success('Operación creada correctamente');
     } catch (error) {
-      console.error('Error creating recepcion:', error);
-      toast.error('Error al crear operación');
+      handleError(error, { module: 'Reciba', action: 'createRecepcion' }, 'Error al crear operación');
     }
   };
 
   const handlePreGuardar = async () => {
     if (!selectedRecepcion) return;
+    
+    // Validar que no esté completado
+    const validacionEstatus = puedeModificarRegistro(selectedRecepcion.estatus);
+    if (!validacionEstatus.valid) {
+      toast.error(validacionEstatus.errors[0]);
+      return;
+    }
     
     // Manejar proveedor personalizado
     let proveedorIdFinal = proveedorSeleccionado;
@@ -246,8 +254,7 @@ const Reciba = () => {
         proveedorIdFinal = nuevoProveedor.id;
         toast.success('Proveedor creado correctamente');
       } catch (error) {
-        console.error('Error creating proveedor:', error);
-        toast.error('Error al crear proveedor');
+        handleError(error, { module: 'Reciba', action: 'createProveedor' }, 'Error al crear proveedor');
         return;
       }
     }
@@ -274,8 +281,7 @@ const Reciba = () => {
       await loadRecepciones();
       toast.success('Datos pre-guardados correctamente');
     } catch (error) {
-      console.error('Error saving recepcion:', error);
-      toast.error('Error al guardar datos');
+      handleError(error, { module: 'Reciba', action: 'preGuardar' }, 'Error al guardar datos');
     }
   };
 
@@ -297,8 +303,8 @@ const Reciba = () => {
         toast.error(result.error || 'Error al leer peso de la báscula', { id: 'reading-weight' });
       }
     } catch (error) {
-      console.error('Error al leer peso:', error);
-      toast.error('Error al comunicarse con la báscula', { id: 'reading-weight' });
+      handleError(error, { module: 'Reciba', action: 'capturarPesoBruto' });
+      toast.dismiss('reading-weight');
     }
   };
 
@@ -328,24 +334,32 @@ const Reciba = () => {
         toast.error(result.error || 'Error al leer peso de la báscula', { id: 'reading-weight-tara' });
       }
     } catch (error) {
-      console.error('Error al leer peso:', error);
-      toast.error('Error al comunicarse con la báscula', { id: 'reading-weight-tara' });
+      handleError(error, { module: 'Reciba', action: 'capturarPesoTara' });
+      toast.dismiss('reading-weight-tara');
     }
   };
 
   const handleGuardarBoleta = async () => {
     if (!selectedRecepcion) return;
     
-    if (pesoBruto <= 0) {
-      toast.error('Debe registrar el peso bruto');
+    // Validar que no esté completado
+    const validacionEstatus = puedeModificarRegistro(selectedRecepcion.estatus);
+    if (!validacionEstatus.valid) {
+      toast.error(validacionEstatus.errors[0]);
       return;
     }
-    if (pesoTara <= 0) {
-      toast.error('Debe registrar el peso tara');
-      return;
-    }
-    if (!productoSeleccionado) {
-      toast.error('Debe seleccionar un producto');
+    
+    // Validar datos de recepción
+    const validacion = validarRecepcion({
+      producto_id: productoSeleccionado,
+      proveedor_id: proveedorSeleccionado,
+      peso_bruto: pesoBruto,
+      peso_tara: pesoTara,
+      peso_neto: pesoNeto,
+    });
+    
+    if (!validacion.valid) {
+      validacion.errors.forEach(error => toast.error(error));
       return;
     }
     
@@ -363,8 +377,7 @@ const Reciba = () => {
         proveedorIdFinal = nuevoProveedor.id;
         toast.success('Proveedor creado correctamente');
       } catch (error) {
-        console.error('Error creating proveedor:', error);
-        toast.error('Error al crear proveedor');
+        handleError(error, { module: 'Reciba', action: 'createProveedor' }, 'Error al crear proveedor');
         return;
       }
     }
@@ -451,8 +464,7 @@ const Reciba = () => {
       toast.success('Boleta guardada correctamente' + mensajeLote);
       setIsDialogOpen(false);
     } catch (error) {
-      console.error('Error saving recepcion:', error);
-      toast.error('Error al guardar boleta');
+      handleError(error, { module: 'Reciba', action: 'guardarBoleta' }, 'Error al guardar boleta');
     }
   };
 
@@ -578,8 +590,8 @@ const Reciba = () => {
         toast.error(result.error || 'Error al generar boleta PDF', { id: 'generating-pdf' });
       }
     } catch (error) {
-      console.error('Error al imprimir boleta:', error);
-      toast.error('Error al comunicarse con la API de certificados', { id: 'generating-pdf' });
+      handleError(error, { module: 'Reciba', action: 'imprimirBoleta' });
+      toast.dismiss('generating-pdf-reciba');
     }
   };
 
@@ -731,6 +743,9 @@ const Reciba = () => {
 
         {/* Formulario de Báscula Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          {(() => {
+            const isCompletado = selectedRecepcion?.estatus === 'Completado';
+            return (
           <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
             {selectedRecepcion && (
               <>
@@ -788,6 +803,7 @@ const Reciba = () => {
                       <Select 
                         value={productoSeleccionado ? String(productoSeleccionado) : ''} 
                         onValueChange={(v) => setProductoSeleccionado(parseInt(v))}
+                        disabled={isCompletado}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar producto" />
@@ -812,6 +828,7 @@ const Reciba = () => {
                               setProveedorSeleccionado(parseInt(v));
                             }
                           }}
+                          disabled={isCompletado}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Seleccionar proveedor" />
@@ -829,6 +846,7 @@ const Reciba = () => {
                             value={proveedorPersonalizado}
                             onChange={(e) => setProveedorPersonalizado(e.target.value)}
                             placeholder="Nombre del proveedor"
+                            disabled={isCompletado}
                           />
                           <Button 
                             variant="outline" 
@@ -848,6 +866,7 @@ const Reciba = () => {
                       <Select 
                         value={almacenSeleccionado ? String(almacenSeleccionado) : ''} 
                         onValueChange={(v) => setAlmacenSeleccionado(parseInt(v))}
+                        disabled={isCompletado}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccionar almacén" />
@@ -1091,6 +1110,8 @@ const Reciba = () => {
               </>
             )}
           </DialogContent>
+            );
+          })()}
         </Dialog>
       </div>
     </Layout>

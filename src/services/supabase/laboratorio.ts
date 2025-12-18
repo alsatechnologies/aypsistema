@@ -60,6 +60,7 @@ export async function getReportesLab(filters?: {
   let query = supabase
     .from('reportes_laboratorio')
     .select('*')
+    .eq('activo', true)
     .order('fecha', { ascending: false })
     .order('created_at', { ascending: false });
   
@@ -111,7 +112,7 @@ export async function updateReporteLab(id: string, reporte: Partial<ReporteLab>)
   return data;
 }
 
-// Eliminar reporte
+// Eliminar reporte (soft delete)
 export async function deleteReporteLab(id: string) {
   if (!supabase) {
     throw new Error('Supabase no está configurado');
@@ -119,7 +120,7 @@ export async function deleteReporteLab(id: string) {
   
   const { error } = await supabase
     .from('reportes_laboratorio')
-    .delete()
+    .update({ activo: false, updated_at: new Date().toISOString() })
     .eq('id', id);
   
   if (error) throw error;

@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { checkRateLimit, getClientIP } from './utils/rateLimit';
 
 const PRINTER_API_URL = process.env.PRINTER_API_URL || 'https://apiticket.alsatechnologies.com';
 
@@ -19,7 +20,25 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Rate limiting: 30 requests por minuto por IP
+  const clientIP = getClientIP(req);
+  const rateLimit = checkRateLimit(`print-ticket:${clientIP}`, 30, 60000);
+  
+  if (!rateLimit.allowed) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Retry-After', Math.ceil((rateLimit.resetTime - Date.now()) / 1000).toString());
+    return res.status(429).json({
+      success: false,
+      error: 'Demasiadas solicitudes. Por favor, espera un momento antes de intentar de nuevo.',
+      retryAfter: Math.ceil((rateLimit.resetTime - Date.now()) / 1000),
+    });
+  }
+
   try {
+    // Timeout de 15 segundos para impresión
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     // Hacer la solicitud al servidor de impresión
     const response = await fetch(`${PRINTER_API_URL}/api/printer/print-ticket`, {
       method: 'POST',
@@ -27,7 +46,16 @@ export default async function handler(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(req.body),
+      signal: controller.signal,
+    }).catch((fetchError: any) => {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        throw new Error('Timeout al conectar con la impresora (más de 15 segundos)');
+      }
+      throw fetchError;
     });
+
+    clearTimeout(timeoutId);
 
     const data = await response.json();
 

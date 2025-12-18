@@ -28,6 +28,8 @@ import { useAlmacenes } from '@/services/hooks/useAlmacenes';
 import { getProductoConAnalisis } from '@/services/supabase/productos';
 import { createMovimiento } from '@/services/supabase/movimientos';
 import { getCurrentDateTimeMST, formatDateTimeMST } from '@/utils/dateUtils';
+import { validarEmbarque, puedeModificarRegistro } from '@/utils/validations';
+import { handleError } from '@/utils/errorHandler';
 import type { Embarque as EmbarqueDB } from '@/services/supabase/embarques';
 import { getScaleWeight, PREDEFINED_SCALES } from '@/services/api/scales';
 import { generateBoletaEmbarquePDF, openPDF } from '@/services/api/certificate';
@@ -140,7 +142,7 @@ const EmbarquePage = () => {
           const productoCompleto = await getProductoConAnalisis(selectedEmbarque.productoId);
           setAnalisisProducto(productoCompleto.analisis || []);
         } catch (error) {
-          console.error('Error loading analisis:', error);
+          handleError(error, { module: 'Embarque', action: 'loadAnalisis' });
           setAnalisisProducto([]);
         }
       } else {
@@ -222,8 +224,8 @@ const EmbarquePage = () => {
         toast.error(result.error || 'Error al leer peso de la báscula', { id: 'reading-weight-tara' });
       }
     } catch (error) {
-      console.error('Error al leer peso:', error);
-      toast.error('Error al comunicarse con la báscula', { id: 'reading-weight-tara' });
+      handleError(error, { module: 'Embarque', action: 'capturarPesoTara' });
+      toast.dismiss('reading-weight-tara');
     }
   };
 
@@ -246,8 +248,8 @@ const EmbarquePage = () => {
         toast.error(result.error || 'Error al leer peso de la báscula', { id: 'reading-weight-bruto' });
       }
     } catch (error) {
-      console.error('Error al leer peso:', error);
-      toast.error('Error al comunicarse con la báscula', { id: 'reading-weight-bruto' });
+      handleError(error, { module: 'Embarque', action: 'capturarPesoBruto' });
+      toast.dismiss('reading-weight-bruto');
     }
   };
 
@@ -303,8 +305,7 @@ const EmbarquePage = () => {
       setConsecutivo(consecutivo + 1);
       toast.success('Embarque creado correctamente');
     } catch (error) {
-      console.error('Error creating embarque:', error);
-      toast.error('Error al crear embarque');
+      handleError(error, { module: 'Embarque', action: 'createEmbarque' }, 'Error al crear embarque');
     }
   };
 
@@ -314,6 +315,13 @@ const EmbarquePage = () => {
 
   const handlePreGuardar = async () => {
     if (!selectedEmbarque) return;
+    
+    // Validar que no esté completado
+    const validacionEstatus = puedeModificarRegistro(selectedEmbarque.estatus);
+    if (!validacionEstatus.valid) {
+      toast.error(validacionEstatus.errors[0]);
+      return;
+    }
     
     const pesoNeto = formData.pesoBruto - formData.pesoTara;
     
@@ -344,15 +352,35 @@ const EmbarquePage = () => {
       await loadEmbarques();
       toast.success('Datos pre-guardados correctamente');
     } catch (error) {
-      console.error('Error saving embarque:', error);
-      toast.error('Error al guardar datos');
+      handleError(error, { module: 'Embarque', action: 'preGuardar' }, 'Error al guardar datos');
     }
   };
 
   const handleGuardar = async () => {
     if (!selectedEmbarque) return;
     
+    // Validar que no esté completado
+    const validacionEstatus = puedeModificarRegistro(selectedEmbarque.estatus);
+    if (!validacionEstatus.valid) {
+      toast.error(validacionEstatus.errors[0]);
+      return;
+    }
+    
     const pesoNeto = formData.pesoBruto - formData.pesoTara;
+    
+    // Validar datos de embarque
+    const validacion = validarEmbarque({
+      producto_id: selectedEmbarque.productoId,
+      cliente_id: selectedEmbarque.clienteId,
+      peso_bruto: formData.pesoBruto,
+      peso_tara: formData.pesoTara,
+      peso_neto: pesoNeto,
+    });
+    
+    if (!validacion.valid) {
+      validacion.errors.forEach(error => toast.error(error));
+      return;
+    }
 
     // Generar código de lote automáticamente
     let codigoLote = selectedEmbarque.codigoLote;
@@ -368,8 +396,8 @@ const EmbarquePage = () => {
         );
         codigoLote = codigo;
       } catch (error) {
-        console.error('Error al generar código de lote:', error);
-        toast.error('Error al generar código de lote, pero el embarque se guardará');
+        handleError(error, { module: 'Embarque', action: 'generarCodigoLote' });
+        toast.warning('Error al generar código de lote, pero el embarque se guardará');
       }
     }
     
@@ -424,8 +452,7 @@ const EmbarquePage = () => {
       setIsDialogOpen(false);
       toast.success('Embarque guardado correctamente' + (codigoLoteFinal ? ` - Lote: ${codigoLoteFinal}` : ''));
     } catch (error) {
-      console.error('Error saving embarque:', error);
-      toast.error('Error al guardar embarque');
+      handleError(error, { module: 'Embarque', action: 'guardarEmbarque' }, 'Error al guardar embarque');
     }
   };
 
@@ -519,8 +546,8 @@ const EmbarquePage = () => {
         toast.error(result.error || 'Error al generar boleta PDF', { id: 'generating-pdf' });
       }
     } catch (error) {
-      console.error('Error al imprimir boleta:', error);
-      toast.error('Error al comunicarse con la API de certificados', { id: 'generating-pdf' });
+      handleError(error, { module: 'Embarque', action: 'imprimirBoleta' });
+      toast.dismiss('generating-pdf-embarque');
     } finally {
       setIsGeneratingPDF(false);
     }

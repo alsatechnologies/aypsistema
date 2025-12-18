@@ -35,13 +35,26 @@ export async function printTicket(data: PrintTicketRequest): Promise<PrintTicket
     // Usar la ruta relativa que apunta a la función serverless de Vercel
     const apiUrl = '/api/print-ticket';
     
+    // Timeout de 18 segundos en frontend (el servidor tiene 15s)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 18000);
+    
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(data),
+      signal: controller.signal,
+    }).catch((fetchError: any) => {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        throw new Error('Timeout al imprimir ticket (más de 18 segundos)');
+      }
+      throw fetchError;
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }));

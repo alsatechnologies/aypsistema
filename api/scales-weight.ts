@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { checkRateLimit, getClientIP } from './utils/rateLimit';
 
 // Usar HTTP directamente ya que la API está en HTTP
 const SCALES_API_URL = process.env.SCALES_API_URL || 'http://apiscales.alsatechnologies.com';
@@ -18,6 +19,20 @@ export default async function handler(
   // Solo permitir GET
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // Rate limiting: 60 requests por minuto por IP (lecturas frecuentes de báscula)
+  const clientIP = getClientIP(req);
+  const rateLimit = checkRateLimit(`scales:${clientIP}`, 60, 60000);
+  
+  if (!rateLimit.allowed) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Retry-After', Math.ceil((rateLimit.resetTime - Date.now()) / 1000).toString());
+    return res.status(429).json({
+      success: false,
+      error: 'Demasiadas solicitudes a la báscula. Por favor, espera un momento.',
+      retryAfter: Math.ceil((rateLimit.resetTime - Date.now()) / 1000),
+    });
   }
 
   // Obtener parámetros del query, asegurándose de que sean strings

@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { logger } from '@/services/logger';
 
 export interface Producto {
   id: number;
@@ -39,14 +40,12 @@ export async function getProductos() {
   
   // Verificar sesión antes de consultar
   const { data: { session } } = await supabase.auth.getSession();
-  console.log('📦 getProductos - Sesión activa:', session ? 'Sí' : 'No');
-  if (session) {
-    console.log('   Email del usuario:', session.user.email);
-  }
+  logger.debug('Obteniendo productos', { hasSession: !!session, email: session?.user?.email }, 'Productos');
   
   const { data, error } = await supabase
     .from('productos')
     .select('*')
+    .eq('activo', true)
     .order('nombre');
   
   if (error) {
@@ -156,7 +155,7 @@ export async function updateProducto(id: number, producto: Partial<Producto>) {
   return data;
 }
 
-// Eliminar producto
+// Eliminar producto (soft delete)
 export async function deleteProducto(id: number) {
   if (!supabase) {
     throw new Error('Supabase no está configurado');
@@ -164,7 +163,7 @@ export async function deleteProducto(id: number) {
   
   const { error } = await supabase
     .from('productos')
-    .delete()
+    .update({ activo: false, updated_at: new Date().toISOString() })
     .eq('id', id);
   
   if (error) throw error;

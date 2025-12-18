@@ -36,6 +36,7 @@ export async function getIngresos(filters?: {
   let query = supabase
     .from('ingresos')
     .select('*', { count: 'exact' })
+    .eq('activo', true)
     .order('fecha_hora_ingreso', { ascending: false });
   
   if (filters?.fechaDesde) {
@@ -104,7 +105,7 @@ export async function updateIngreso(id: number, ingreso: Partial<Ingreso>) {
   return data;
 }
 
-// Eliminar ingreso
+// Eliminar ingreso (soft delete)
 export async function deleteIngreso(id: number) {
   if (!supabase) {
     throw new Error('Supabase no está configurado');
@@ -112,7 +113,7 @@ export async function deleteIngreso(id: number) {
   
   const { error } = await supabase
     .from('ingresos')
-    .delete()
+    .update({ activo: false, updated_at: new Date().toISOString() })
     .eq('id', id);
   
   if (error) throw error;

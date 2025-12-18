@@ -66,13 +66,26 @@ export async function getScaleWeight(scaleId: string, getType: string = 'weight'
     console.log('Llamando a función serverless:', url);
     console.log('Parámetros:', { scaleId, getType, encodedScaleId, encodedGetType });
     
+    // Timeout de 12 segundos en frontend (el servidor tiene 10s)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+    
     // Usar la función serverless proxy con query parameters
     const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
+      signal: controller.signal,
+    }).catch((fetchError: any) => {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        throw new Error('Timeout al leer peso de la báscula (más de 12 segundos)');
+      }
+      throw fetchError;
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }));

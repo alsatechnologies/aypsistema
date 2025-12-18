@@ -37,6 +37,7 @@ export async function getMovimientos(filters?: {
       *,
       producto:productos(id, nombre)
     `, { count: 'exact' })
+    .eq('activo', true)
     .order('fecha', { ascending: false });
   
   if (filters?.fechaDesde) {
@@ -91,7 +92,7 @@ export async function createMovimiento(movimiento: Omit<Movimiento, 'id' | 'crea
   return data;
 }
 
-// Eliminar movimiento
+// Eliminar movimiento (soft delete)
 export async function deleteMovimiento(id: number) {
   if (!supabase) {
     throw new Error('Supabase no está configurado');
@@ -99,7 +100,7 @@ export async function deleteMovimiento(id: number) {
   
   const { error } = await supabase
     .from('movimientos')
-    .delete()
+    .update({ activo: false })
     .eq('id', id);
   
   if (error) throw error;

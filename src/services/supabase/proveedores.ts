@@ -24,6 +24,7 @@ export async function getProveedores(filters?: {
   let query = supabase
     .from('proveedores')
     .select('*', { count: 'exact' })
+    .eq('activo', true)
     .order('empresa');
   
   // Aplicar paginación si se proporciona
@@ -79,7 +80,7 @@ export async function updateProveedor(id: number, proveedor: Partial<Proveedor>)
   return data;
 }
 
-// Eliminar proveedor
+// Eliminar proveedor (soft delete)
 export async function deleteProveedor(id: number) {
   if (!supabase) {
     throw new Error('Supabase no está configurado');
@@ -87,7 +88,7 @@ export async function deleteProveedor(id: number) {
   
   const { error } = await supabase
     .from('proveedores')
-    .delete()
+    .update({ activo: false, updated_at: new Date().toISOString() })
     .eq('id', id);
   
   if (error) throw error;
