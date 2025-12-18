@@ -4,7 +4,7 @@ import { logger } from '@/services/logger';
 export interface AuditoriaEntry {
   tabla: string;
   registro_id: number;
-  accion: 'INSERT' | 'UPDATE' | 'DELETE';
+  accion: 'INSERT' | 'UPDATE' | 'DELETE' | 'DELETE_PERMANENT';
   datos_anteriores?: Record<string, any> | null;
   datos_nuevos?: Record<string, any> | null;
   usuario_id?: number | null;
