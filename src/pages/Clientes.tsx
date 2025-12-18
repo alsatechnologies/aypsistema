@@ -97,12 +97,12 @@ const Clientes = () => {
         // Modo edición
         await updateCliente(selectedCliente.id, {
           empresa: formData.empresa,
-          rfc: formData.rfc ? formData.rfc.toUpperCase() : null,
-          contacto: formData.contacto || null,
-          telefono: formData.telefono || null,
-          email: formData.email || null,
-          direccion: formData.direccion || null,
-          ciudad: formData.ciudad || null,
+          rfc: formData.rfc && formData.rfc.trim() !== '' ? formData.rfc.toUpperCase() : null,
+          contacto: formData.contacto && formData.contacto.trim() !== '' ? formData.contacto : null,
+          telefono: formData.telefono && formData.telefono.trim() !== '' ? formData.telefono : null,
+          email: formData.email && formData.email.trim() !== '' ? formData.email : null,
+          direccion: formData.direccion && formData.direccion.trim() !== '' ? formData.direccion : null,
+          ciudad: formData.ciudad && formData.ciudad.trim() !== '' ? formData.ciudad : null,
           tipo_cliente: formData.tipoCliente
         }, formData.productos);
         await loadClientes();
@@ -112,12 +112,12 @@ const Clientes = () => {
         // Modo nuevo
         await addCliente({
           empresa: formData.empresa,
-          rfc: formData.rfc ? formData.rfc.toUpperCase() : null,
-          contacto: formData.contacto || null,
-          telefono: formData.telefono || null,
-          email: formData.email || null,
-          direccion: formData.direccion || null,
-          ciudad: formData.ciudad || null,
+          rfc: formData.rfc && formData.rfc.trim() !== '' ? formData.rfc.toUpperCase() : null,
+          contacto: formData.contacto && formData.contacto.trim() !== '' ? formData.contacto : null,
+          telefono: formData.telefono && formData.telefono.trim() !== '' ? formData.telefono : null,
+          email: formData.email && formData.email.trim() !== '' ? formData.email : null,
+          direccion: formData.direccion && formData.direccion.trim() !== '' ? formData.direccion : null,
+          ciudad: formData.ciudad && formData.ciudad.trim() !== '' ? formData.ciudad : null,
           tipo_cliente: formData.tipoCliente
         }, formData.productos);
         await loadClientes();
