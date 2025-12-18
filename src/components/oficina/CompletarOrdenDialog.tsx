@@ -46,8 +46,9 @@ const CompletarOrdenDialog: React.FC<CompletarOrdenDialogProps> = ({
     if (orden && open) {
       setProductoId(orden.producto_id?.toString() || '');
       setClienteId(orden.cliente_id?.toString() || '');
-      setProveedorId('');
-      setTipoTransporte('');
+      setProveedorId(orden.proveedor_id?.toString() || '');
+      // Obtener tipo_transporte de la orden si existe
+      setTipoTransporte(orden.tipo_transporte || '');
     }
   }, [orden, open]);
 

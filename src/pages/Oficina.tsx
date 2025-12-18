@@ -122,6 +122,15 @@ const Oficina = () => {
     }
   };
 
+  const handleEditar = (orden: Orden) => {
+    // Buscar la orden completa en ordenesDB
+    const ordenCompleta = ordenesDB.find(o => o.id === orden.id);
+    if (ordenCompleta) {
+      setOrdenParaCompletar(ordenCompleta);
+      setShowCompletarDialog(true);
+    }
+  };
+
   const handleMarcarCompletado = async (orden: Orden) => {
     try {
       await updateOrden(orden.id, { estatus: 'Completado' });
@@ -256,13 +265,20 @@ const Oficina = () => {
       }
 
       // Actualizar la orden
-      await updateOrden(ordenId, {
+      const updateData: any = {
         producto_id: data.producto_id,
         cliente_id: data.cliente_id,
         proveedor_id: data.proveedor_id,
-        boleta: ticketFinal,
-        estatus: 'En Proceso'
-      });
+        tipo_transporte: data.tipo_transporte || null
+      };
+
+      // Solo actualizar boleta y estatus si es temporal
+      if (esTemporal) {
+        updateData.boleta = ticketFinal;
+        updateData.estatus = 'En Proceso';
+      }
+
+      await updateOrden(ordenId, updateData);
 
       // Si es una orden de Embarque, crear también el registro en embarques
       if (orden.tipo_operacion === 'Embarque Nacional' || orden.tipo_operacion === 'Embarque Exportación') {
@@ -783,12 +799,7 @@ const Oficina = () => {
                                 className="h-8 w-8"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  // Permitir editar abriendo el diálogo de completar
-                                  if (orden.estatus === 'Nuevo' && orden.boleta.startsWith('TEMP-')) {
-                                    handleCompletarOrden(orden);
-                                  } else {
-                                    handleViewTicket(orden);
-                                  }
+                                  handleEditar(orden);
                                 }}
                                 title="Editar"
                               >
