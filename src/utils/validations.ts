@@ -135,9 +135,8 @@ export function validarCliente(data: {
     errors.push('El nombre de la empresa es requerido');
   }
 
-  if (!data.rfc || data.rfc.trim() === '') {
-    errors.push('El RFC es requerido');
-  } else {
+  // RFC es opcional, pero si se proporciona, debe tener formato válido
+  if (data.rfc && data.rfc.trim() !== '') {
     // Validar formato básico de RFC (12-13 caracteres alfanuméricos)
     const rfcRegex = /^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/i;
     if (!rfcRegex.test(data.rfc.trim())) {

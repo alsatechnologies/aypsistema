@@ -87,8 +87,8 @@ const Clientes = () => {
   };
 
   const handleNuevoCliente = async () => {
-    if (!formData.empresa || !formData.rfc || !formData.contacto) {
-      toast.error('Complete los campos obligatorios');
+    if (!formData.empresa) {
+      toast.error('El nombre de la empresa es obligatorio');
       return;
     }
 
@@ -97,7 +97,7 @@ const Clientes = () => {
         // Modo edición
         await updateCliente(selectedCliente.id, {
           empresa: formData.empresa,
-          rfc: formData.rfc.toUpperCase(),
+          rfc: formData.rfc ? formData.rfc.toUpperCase() : null,
           contacto: formData.contacto || null,
           telefono: formData.telefono || null,
           email: formData.email || null,
@@ -112,7 +112,7 @@ const Clientes = () => {
         // Modo nuevo
         await addCliente({
           empresa: formData.empresa,
-          rfc: formData.rfc.toUpperCase(),
+          rfc: formData.rfc ? formData.rfc.toUpperCase() : null,
           contacto: formData.contacto || null,
           telefono: formData.telefono || null,
           email: formData.email || null,
@@ -301,7 +301,7 @@ const Clientes = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>RFC *</Label>
+                  <Label>RFC</Label>
                   <Input 
                     value={formData.rfc}
                     onChange={(e) => setFormData({ ...formData, rfc: e.target.value.toUpperCase() })}
@@ -333,7 +333,7 @@ const Clientes = () => {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Contacto *</Label>
+                  <Label>Contacto</Label>
                   <Input 
                     value={formData.contacto}
                     onChange={(e) => setFormData({ ...formData, contacto: e.target.value })}
