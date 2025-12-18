@@ -298,6 +298,30 @@ const Oficina = () => {
     }
   };
 
+  const handleEliminar = async (orden: Orden) => {
+    if (!puedeEditarEliminar) {
+      toast.error('No tienes permisos para eliminar órdenes');
+      return;
+    }
+    setOrdenAEliminar(orden);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmarEliminar = async () => {
+    if (!ordenAEliminar) return;
+    
+    try {
+      await deleteOrden(ordenAEliminar.id);
+      await loadOrdenes();
+      toast.success('Orden eliminada correctamente');
+      setShowDeleteDialog(false);
+      setOrdenAEliminar(null);
+    } catch (error) {
+      console.error('Error al eliminar orden:', error);
+      toast.error('Error al eliminar orden');
+    }
+  };
+
   const getEstatusBadge = (estatus: string) => {
     const config: Record<string, { className: string; icon: React.ReactNode }> = {
       'Nuevo': { className: 'bg-yellow-100 text-yellow-700 border-yellow-300', icon: <Clock className="h-3 w-3 mr-1" /> },
