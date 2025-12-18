@@ -113,22 +113,8 @@ export async function updateOrden(id: number, orden: Partial<Orden>) {
   return data;
 }
 
-// Eliminar orden (soft delete)
+// Eliminar orden permanentemente
 export async function deleteOrden(id: number) {
-  if (!supabase) {
-    throw new Error('Supabase no está configurado');
-  }
-  
-  const { error } = await supabase
-    .from('ordenes')
-    .update({ activo: false, updated_at: new Date().toISOString() })
-    .eq('id', id);
-  
-  if (error) throw error;
-}
-
-// Eliminar orden permanentemente (solo para administradores)
-export async function deleteOrdenPermanente(id: number) {
   if (!supabase) {
     throw new Error('Supabase no está configurado');
   }
@@ -164,15 +150,15 @@ export async function deleteOrdenPermanente(id: number) {
     .limit(1);
   
   if (embarques && embarques.length > 0) {
-    throw new Error('No se puede eliminar permanentemente: existe un embarque asociado con esta boleta');
+    throw new Error('No se puede eliminar: existe un embarque asociado con esta boleta');
   }
   
   if (recepciones && recepciones.length > 0) {
-    throw new Error('No se puede eliminar permanentemente: existe una recepción asociada con esta boleta');
+    throw new Error('No se puede eliminar: existe una recepción asociada con esta boleta');
   }
   
   if (movimientos && movimientos.length > 0) {
-    throw new Error('No se puede eliminar permanentemente: existe un movimiento asociado con esta boleta');
+    throw new Error('No se puede eliminar: existe un movimiento asociado con esta boleta');
   }
   
   // Registrar en auditoría antes de eliminar

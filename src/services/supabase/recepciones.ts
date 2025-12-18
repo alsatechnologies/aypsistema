@@ -181,37 +181,8 @@ export async function updateRecepcion(id: number, recepcion: Partial<Recepcion>)
   return data;
 }
 
-// Eliminar recepción (soft delete)
+// Eliminar recepción permanentemente
 export async function deleteRecepcion(id: number) {
-  if (!supabase) {
-    throw new Error('Supabase no está configurado');
-  }
-  
-  // Obtener datos anteriores para auditoría
-  const { data: recepcionAnterior } = await supabase
-    .from('recepciones')
-    .select('*')
-    .eq('id', id)
-    .single();
-  
-  const { error } = await supabase
-    .from('recepciones')
-    .update({ activo: false, updated_at: new Date().toISOString() })
-    .eq('id', id);
-  
-  if (error) throw error;
-  
-  // Registrar en auditoría
-  await registrarAuditoria({
-    tabla: 'recepciones',
-    registro_id: id,
-    accion: 'DELETE',
-    datos_anteriores: recepcionAnterior || null,
-  });
-}
-
-// Eliminar recepción permanentemente (solo para administradores)
-export async function deleteRecepcionPermanente(id: number) {
   if (!supabase) {
     throw new Error('Supabase no está configurado');
   }
@@ -235,7 +206,7 @@ export async function deleteRecepcionPermanente(id: number) {
     .limit(1);
   
   if (movimientos && movimientos.length > 0) {
-    throw new Error('No se puede eliminar permanentemente: existe un movimiento asociado con esta boleta');
+    throw new Error('No se puede eliminar: existe un movimiento asociado con esta boleta');
   }
   
   // Registrar en auditoría antes de eliminar

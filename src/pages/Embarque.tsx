@@ -501,16 +501,17 @@ const EmbarquePage = () => {
     try {
       await deleteEmbarque(embarqueAEliminar.id);
       await loadEmbarques();
-      toast.success('Embarque eliminado correctamente');
+      toast.success('Embarque eliminado permanentemente');
       setShowDeleteDialog(false);
       setEmbarqueAEliminar(null);
       if (selectedEmbarque?.id === embarqueAEliminar.id) {
         setIsDialogOpen(false);
         setSelectedEmbarque(null);
       }
-    } catch (error) {
+    } catch (error: any) {
       handleError(error, { module: 'Embarque', action: 'eliminar' });
-      toast.error('Error al eliminar embarque');
+      const errorMessage = error?.message || 'Error al eliminar embarque';
+      toast.error(errorMessage);
     }
   };
 
@@ -1076,24 +1077,34 @@ const EmbarquePage = () => {
             <AlertDialogHeader>
               <AlertDialogTitle>¿Eliminar embarque?</AlertDialogTitle>
               <AlertDialogDescription>
-                Esta acción marcará el embarque como eliminado (soft delete). 
-                El registro permanecerá en la base de datos pero no será visible en las listas.
-                {embarqueAEliminar && (
-                  <div className="mt-2 p-2 bg-muted rounded">
-                    <p className="font-medium">Boleta: {embarqueAEliminar.boleta}</p>
-                    <p>Producto: {embarqueAEliminar.producto}</p>
-                    <p>Cliente: {embarqueAEliminar.cliente}</p>
-                  </div>
-                )}
+                <div className="space-y-3">
+                  <p className="font-semibold text-destructive">
+                    Esta acción eliminará el embarque "{embarqueAEliminar?.boleta}" <strong>PERMANENTEMENTE</strong> de la base de datos.
+                  </p>
+                  <p className="text-sm">
+                    Esta acción <strong>NO se puede deshacer</strong>. El registro será eliminado completamente y no podrá ser recuperado.
+                  </p>
+                  {embarqueAEliminar && (
+                    <div className="mt-3 p-3 bg-muted rounded-md text-sm">
+                      <p className="font-medium">Detalles del embarque a eliminar:</p>
+                      <p>Boleta: <strong>{embarqueAEliminar.boleta}</strong></p>
+                      <p>Producto: {embarqueAEliminar.producto}</p>
+                      <p>Cliente: {embarqueAEliminar.cliente}</p>
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Si este embarque tiene movimientos asociados, la eliminación será bloqueada.
+                  </p>
+                </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
               <AlertDialogAction
                 onClick={confirmarEliminar}
-                className="bg-red-600 hover:bg-red-700"
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                Eliminar
+                Eliminar Permanentemente
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

@@ -339,12 +339,13 @@ const Oficina = () => {
     try {
       await deleteOrden(ordenAEliminar.id);
       await loadOrdenes();
-      toast.success('Orden eliminada correctamente');
+      toast.success('Orden eliminada permanentemente');
       setShowDeleteDialog(false);
       setOrdenAEliminar(null);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error al eliminar orden:', error);
-      toast.error('Error al eliminar orden');
+      const errorMessage = error?.message || 'Error al eliminar orden';
+      toast.error(errorMessage);
     }
   };
 
@@ -883,26 +884,36 @@ const Oficina = () => {
         <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>¿Eliminar orden?</AlertDialogTitle>
+              <AlertDialogTitle className="text-destructive">⚠️ Eliminación Permanente</AlertDialogTitle>
               <AlertDialogDescription>
-                Esta acción marcará la orden como eliminada (soft delete). 
-                El registro permanecerá en la base de datos pero no será visible en las listas.
-                {ordenAEliminar && (
-                  <div className="mt-2 p-2 bg-muted rounded">
-                    <p className="font-medium">Boleta: {ordenAEliminar.boleta}</p>
-                    <p>Producto: {ordenAEliminar.producto || '-'}</p>
-                    <p>Cliente/Proveedor: {ordenAEliminar.cliente || '-'}</p>
-                  </div>
-                )}
+                <div className="space-y-3">
+                  <p className="font-semibold text-destructive">
+                    Esta acción eliminará la orden "{ordenAEliminar?.boleta}" <strong>PERMANENTEMENTE</strong> de la base de datos.
+                  </p>
+                  <p className="text-sm">
+                    Esta acción <strong>NO se puede deshacer</strong>. El registro será eliminado completamente y no podrá ser recuperado.
+                  </p>
+                  {ordenAEliminar && (
+                    <div className="mt-3 p-3 bg-muted rounded-md text-sm">
+                      <p className="font-medium">Detalles de la orden a eliminar:</p>
+                      <p>Boleta: <strong>{ordenAEliminar.boleta}</strong></p>
+                      <p>Producto: {ordenAEliminar.producto || '-'}</p>
+                      <p>Cliente/Proveedor: {ordenAEliminar.cliente || '-'}</p>
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Si esta orden tiene embarques, recepciones o movimientos asociados, la eliminación será bloqueada.
+                  </p>
+                </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Cancelar</AlertDialogCancel>
               <AlertDialogAction
                 onClick={confirmarEliminar}
-                className="bg-red-600 hover:bg-red-700"
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                Eliminar
+                Eliminar Permanentemente
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

@@ -200,37 +200,8 @@ export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
   return data;
 }
 
-// Eliminar embarque (soft delete)
+// Eliminar embarque permanentemente
 export async function deleteEmbarque(id: number) {
-  if (!supabase) {
-    throw new Error('Supabase no está configurado');
-  }
-  
-  // Obtener datos anteriores para auditoría
-  const { data: embarqueAnterior } = await supabase
-    .from('embarques')
-    .select('*')
-    .eq('id', id)
-    .single();
-  
-  const { error } = await supabase
-    .from('embarques')
-    .update({ activo: false, updated_at: new Date().toISOString() })
-    .eq('id', id);
-  
-  if (error) throw error;
-  
-  // Registrar en auditoría
-  await registrarAuditoria({
-    tabla: 'embarques',
-    registro_id: id,
-    accion: 'DELETE',
-    datos_anteriores: embarqueAnterior || null,
-  });
-}
-
-// Eliminar embarque permanentemente (solo para administradores)
-export async function deleteEmbarquePermanente(id: number) {
   if (!supabase) {
     throw new Error('Supabase no está configurado');
   }
@@ -254,7 +225,7 @@ export async function deleteEmbarquePermanente(id: number) {
     .limit(1);
   
   if (movimientos && movimientos.length > 0) {
-    throw new Error('No se puede eliminar permanentemente: existe un movimiento asociado con esta boleta');
+    throw new Error('No se puede eliminar: existe un movimiento asociado con esta boleta');
   }
   
   // Registrar en auditoría antes de eliminar
