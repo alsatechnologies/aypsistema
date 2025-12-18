@@ -92,6 +92,49 @@ export async function createMovimiento(movimiento: Omit<Movimiento, 'id' | 'crea
   return data;
 }
 
+// Obtener movimiento por boleta
+export async function getMovimientoByBoleta(boleta: string) {
+  if (!supabase) {
+    throw new Error('Supabase no está configurado');
+  }
+  
+  const { data, error } = await supabase
+    .from('movimientos')
+    .select(`
+      *,
+      producto:productos(id, nombre)
+    `)
+    .eq('boleta', boleta)
+    .eq('activo', true)
+    .single();
+  
+  if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+    throw error;
+  }
+  
+  return data || null;
+}
+
+// Actualizar movimiento
+export async function updateMovimiento(id: number, movimiento: Partial<Movimiento>) {
+  if (!supabase) {
+    throw new Error('Supabase no está configurado');
+  }
+  
+  const { data, error } = await supabase
+    .from('movimientos')
+    .update(movimiento)
+    .eq('id', id)
+    .select(`
+      *,
+      producto:productos(id, nombre)
+    `)
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
+
 // Eliminar movimiento (soft delete)
 export async function deleteMovimiento(id: number) {
   if (!supabase) {

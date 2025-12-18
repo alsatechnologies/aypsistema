@@ -22,6 +22,7 @@ import CompletarOrdenDialog from '@/components/oficina/CompletarOrdenDialog';
 import { toast } from 'sonner';
 import { formatDateTimeMST } from '@/utils/dateUtils';
 import { createEmbarque, getEmbarqueByBoleta, updateEmbarque } from '@/services/supabase/embarques';
+import { getMovimientoByBoleta, updateMovimiento } from '@/services/supabase/movimientos';
 import { createOrden, deleteOrden } from '@/services/supabase/ordenes';
 import { getCurrentDateTimeMST } from '@/utils/dateUtils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -305,6 +306,23 @@ const Oficina = () => {
             if (embarqueExistente) {
               // Actualizar embarque existente
               await updateEmbarque(embarqueExistente.id, embarqueData);
+              
+              // Actualizar también el movimiento asociado si existe
+              try {
+                const movimientoExistente = await getMovimientoByBoleta(ticketFinal);
+                if (movimientoExistente) {
+                  // Obtener el nombre del cliente actualizado
+                  const clienteActualizado = clientesDB.find(c => c.id === data.cliente_id);
+                  if (clienteActualizado) {
+                    await updateMovimiento(movimientoExistente.id, {
+                      cliente_proveedor: clienteActualizado.empresa
+                    });
+                  }
+                }
+              } catch (error) {
+                console.error('Error updating movimiento:', error);
+                // No lanzamos error para no interrumpir el flujo
+              }
             } else {
               // Crear nuevo embarque
               await createEmbarque({
