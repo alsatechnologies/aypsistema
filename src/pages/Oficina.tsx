@@ -234,35 +234,13 @@ const Oficina = () => {
           ? 'Embarque Nacional' 
           : 'Exportación';
         
-        // Calcular consecutivo anual: contar órdenes del año actual para el mismo tipo de operación y producto
-        const fechaActual = new Date();
-        const añoActual = fechaActual.getFullYear();
-        
-        // Contar órdenes completadas del año actual con el mismo tipo de operación y producto
-        // IMPORTANTE: Solo contar órdenes que ya tienen boleta final (no temporales) y que no sean la orden actual
-        const ordenesDelAño = ordenesDB.filter(o => {
-          // Excluir la orden actual
-          if (o.id === ordenId) return false;
-          // Debe tener fecha de ingreso
-          if (!o.fecha_hora_ingreso) return false;
-          // Debe tener el mismo producto
-          if (o.producto_id !== data.producto_id) return false;
-          // Debe tener el mismo tipo de operación
-          if (o.tipo_operacion !== orden.tipo_operacion) return false;
-          // Debe ser del año actual
-          const fechaOrden = new Date(o.fecha_hora_ingreso);
-          if (fechaOrden.getFullYear() !== añoActual) return false;
-          // Debe tener boleta final (no temporal)
-          if (!o.boleta || o.boleta.startsWith('TEMP-')) return false;
-          // Ignorar boletas que contengan "1212" (números incorrectos del código anterior)
-          if (o.boleta.includes('1212')) return false;
-          return true;
-        });
-        
-        const consecutivo = ordenesDelAño.length + 1;
+        // Calcular consecutivo anual considerando tanto órdenes como embarques
+        const { calcularSiguienteConsecutivo } = await import('@/utils/consecutivoBoleta');
+        const consecutivo = await calcularSiguienteConsecutivo(tipoOperacion, data.producto_id, codigoBoleta);
         
         // Usar codigo_boleta de la base de datos, con fallback al nombre si no existe
         const codigoBoleta = producto.codigo_boleta || producto.nombre;
+        // El consecutivo ya fue calculado arriba considerando órdenes y embarques
         ticketFinal = generateNumeroBoleta(tipoOperacion, codigoBoleta, consecutivo);
       }
 

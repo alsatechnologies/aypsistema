@@ -312,7 +312,8 @@ const EmbarquePage = () => {
       });
       
       await loadEmbarques();
-      setConsecutivo(consecutivo + 1);
+      // Actualizar el consecutivo local para la próxima vez (aunque ya no se usa para calcular)
+      setConsecutivo(siguienteConsecutivo + 1);
       toast.success('Embarque creado correctamente');
     } catch (error) {
       handleError(error, { module: 'Embarque', action: 'createEmbarque' }, 'Error al crear embarque');
