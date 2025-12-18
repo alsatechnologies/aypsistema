@@ -58,8 +58,12 @@ interface Embarque {
   sellos?: {
     selloEntrada1: string;
     selloEntrada2: string;
+    selloEntrada3: string;
+    selloEntrada4: string;
     selloSalida1: string;
     selloSalida2: string;
+    selloSalida3: string;
+    selloSalida4: string;
   };
   valoresAnalisis?: Record<string, number> | null;
   codigoLote?: string | null;
@@ -110,11 +114,15 @@ const EmbarquePage = () => {
     pesoNeto: e.peso_neto,
     tipoTransporte: e.tipo_transporte as any,
     tipoEmbarque: e.tipo_embarque as any,
-    sellos: e.sello_entrada_1 || e.sello_entrada_2 || e.sello_salida_1 || e.sello_salida_2 ? {
+    sellos: e.sello_entrada_1 || e.sello_entrada_2 || e.sello_entrada_3 || e.sello_entrada_4 || e.sello_salida_1 || e.sello_salida_2 || e.sello_salida_3 || e.sello_salida_4 ? {
       selloEntrada1: e.sello_entrada_1 || '',
       selloEntrada2: e.sello_entrada_2 || '',
+      selloEntrada3: e.sello_entrada_3 || '',
+      selloEntrada4: e.sello_entrada_4 || '',
       selloSalida1: e.sello_salida_1 || '',
-      selloSalida2: e.sello_salida_2 || ''
+      selloSalida2: e.sello_salida_2 || '',
+      selloSalida3: e.sello_salida_3 || '',
+      selloSalida4: e.sello_salida_4 || ''
     } : undefined,
     valoresAnalisis: e.valores_analisis as Record<string, number> | null,
     codigoLote: e.codigo_lote,
@@ -129,7 +137,16 @@ const EmbarquePage = () => {
   }));
 
   const [formData, setFormData] = useState({
-    sellos: { selloEntrada1: '', selloEntrada2: '', selloSalida1: '', selloSalida2: '' },
+    sellos: { 
+      selloEntrada1: '', 
+      selloEntrada2: '', 
+      selloEntrada3: '', 
+      selloEntrada4: '', 
+      selloSalida1: '', 
+      selloSalida2: '', 
+      selloSalida3: '', 
+      selloSalida4: '' 
+    },
     valoresAnalisis: {} as Record<string, number>,
     pesoBruto: 0,
     pesoTara: 0,
@@ -190,7 +207,16 @@ const EmbarquePage = () => {
   const handleRowClick = (embarque: Embarque) => {
     setSelectedEmbarque(embarque);
     setFormData({
-      sellos: embarque.sellos || { selloEntrada1: '', selloEntrada2: '', selloSalida1: '', selloSalida2: '' },
+      sellos: embarque.sellos || { 
+        selloEntrada1: '', 
+        selloEntrada2: '', 
+        selloEntrada3: '', 
+        selloEntrada4: '', 
+        selloSalida1: '', 
+        selloSalida2: '', 
+        selloSalida3: '', 
+        selloSalida4: '' 
+      },
       valoresAnalisis: embarque.valoresAnalisis || {},
       pesoBruto: embarque.pesoBruto || 0,
       pesoTara: embarque.pesoTara || 0,
@@ -353,8 +379,12 @@ const EmbarquePage = () => {
         peso_neto: pesoNeto > 0 ? pesoNeto : null,
         sello_entrada_1: formData.sellos.selloEntrada1 || null,
         sello_entrada_2: formData.sellos.selloEntrada2 || null,
+        sello_entrada_3: formData.sellos.selloEntrada3 || null,
+        sello_entrada_4: formData.sellos.selloEntrada4 || null,
         sello_salida_1: formData.sellos.selloSalida1 || null,
         sello_salida_2: formData.sellos.selloSalida2 || null,
+        sello_salida_3: formData.sellos.selloSalida3 || null,
+        sello_salida_4: formData.sellos.selloSalida4 || null,
         valores_analisis: Object.keys(formData.valoresAnalisis).length > 0 ? formData.valoresAnalisis : null,
         estatus: nuevoEstatus,
         almacen_id: formData.almacenId || null,
@@ -424,8 +454,12 @@ const EmbarquePage = () => {
         peso_neto: pesoNeto,
         sello_entrada_1: formData.sellos.selloEntrada1 || null,
         sello_entrada_2: formData.sellos.selloEntrada2 || null,
+        sello_entrada_3: formData.sellos.selloEntrada3 || null,
+        sello_entrada_4: formData.sellos.selloEntrada4 || null,
         sello_salida_1: formData.sellos.selloSalida1 || null,
         sello_salida_2: formData.sellos.selloSalida2 || null,
+        sello_salida_3: formData.sellos.selloSalida3 || null,
+        sello_salida_4: formData.sellos.selloSalida4 || null,
         valores_analisis: Object.keys(formData.valoresAnalisis).length > 0 ? formData.valoresAnalisis : null,
         estatus: 'Completado',
         codigo_lote: codigoLote || null,

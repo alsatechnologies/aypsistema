@@ -21,8 +21,12 @@ export interface Embarque {
   tipo_embarque?: string | null;
   sello_entrada_1?: string | null;
   sello_entrada_2?: string | null;
+  sello_entrada_3?: string | null;
+  sello_entrada_4?: string | null;
   sello_salida_1?: string | null;
   sello_salida_2?: string | null;
+  sello_salida_3?: string | null;
+  sello_salida_4?: string | null;
   valores_analisis?: Record<string, number> | null;
   hora_peso_bruto?: string | null;
   hora_peso_tara?: string | null;

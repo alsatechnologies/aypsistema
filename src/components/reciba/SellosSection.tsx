@@ -6,8 +6,12 @@ import { Lock, Unlock } from 'lucide-react';
 interface SellosData {
   selloEntrada1: string;
   selloEntrada2: string;
+  selloEntrada3: string;
+  selloEntrada4: string;
   selloSalida1: string;
   selloSalida2: string;
+  selloSalida3: string;
+  selloSalida4: string;
 }
 
 interface SellosSectionProps {
@@ -22,47 +26,83 @@ const SellosSection: React.FC<SellosSectionProps> = ({ sellos, onChange, readOnl
     onChange({ ...sellos, [field]: value.toUpperCase() });
   };
 
-  // Modo simple: solo 4 campos numerados en una fila
+  // Modo simple: 8 campos numerados en 2 filas de 4
   if (simple) {
     return (
-      <div className="grid grid-cols-4 gap-4">
-        <div className="space-y-1">
-          <Label className="text-xs">Sello 1</Label>
-          <Input 
-            placeholder="XXX-000" 
-            value={sellos.selloEntrada1}
-            onChange={(e) => handleChange('selloEntrada1', e.target.value)}
-          />
+      <div className="space-y-4">
+        <div className="grid grid-cols-4 gap-4">
+          <div className="space-y-1">
+            <Label className="text-xs">Sello 1</Label>
+            <Input 
+              placeholder="XXX-000" 
+              value={sellos.selloEntrada1}
+              onChange={(e) => handleChange('selloEntrada1', e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Sello 2</Label>
+            <Input 
+              placeholder="XXX-000" 
+              value={sellos.selloEntrada2}
+              onChange={(e) => handleChange('selloEntrada2', e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Sello 3</Label>
+            <Input 
+              placeholder="XXX-000" 
+              value={sellos.selloEntrada3}
+              onChange={(e) => handleChange('selloEntrada3', e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Sello 4</Label>
+            <Input 
+              placeholder="XXX-000" 
+              value={sellos.selloEntrada4}
+              onChange={(e) => handleChange('selloEntrada4', e.target.value)}
+            />
+          </div>
         </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Sello 2</Label>
-          <Input 
-            placeholder="XXX-000" 
-            value={sellos.selloEntrada2}
-            onChange={(e) => handleChange('selloEntrada2', e.target.value)}
-          />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Sello 3</Label>
-          <Input 
-            placeholder="XXX-000" 
-            value={sellos.selloSalida1}
-            onChange={(e) => handleChange('selloSalida1', e.target.value)}
-          />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Sello 4</Label>
-          <Input 
-            placeholder="XXX-000" 
-            value={sellos.selloSalida2}
-            onChange={(e) => handleChange('selloSalida2', e.target.value)}
-          />
+        <div className="grid grid-cols-4 gap-4">
+          <div className="space-y-1">
+            <Label className="text-xs">Sello 5</Label>
+            <Input 
+              placeholder="XXX-000" 
+              value={sellos.selloSalida1}
+              onChange={(e) => handleChange('selloSalida1', e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Sello 6</Label>
+            <Input 
+              placeholder="XXX-000" 
+              value={sellos.selloSalida2}
+              onChange={(e) => handleChange('selloSalida2', e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Sello 7</Label>
+            <Input 
+              placeholder="XXX-000" 
+              value={sellos.selloSalida3}
+              onChange={(e) => handleChange('selloSalida3', e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Sello 8</Label>
+            <Input 
+              placeholder="XXX-000" 
+              value={sellos.selloSalida4}
+              onChange={(e) => handleChange('selloSalida4', e.target.value)}
+            />
+          </div>
         </div>
       </div>
     );
   }
 
-  // Modo normal: con grupos de entrada/salida
+  // Modo normal: con grupos de entrada/salida (2 filas de 4 sellos)
   return (
     <div className="grid grid-cols-2 gap-6">
       {/* Sellos de Entrada */}
@@ -92,6 +132,26 @@ const SellosSection: React.FC<SellosSectionProps> = ({ sellos, onChange, readOnl
               className={readOnlyEntrada ? 'bg-muted' : ''}
             />
           </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Sello 3</Label>
+            <Input 
+              placeholder="XXX-000" 
+              value={sellos.selloEntrada3}
+              onChange={(e) => handleChange('selloEntrada3', e.target.value)}
+              readOnly={readOnlyEntrada}
+              className={readOnlyEntrada ? 'bg-muted' : ''}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Sello 4</Label>
+            <Input 
+              placeholder="XXX-000" 
+              value={sellos.selloEntrada4}
+              onChange={(e) => handleChange('selloEntrada4', e.target.value)}
+              readOnly={readOnlyEntrada}
+              className={readOnlyEntrada ? 'bg-muted' : ''}
+            />
+          </div>
         </div>
       </div>
 
@@ -116,6 +176,22 @@ const SellosSection: React.FC<SellosSectionProps> = ({ sellos, onChange, readOnl
               placeholder="XXX-000" 
               value={sellos.selloSalida2}
               onChange={(e) => handleChange('selloSalida2', e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Sello 3</Label>
+            <Input 
+              placeholder="XXX-000" 
+              value={sellos.selloSalida3}
+              onChange={(e) => handleChange('selloSalida3', e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Sello 4</Label>
+            <Input 
+              placeholder="XXX-000" 
+              value={sellos.selloSalida4}
+              onChange={(e) => handleChange('selloSalida4', e.target.value)}
             />
           </div>
         </div>

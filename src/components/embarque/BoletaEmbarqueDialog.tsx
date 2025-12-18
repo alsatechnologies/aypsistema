@@ -28,8 +28,12 @@ interface Embarque {
   sellos?: {
     selloEntrada1?: string;
     selloEntrada2?: string;
+    selloEntrada3?: string;
+    selloEntrada4?: string;
     selloSalida1?: string;
     selloSalida2?: string;
+    selloSalida3?: string;
+    selloSalida4?: string;
   };
 }
 
@@ -65,9 +69,9 @@ const BoletaEmbarqueDialog: React.FC<BoletaEmbarqueDialogProps> = ({ open, onOpe
         boleta_no: embarque.boleta,
         fecha: fechaActual,
         lote: embarque.codigoLote || '',
-        cliente: embarque.cliente,
+        productor: embarque.cliente, // La API espera "productor" aunque sea cliente
         producto: embarque.producto,
-        destino: embarque.destino || 'N/A',
+        procedencia: embarque.destino || 'N/A', // La API espera "procedencia" aunque sea destino
         vehiculo: embarque.tipoTransporte || 'N/A',
         placas: embarque.placas || '',
         chofer: embarque.chofer || 'N/A',
@@ -92,8 +96,12 @@ const BoletaEmbarqueDialog: React.FC<BoletaEmbarqueDialogProps> = ({ open, onOpe
         sellos: embarque.sellos ? {
           entrada1: embarque.sellos.selloEntrada1,
           entrada2: embarque.sellos.selloEntrada2,
+          entrada3: embarque.sellos.selloEntrada3,
+          entrada4: embarque.sellos.selloEntrada4,
           salida1: embarque.sellos.selloSalida1,
           salida2: embarque.sellos.selloSalida2,
+          salida3: embarque.sellos.selloSalida3,
+          salida4: embarque.sellos.selloSalida4,
         } : undefined,
       };
 
