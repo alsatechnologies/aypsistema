@@ -210,3 +210,48 @@ export async function deleteRecepcion(id: number) {
   });
 }
 
+// Eliminar recepción permanentemente (solo para administradores)
+export async function deleteRecepcionPermanente(id: number) {
+  if (!supabase) {
+    throw new Error('Supabase no está configurado');
+  }
+  
+  // Obtener datos anteriores para auditoría
+  const { data: recepcionAnterior } = await supabase
+    .from('recepciones')
+    .select('*')
+    .eq('id', id)
+    .single();
+  
+  if (!recepcionAnterior) {
+    throw new Error('Recepción no encontrada');
+  }
+  
+  // Verificar si hay referencias (movimientos)
+  const { data: movimientos } = await supabase
+    .from('movimientos')
+    .select('id')
+    .eq('boleta', recepcionAnterior.boleta)
+    .limit(1);
+  
+  if (movimientos && movimientos.length > 0) {
+    throw new Error('No se puede eliminar permanentemente: existe un movimiento asociado con esta boleta');
+  }
+  
+  // Registrar en auditoría antes de eliminar
+  await registrarAuditoria({
+    tabla: 'recepciones',
+    registro_id: id,
+    accion: 'DELETE_PERMANENT',
+    datos_anteriores: recepcionAnterior,
+  });
+  
+  // Eliminar permanentemente
+  const { error } = await supabase
+    .from('recepciones')
+    .delete()
+    .eq('id', id);
+  
+  if (error) throw error;
+}
+

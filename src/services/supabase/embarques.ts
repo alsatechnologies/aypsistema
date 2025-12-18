@@ -229,4 +229,49 @@ export async function deleteEmbarque(id: number) {
   });
 }
 
+// Eliminar embarque permanentemente (solo para administradores)
+export async function deleteEmbarquePermanente(id: number) {
+  if (!supabase) {
+    throw new Error('Supabase no está configurado');
+  }
+  
+  // Obtener datos anteriores para auditoría
+  const { data: embarqueAnterior } = await supabase
+    .from('embarques')
+    .select('*')
+    .eq('id', id)
+    .single();
+  
+  if (!embarqueAnterior) {
+    throw new Error('Embarque no encontrado');
+  }
+  
+  // Verificar si hay referencias (movimientos)
+  const { data: movimientos } = await supabase
+    .from('movimientos')
+    .select('id')
+    .eq('boleta', embarqueAnterior.boleta)
+    .limit(1);
+  
+  if (movimientos && movimientos.length > 0) {
+    throw new Error('No se puede eliminar permanentemente: existe un movimiento asociado con esta boleta');
+  }
+  
+  // Registrar en auditoría antes de eliminar
+  await registrarAuditoria({
+    tabla: 'embarques',
+    registro_id: id,
+    accion: 'DELETE_PERMANENT',
+    datos_anteriores: embarqueAnterior,
+  });
+  
+  // Eliminar permanentemente
+  const { error } = await supabase
+    .from('embarques')
+    .delete()
+    .eq('id', id);
+  
+  if (error) throw error;
+}
+
 

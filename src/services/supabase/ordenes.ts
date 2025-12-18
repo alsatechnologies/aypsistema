@@ -127,3 +127,69 @@ export async function deleteOrden(id: number) {
   if (error) throw error;
 }
 
+// Eliminar orden permanentemente (solo para administradores)
+export async function deleteOrdenPermanente(id: number) {
+  if (!supabase) {
+    throw new Error('Supabase no está configurado');
+  }
+  
+  // Obtener datos anteriores para auditoría
+  const { data: ordenAnterior } = await supabase
+    .from('ordenes')
+    .select('*')
+    .eq('id', id)
+    .single();
+  
+  if (!ordenAnterior) {
+    throw new Error('Orden no encontrada');
+  }
+  
+  // Verificar si hay referencias (embarques, recepciones, movimientos)
+  const { data: embarques } = await supabase
+    .from('embarques')
+    .select('id')
+    .eq('boleta', ordenAnterior.boleta)
+    .limit(1);
+  
+  const { data: recepciones } = await supabase
+    .from('recepciones')
+    .select('id')
+    .eq('boleta', ordenAnterior.boleta)
+    .limit(1);
+  
+  const { data: movimientos } = await supabase
+    .from('movimientos')
+    .select('id')
+    .eq('boleta', ordenAnterior.boleta)
+    .limit(1);
+  
+  if (embarques && embarques.length > 0) {
+    throw new Error('No se puede eliminar permanentemente: existe un embarque asociado con esta boleta');
+  }
+  
+  if (recepciones && recepciones.length > 0) {
+    throw new Error('No se puede eliminar permanentemente: existe una recepción asociada con esta boleta');
+  }
+  
+  if (movimientos && movimientos.length > 0) {
+    throw new Error('No se puede eliminar permanentemente: existe un movimiento asociado con esta boleta');
+  }
+  
+  // Registrar en auditoría antes de eliminar
+  const { registrarAuditoria } = await import('./auditoria');
+  await registrarAuditoria({
+    tabla: 'ordenes',
+    registro_id: id,
+    accion: 'DELETE_PERMANENT',
+    datos_anteriores: ordenAnterior,
+  });
+  
+  // Eliminar permanentemente
+  const { error } = await supabase
+    .from('ordenes')
+    .delete()
+    .eq('id', id);
+  
+  if (error) throw error;
+}
+
