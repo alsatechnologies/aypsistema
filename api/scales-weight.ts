@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { checkRateLimit, getClientIP } from './utils/rateLimit';
+import { checkRateLimit, getClientIP } from './utils/rateLimit.js';
 
 // Usar HTTP directamente ya que la API está en HTTP
 const SCALES_API_URL = process.env.SCALES_API_URL || 'http://apiscales.alsatechnologies.com';

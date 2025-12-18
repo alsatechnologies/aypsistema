@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { checkRateLimit, getClientIP } from './utils/rateLimit';
+import { checkRateLimit, getClientIP } from './utils/rateLimit.js';
 
 // URL de la API de certificados de SALIDA (Embarque)
 const CERTIFICATE_SALIDA_API_URL = 'https://pdf-salida.alsatechnologies.com';

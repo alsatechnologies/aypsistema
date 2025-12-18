@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { checkRateLimit, getClientIP } from './utils/rateLimit';
+import { checkRateLimit, getClientIP } from './utils/rateLimit.js';
 
 // URL de la API de certificados de ENTRADA (Reciba)
 const CERTIFICATE_ENTRADA_API_URL = 'https://pdf-entrada.alsatechnologies.com';
