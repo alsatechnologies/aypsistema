@@ -310,10 +310,10 @@ const Oficina = () => {
               // Actualizar también el movimiento asociado si existe
               try {
                 const movimientoExistente = await getMovimientoByBoleta(ticketFinal);
-                if (movimientoExistente) {
+                if (movimientoExistente && clientesDB && clientesDB.length > 0) {
                   // Obtener el nombre del cliente actualizado
                   const clienteActualizado = clientesDB.find(c => c.id === data.cliente_id);
-                  if (clienteActualizado) {
+                  if (clienteActualizado && clienteActualizado.empresa) {
                     await updateMovimiento(movimientoExistente.id, {
                       cliente_proveedor: clienteActualizado.empresa
                     });
