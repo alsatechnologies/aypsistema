@@ -4,7 +4,7 @@ import { registrarAuditoria } from './auditoria';
 export interface Cliente {
   id: number;
   empresa: string;
-  rfc: string;
+  rfc?: string | null;
   contacto?: string | null;
   telefono?: string | null;
   email?: string | null;

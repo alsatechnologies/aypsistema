@@ -18,7 +18,7 @@ import type { Cliente as ClienteDB } from '@/services/supabase/clientes';
 interface Cliente {
   id: number;
   empresa: string;
-  rfc: string;
+  rfc?: string | null;
   contacto?: string | null;
   telefono?: string | null;
   email?: string | null;
