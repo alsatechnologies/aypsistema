@@ -1005,13 +1005,15 @@ const Reciba = () => {
                             }}
                             placeholder="0"
                           />
-                          <Button 
-                            className="w-full mt-2" 
-                            size="sm"
-                            onClick={handleCapturarPesoBruto}
-                          >
-                            Capturar Peso
-                          </Button>
+                          {!(selectedRecepcion?.estatus === 'Completado' && pesoBruto > 0 && pesoTara > 0) && (
+                            <Button 
+                              className="w-full mt-2" 
+                              size="sm"
+                              onClick={handleCapturarPesoBruto}
+                            >
+                              Capturar Peso
+                            </Button>
+                          )}
                           {horaPesoBruto && (
                             <p className="text-xs text-center text-muted-foreground mt-2">
                               {formatDateTimeMST(horaPesoBruto)}
@@ -1038,14 +1040,16 @@ const Reciba = () => {
                             }}
                             placeholder="0"
                           />
-                          <Button 
-                            className="w-full mt-2" 
-                            size="sm" 
-                            variant="outline"
-                            onClick={handleCapturarPesoTara}
-                          >
-                            Capturar Peso
-                          </Button>
+                          {!(selectedRecepcion?.estatus === 'Completado' && pesoBruto > 0 && pesoTara > 0) && (
+                            <Button 
+                              className="w-full mt-2" 
+                              size="sm" 
+                              variant="outline"
+                              onClick={handleCapturarPesoTara}
+                            >
+                              Capturar Peso
+                            </Button>
+                          )}
                           {horaPesoTara && (
                             <p className="text-xs text-center text-muted-foreground mt-2">
                               {formatDateTimeMST(horaPesoTara)}

@@ -904,9 +904,11 @@ const EmbarquePage = () => {
                             onChange={(e) => handlePesoTaraChange(Number(e.target.value))}
                             placeholder="0"
                           />
-                          <Button className="w-full mt-2" size="sm" onClick={handleCapturarPesoTara}>
-                            Capturar Peso
-                          </Button>
+                          {!(selectedEmbarque?.estatus === 'Completado' && formData.pesoBruto > 0 && formData.pesoTara > 0) && (
+                            <Button className="w-full mt-2" size="sm" onClick={handleCapturarPesoTara}>
+                              Capturar Peso
+                            </Button>
+                          )}
                           {horaPesoTara && (
                             <p className="text-xs text-center text-muted-foreground mt-2">
                               {formatDateTimeMST(horaPesoTara)}
@@ -927,9 +929,11 @@ const EmbarquePage = () => {
                             onChange={(e) => handlePesoBrutoChange(Number(e.target.value))}
                             placeholder="0"
                           />
-                          <Button className="w-full mt-2" size="sm" variant="outline" onClick={handleCapturarPesoBruto}>
-                            Capturar Peso
-                          </Button>
+                          {!(selectedEmbarque?.estatus === 'Completado' && formData.pesoBruto > 0 && formData.pesoTara > 0) && (
+                            <Button className="w-full mt-2" size="sm" variant="outline" onClick={handleCapturarPesoBruto}>
+                              Capturar Peso
+                            </Button>
+                          )}
                           {horaPesoBruto && (
                             <p className="text-xs text-center text-muted-foreground mt-2">
                               {formatDateTimeMST(horaPesoBruto)}
