@@ -1044,14 +1044,41 @@ const Configuracion = () => {
                   onChange={(e) => setSearchUsuario(e.target.value)}
                 />
               </div>
-              <Button className="bg-primary hover:bg-primary/90" onClick={() => {
-                setEditingUsuario(null);
-                setNuevoUsuario({ nombreCompleto: '', nombreUsuario: '', correo: '', contrasena: '', rol: '' });
-                setUsuarioDialogOpen(true);
-              }}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nuevo Usuario
-              </Button>
+              <div className="flex gap-2">
+                <Button className="bg-primary hover:bg-primary/90" onClick={() => {
+                  setEditingUsuario(null);
+                  setNuevoUsuario({ nombreCompleto: '', nombreUsuario: '', correo: '', contrasena: '', rol: '' });
+                  setUsuarioDialogOpen(true);
+                }}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuevo Usuario
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={async () => {
+                    try {
+                      toast.loading('Creando/actualizando usuario Oficina en auth.users...', { id: 'fix-oficina' });
+                      const response = await fetch('/api/fix-oficina-user', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ password: 'Admin123' })
+                      });
+                      const result = await response.json();
+                      if (result.success) {
+                        toast.success('Usuario Oficina creado/actualizado en auth.users. Ahora puedes iniciar sesión.', { id: 'fix-oficina' });
+                        await loadUsuarios();
+                      } else {
+                        toast.error(result.error || 'Error al crear usuario', { id: 'fix-oficina' });
+                      }
+                    } catch (error) {
+                      toast.error('Error al conectar con el servidor. Verifica que las variables de entorno estén configuradas en Vercel.', { id: 'fix-oficina' });
+                    }
+                  }}
+                  title="Crear/actualizar usuario Oficina en auth.users"
+                >
+                  🔧 Fix Usuario Oficina
+                </Button>
+              </div>
             </div>
 
             <Card>
