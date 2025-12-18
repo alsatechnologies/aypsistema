@@ -223,9 +223,10 @@ const Oficina = () => {
         return;
       }
       
-      // Generar ticket final si es temporal
+      // Generar ticket final solo si es temporal, mantener el existente si ya tiene boleta
       let ticketFinal = orden.boleta;
-      if (orden.boleta.startsWith('TEMP-')) {
+      const esTemporal = orden.boleta.startsWith('TEMP-');
+      if (esTemporal) {
         const tipoOperacion: TipoOperacion = orden.tipo_operacion === 'Reciba' 
           ? 'Entradas' 
           : orden.tipo_operacion === 'Embarque Nacional' 
