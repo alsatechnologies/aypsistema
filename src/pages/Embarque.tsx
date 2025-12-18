@@ -297,7 +297,12 @@ const EmbarquePage = () => {
       const tipoOperacion: TipoOperacion = data.tipoEmbarque === 'Nacional' ? 'Embarque Nacional' : 'Exportación';
       // Usar codigo_boleta de la base de datos, con fallback al nombre si no existe
       const codigoBoleta = producto.codigo_boleta || producto.nombre;
-      const nuevaBoleta = generateNumeroBoleta(tipoOperacion, codigoBoleta, consecutivo);
+      
+      // Calcular consecutivo considerando tanto órdenes como embarques existentes
+      const { calcularSiguienteConsecutivo } = await import('@/utils/consecutivoBoleta');
+      const siguienteConsecutivo = await calcularSiguienteConsecutivo(tipoOperacion, data.productoId, codigoBoleta);
+      
+      const nuevaBoleta = generateNumeroBoleta(tipoOperacion, codigoBoleta, siguienteConsecutivo);
       
       await addEmbarque({
         boleta: nuevaBoleta,
