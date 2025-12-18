@@ -514,17 +514,51 @@ const Configuracion = () => {
       if (deleteDialog.type === 'producto') {
         await deleteProductoDB(deleteDialog.id);
         await loadProductos();
+        toast.success('Producto eliminado correctamente');
       } else if (deleteDialog.type === 'almacen') {
         await deleteAlmacenDB(deleteDialog.id);
+        toast.success('Almacén eliminado correctamente');
       } else if (deleteDialog.type === 'usuario') {
+        // Obtener el usuario antes de eliminarlo para tener el email
+        const usuarioAEliminar = usuariosDB.find(u => u.id === deleteDialog.id);
+        
+        if (usuarioAEliminar) {
+          // Intentar eliminar de auth.users también
+          try {
+            const deleteAuthResponse = await fetch('/api/delete-auth-user', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                email: usuarioAEliminar.correo
+              }),
+            });
+
+            if (!deleteAuthResponse.ok) {
+              const errorData = await deleteAuthResponse.json();
+              // Si el usuario no existe en auth.users, no es un error crítico
+              if (!errorData.error || !errorData.error.includes('no encontrado')) {
+                console.warn('Advertencia: No se pudo eliminar de auth.users:', errorData.error);
+              }
+            }
+          } catch (authError) {
+            console.warn('Advertencia: Error al eliminar de auth.users:', authError);
+            // Continuar de todas formas
+          }
+        }
+
+        // Eliminar de la tabla usuarios (soft delete)
         await deleteUsuarioDB(deleteDialog.id);
+        await loadUsuarios();
+        toast.success('Usuario eliminado correctamente');
       }
 
-      toast.success(`${deleteDialog.type === 'producto' ? 'Producto' : deleteDialog.type === 'almacen' ? 'Almacén' : 'Usuario'} eliminado correctamente`);
       setDeleteDialog(null);
     } catch (error) {
       console.error('Error deleting:', error);
-      toast.error('Error al eliminar');
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      toast.error(`Error al eliminar: ${errorMessage}`);
     }
   };
 
