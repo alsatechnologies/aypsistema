@@ -569,7 +569,7 @@ const Oficina = () => {
                           <SelectValue placeholder="Seleccionar cliente" />
                         </SelectTrigger>
                         <SelectContent>
-                          {clientes.map((cli) => (
+                          {clientesDB.map((cli) => (
                             <SelectItem key={cli.id} value={cli.id.toString()}>
                               {cli.empresa}
                             </SelectItem>
@@ -635,7 +635,7 @@ const Oficina = () => {
                           <SelectValue placeholder="Seleccionar cliente" />
                         </SelectTrigger>
                         <SelectContent>
-                          {clientes.map((cli) => (
+                          {clientesDB.map((cli) => (
                             <SelectItem key={cli.id} value={cli.id.toString()}>
                               {cli.empresa}
                             </SelectItem>
