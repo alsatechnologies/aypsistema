@@ -81,7 +81,7 @@ const Oficina = () => {
   useEffect(() => {
     if (!isNuevaOrdenOpen) {
       setNuevaOrdenData({
-        tipoOperacion: 'Embarque Nacional',
+      tipoOperacion: 'Embarque Nacional',
         productoId: '',
         clienteId: '',
         proveedorId: '',
@@ -234,12 +234,13 @@ const Oficina = () => {
           ? 'Embarque Nacional' 
           : 'Exportación';
         
+        // Usar codigo_boleta de la base de datos, con fallback al nombre si no existe
+        const codigoBoleta = producto.codigo_boleta || producto.nombre;
+        
         // Calcular consecutivo anual considerando tanto órdenes como embarques
         const { calcularSiguienteConsecutivo } = await import('@/utils/consecutivoBoleta');
         const consecutivo = await calcularSiguienteConsecutivo(tipoOperacion, data.producto_id, codigoBoleta);
         
-        // Usar codigo_boleta de la base de datos, con fallback al nombre si no existe
-        const codigoBoleta = producto.codigo_boleta || producto.nombre;
         // El consecutivo ya fue calculado arriba considerando órdenes y embarques
         ticketFinal = generateNumeroBoleta(tipoOperacion, codigoBoleta, consecutivo);
       }
@@ -371,9 +372,9 @@ const Oficina = () => {
   const filteredOrdenes = ordenes.filter(o => {
     // Filtro de búsqueda
     const matchesSearch = 
-      o.producto.toLowerCase().includes(search.toLowerCase()) ||
+    o.producto.toLowerCase().includes(search.toLowerCase()) ||
       (o.cliente && o.cliente.toLowerCase().includes(search.toLowerCase())) ||
-      o.boleta.includes(search) ||
+    o.boleta.includes(search) ||
       (o.nombreChofer && o.nombreChofer.toLowerCase().includes(search.toLowerCase()));
     
     // Filtro de fecha
@@ -395,14 +396,14 @@ const Oficina = () => {
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
           <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
             <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input 
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
                 placeholder="Buscar por boleta, producto, cliente..." 
-                className="pl-10"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
+              className="pl-10"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
               <Input 
@@ -784,24 +785,24 @@ const Oficina = () => {
                         </div>
                       ) : (
                         <div className="flex items-center justify-end gap-1">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8"
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
                             onClick={() => handleViewTicket(orden)}
                             title="Ver ticket"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8"
                             onClick={() => handleViewTicket(orden)}
                             title="Imprimir ticket"
-                          >
-                            <Printer className="h-4 w-4" />
-                          </Button>
+                      >
+                        <Printer className="h-4 w-4" />
+                      </Button>
                           {puedeEditarEliminar && (
                             <>
                               <Button

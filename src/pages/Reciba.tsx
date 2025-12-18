@@ -221,18 +221,18 @@ const Reciba = () => {
       // Usar codigo_boleta de la base de datos, con fallback al nombre si no existe
       const codigoBoleta = producto.codigo_boleta || producto.nombre;
       const nuevaBoleta = generarBoletaEntradas(codigoBoleta, recepciones.length + 1);
-      
+    
       await addRecepcion({
         boleta: nuevaBoleta,
         producto_id: operacion.productoId,
         proveedor_id: operacion.proveedorId,
-        chofer: operacion.chofer,
-        placas: operacion.placas,
-        fecha: new Date().toISOString().split('T')[0],
-        estatus: 'Pendiente',
+      chofer: operacion.chofer,
+      placas: operacion.placas,
+      fecha: new Date().toISOString().split('T')[0],
+      estatus: 'Pendiente',
         tipo_transporte: operacion.tipoTransporte
       });
-      
+
       await loadRecepciones();
       toast.success('Operación creada correctamente');
     } catch (error) {
@@ -289,7 +289,7 @@ const Reciba = () => {
       });
       
       await loadRecepciones();
-      toast.success('Datos pre-guardados correctamente');
+    toast.success('Datos pre-guardados correctamente');
     } catch (error) {
       handleError(error, { module: 'Reciba', action: 'preGuardar' }, 'Error al guardar datos');
     }
@@ -472,7 +472,7 @@ const Reciba = () => {
       
       await loadRecepciones();
       toast.success('Boleta guardada correctamente' + mensajeLote);
-      setIsDialogOpen(false);
+    setIsDialogOpen(false);
     } catch (error) {
       handleError(error, { module: 'Reciba', action: 'guardarBoleta' }, 'Error al guardar boleta');
     }
@@ -635,8 +635,8 @@ const Reciba = () => {
 
   const filteredRecepciones = recepciones.filter(r => {
     const matchesSearch = 
-      r.producto.toLowerCase().includes(search.toLowerCase()) ||
-      r.proveedor.toLowerCase().includes(search.toLowerCase()) ||
+    r.producto.toLowerCase().includes(search.toLowerCase()) ||
+    r.proveedor.toLowerCase().includes(search.toLowerCase()) ||
       (r.boleta && !r.boleta.startsWith('TEMP-') && r.boleta.includes(search)) ||
       r.chofer.toLowerCase().includes(search.toLowerCase());
     
@@ -660,13 +660,13 @@ const Reciba = () => {
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
           <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
             <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input 
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
                 placeholder="Buscar por boleta, producto, proveedor..." 
-                className="pl-10"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+              className="pl-10"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
             </div>
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -1017,8 +1017,8 @@ const Reciba = () => {
                               size="sm"
                               onClick={handleCapturarPesoBruto}
                             >
-                              Capturar Peso
-                            </Button>
+                            Capturar Peso
+                          </Button>
                           )}
                           {horaPesoBruto && (
                             <p className="text-xs text-center text-muted-foreground mt-2">
@@ -1057,8 +1057,8 @@ const Reciba = () => {
                               variant="outline"
                               onClick={handleCapturarPesoTara}
                             >
-                              Capturar Peso
-                            </Button>
+                            Capturar Peso
+                          </Button>
                           )}
                           {horaPesoTara && (
                             <p className="text-xs text-center text-muted-foreground mt-2">
@@ -1091,28 +1091,28 @@ const Reciba = () => {
 
                   {/* Análisis dinámicos según producto */}
                   {productoSeleccionado && (
-                    <div className="space-y-4">
-                      <h4 className="font-medium flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
+                  <div className="space-y-4">
+                    <h4 className="font-medium flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
                         Análisis de Calidad - {productosDB.find(p => p.id === productoSeleccionado)?.nombre || 'Producto'}
-                      </h4>
-                      <AnalisisDinamico 
+                    </h4>
+                    <AnalisisDinamico 
                         analisis={analisisProducto}
-                        valores={valoresAnalisis}
-                        onChange={handleAnalisisChange}
-                      />
-                    </div>
+                      valores={valoresAnalisis}
+                      onChange={handleAnalisisChange}
+                    />
+                  </div>
                   )}
 
                   <Separator />
 
                   {/* Descuentos calculados */}
                   {productoSeleccionado && analisisProducto.length > 0 && (
-                    <DescuentosPanel 
+                  <DescuentosPanel 
                       analisis={analisisProducto}
-                      valoresAnalisis={valoresAnalisis}
-                      pesoNeto={pesoNeto > 0 ? pesoNeto : 0}
-                    />
+                    valoresAnalisis={valoresAnalisis}
+                    pesoNeto={pesoNeto > 0 ? pesoNeto : 0}
+                  />
                   )}
 
                   <Separator />

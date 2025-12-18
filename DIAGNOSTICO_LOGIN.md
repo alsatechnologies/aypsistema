@@ -13,7 +13,8 @@ El login se está colgando con timeout después de 5 segundos al intentar buscar
 2. Selecciona tu proyecto `aypsistema`
 3. Ve a **Settings** → **Environment Variables**
 4. Verifica que existan:
-   - `VITE_SUPABASE_URL` = `https://higgudeoopxwcvdrhudl.supabase.co`
+   - `VITE_SUPABASE_URL` = `
+   `
    - `VITE_SUPABASE_ANON_KEY` = (tu clave anónima)
 
 **Si no existen, agrégalas:**

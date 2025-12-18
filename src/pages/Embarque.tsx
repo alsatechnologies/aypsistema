@@ -320,24 +320,24 @@ const EmbarquePage = () => {
         return;
       }
       
-      const tipoOperacion: TipoOperacion = data.tipoEmbarque === 'Nacional' ? 'Embarque Nacional' : 'Exportación';
+    const tipoOperacion: TipoOperacion = data.tipoEmbarque === 'Nacional' ? 'Embarque Nacional' : 'Exportación';
       // Usar codigo_boleta de la base de datos, con fallback al nombre si no existe
       const codigoBoleta = producto.codigo_boleta || producto.nombre;
       
       // Calcular consecutivo considerando tanto órdenes como embarques existentes
       const { calcularSiguienteConsecutivo } = await import('@/utils/consecutivoBoleta');
       const siguienteConsecutivo = await calcularSiguienteConsecutivo(tipoOperacion, data.productoId, codigoBoleta);
-      
+    
       const nuevaBoleta = generateNumeroBoleta(tipoOperacion, codigoBoleta, siguienteConsecutivo);
       
       await addEmbarque({
         boleta: nuevaBoleta,
         producto_id: data.productoId,
         cliente_id: data.clienteId,
-        destino: data.destino,
-        chofer: data.chofer,
-        fecha: new Date().toISOString().split('T')[0],
-        estatus: 'Pendiente',
+      destino: data.destino,
+      chofer: data.chofer,
+      fecha: new Date().toISOString().split('T')[0],
+      estatus: 'Pendiente',
         tipo_transporte: data.tipoTransporte,
         tipo_embarque: data.tipoEmbarque
       });
@@ -499,7 +499,7 @@ const EmbarquePage = () => {
       }
       
       await loadEmbarques();
-      setIsDialogOpen(false);
+    setIsDialogOpen(false);
       toast.success('Embarque guardado correctamente' + (codigoLoteFinal ? ` - Lote: ${codigoLoteFinal}` : ''));
     } catch (error) {
       handleError(error, { module: 'Embarque', action: 'guardarEmbarque' }, 'Error al guardar embarque');
@@ -634,8 +634,8 @@ const EmbarquePage = () => {
 
   const filteredEmbarques = embarques.filter(e => {
     const matchesSearch = 
-      e.producto.toLowerCase().includes(search.toLowerCase()) ||
-      e.cliente.toLowerCase().includes(search.toLowerCase()) ||
+    e.producto.toLowerCase().includes(search.toLowerCase()) ||
+    e.cliente.toLowerCase().includes(search.toLowerCase()) ||
       e.boleta.includes(search) ||
       e.chofer.toLowerCase().includes(search.toLowerCase());
     
@@ -659,13 +659,13 @@ const EmbarquePage = () => {
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
           <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
             <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input 
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
                 placeholder="Buscar por boleta, producto, cliente..." 
-                className="pl-10"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+              className="pl-10"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
             </div>
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -846,10 +846,10 @@ const EmbarquePage = () => {
 
                   {/* Destino y Almacén en la misma fila */}
                   <div className="grid grid-cols-2 gap-4">
-                    {/* Destino */}
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                      <Label className="text-xs text-blue-700">Destino</Label>
-                      <p className="font-medium text-lg">{selectedEmbarque.destino}</p>
+                  {/* Destino */}
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <Label className="text-xs text-blue-700">Destino</Label>
+                    <p className="font-medium text-lg">{selectedEmbarque.destino}</p>
                     </div>
 
                     {/* Almacén */}
@@ -946,8 +946,8 @@ const EmbarquePage = () => {
                             formData.pesoTara > 0
                           ) && (
                             <Button className="w-full mt-2" size="sm" onClick={handleCapturarPesoTara}>
-                              Capturar Peso
-                            </Button>
+                            Capturar Peso
+                          </Button>
                           )}
                           {horaPesoTara && (
                             <p className="text-xs text-center text-muted-foreground mt-2">
@@ -975,8 +975,8 @@ const EmbarquePage = () => {
                             formData.pesoBruto > 0
                           ) && (
                             <Button className="w-full mt-2" size="sm" variant="outline" onClick={handleCapturarPesoBruto}>
-                              Capturar Peso
-                            </Button>
+                            Capturar Peso
+                          </Button>
                           )}
                           {horaPesoBruto && (
                             <p className="text-xs text-center text-muted-foreground mt-2">
@@ -1024,7 +1024,7 @@ const EmbarquePage = () => {
                     />
                   </div>
 
-                  <Separator />
+                      <Separator />
 
                   {/* Sellos */}
                   <div className="space-y-4">
@@ -1111,7 +1111,7 @@ const EmbarquePage = () => {
         </Dialog>
 
         {/* Nuevo Embarque Dialog */}
-        <NuevoEmbarqueDialog 
+        <NuevoEmbarqueDialog
           open={isNuevoDialogOpen}
           onOpenChange={setIsNuevoDialogOpen}
           onCrear={handleNuevoEmbarque}
