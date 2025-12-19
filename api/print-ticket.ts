@@ -40,12 +40,10 @@ export default async function handler(
     const { rol_usuario, ...printData } = req.body;
     
     // Seleccionar API según el rol del usuario
-    // TEMPORAL: Usuario Oficina usa apiticket.alsatechnologies.com para prueba
     let apiUrl = PRINTER_API_URL;
     if (rol_usuario === 'Oficina') {
-      // TEMPORAL: Cambiar a PRINTER_API_URL_2 cuando termine la prueba
-      apiUrl = PRINTER_API_URL; // Temporalmente usando API 1 para prueba
-      console.log('🔧 [PRINT-TICKET] TEMPORAL: Usando API 1 (apiticket) para usuario Oficina (PRUEBA)');
+      apiUrl = PRINTER_API_URL_2;
+      console.log('🔧 [PRINT-TICKET] Usando API 2 (apiticket2) para usuario Oficina');
     } else {
       console.log('🔧 [PRINT-TICKET] Usando API 1 (apiticket) para otros usuarios');
     }
