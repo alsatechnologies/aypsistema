@@ -510,6 +510,9 @@ const Configuracion = () => {
   const handleDelete = async () => {
     if (!deleteDialog) return;
 
+    // FORZAR REBUILD - Si ves un PATCH directo a Supabase, el código compilado está desactualizado
+    console.log('🚀 [HANDLE DELETE] Versión actualizada - usando endpoint serverless');
+
     try {
       if (deleteDialog.type === 'producto') {
         await deleteProductoDB(deleteDialog.id);
