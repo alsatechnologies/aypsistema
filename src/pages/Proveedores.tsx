@@ -64,8 +64,8 @@ const Proveedores = () => {
   };
 
   const handleNuevoProveedor = async () => {
-    if (!formData.empresa || !formData.producto) {
-      toast.error('Complete los campos obligatorios');
+    if (!formData.empresa) {
+      toast.error('El campo Empresa es obligatorio');
       return;
     }
 
@@ -264,7 +264,7 @@ const Proveedores = () => {
                   />
                 </div>
                 <div className="space-y-2 col-span-2">
-                  <Label>Producto *</Label>
+                  <Label>Producto</Label>
                   <Input 
                     value={formData.producto}
                     onChange={(e) => setFormData({ ...formData, producto: e.target.value })}

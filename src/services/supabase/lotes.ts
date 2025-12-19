@@ -348,8 +348,16 @@ export async function generarCodigoLoteParaOperacion(
   
   const anioCodigo = String(anio).slice(-2);
 
-  // Obtener códigos
-  const origenCodigo = await getCodigoOrigen(clienteId, proveedorId);
+  // Para embarques (NL y EX), el origen siempre es ACEITE Y PROTEINAS SA DE CV (código '01')
+  // porque el que vende siempre es Aceite y Proteínas
+  let origenCodigo: string;
+  if (tipoOperacion === 'Embarque Nacional' || tipoOperacion === 'Embarque Exportación') {
+    origenCodigo = '01'; // ACEITE Y PROTEINAS SA DE CV
+  } else {
+    // Para Reciba, usar el proveedor
+    origenCodigo = await getCodigoOrigen(clienteId, proveedorId);
+  }
+
   const productoCodigo = await getCodigoProducto(productoId);
   const almacenCodigo = await getCodigoAlmacen(almacenId);
 
