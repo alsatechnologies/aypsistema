@@ -560,9 +560,25 @@ const Configuracion = () => {
 
           console.log('🔧 [DELETE USUARIO] Response status:', deleteResponse.status);
           console.log('🔧 [DELETE USUARIO] Response ok:', deleteResponse.ok);
+          console.log('🔧 [DELETE USUARIO] Response headers:', Object.fromEntries(deleteResponse.headers.entries()));
 
-          const result = await deleteResponse.json();
-          console.log('🔧 [DELETE USUARIO] Response data:', result);
+          // Verificar si la respuesta tiene contenido antes de parsear
+          const responseText = await deleteResponse.text();
+          console.log('🔧 [DELETE USUARIO] Response text:', responseText);
+
+          if (!responseText || responseText.trim() === '') {
+            throw new Error('El servidor devolvió una respuesta vacía. Verifica que el endpoint /api/delete-usuario esté desplegado correctamente.');
+          }
+
+          let result;
+          try {
+            result = JSON.parse(responseText);
+            console.log('🔧 [DELETE USUARIO] Response data:', result);
+          } catch (parseError) {
+            console.error('❌ [DELETE USUARIO] Error parseando JSON:', parseError);
+            console.error('❌ [DELETE USUARIO] Response text recibido:', responseText);
+            throw new Error(`Error al parsear respuesta del servidor: ${parseError instanceof Error ? parseError.message : 'Error desconocido'}`);
+          }
 
           if (!deleteResponse.ok || !result.success) {
             // Mostrar error más detallado
