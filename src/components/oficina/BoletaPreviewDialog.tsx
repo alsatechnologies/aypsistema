@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Printer, X } from 'lucide-react';
 import { formatDateTimeMST } from '@/utils/dateUtils';
-import { printTicket } from '@/services/api/printer';
+import { printTicket, listPrinters } from '@/services/api/printer';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 // Logo se carga desde el servidor (logo_escpos.bin)
@@ -40,6 +40,29 @@ const BoletaPreviewDialog: React.FC<BoletaPreviewDialogProps> = ({ open, onOpenC
 
     setIsPrinting(true);
     try {
+      // Primero, intentar detectar el nombre de la impresora disponible
+      let printerName = 'POS-80c'; // Nombre por defecto
+      
+      console.log('🔍 [PRINT] Buscando impresoras disponibles para rol:', usuario?.rol);
+      const printersResult = await listPrinters(usuario?.rol);
+      
+      if (printersResult.success && printersResult.printers && printersResult.printers.length > 0) {
+        // Buscar una impresora que contenga "POS" o "80" en el nombre, o usar la primera disponible
+        const posPrinter = printersResult.printers.find(p => 
+          p.toLowerCase().includes('pos') || 
+          p.toLowerCase().includes('80') ||
+          p.toLowerCase().includes('ticket')
+        );
+        printerName = posPrinter || printersResult.printers[0];
+        console.log('✅ [PRINT] Impresora detectada:', printerName);
+        console.log('📋 [PRINT] Todas las impresoras disponibles:', printersResult.printers);
+      } else {
+        console.warn('⚠️ [PRINT] No se pudieron listar impresoras, usando nombre por defecto:', printerName);
+        if (printersResult.error) {
+          console.error('❌ [PRINT] Error al listar impresoras:', printersResult.error);
+        }
+      }
+
       // Formatear fecha actual
       const fechaActual = format(new Date(), 'dd/MM/yyyy HH:mm', { locale: es });
 
@@ -48,7 +71,7 @@ const BoletaPreviewDialog: React.FC<BoletaPreviewDialogProps> = ({ open, onOpenC
         rol_usuario: usuario?.rol, // Enviar rol del usuario para determinar qué API usar
         printer_config: {
           connection_type: 'usb' as const,
-          printer_name: 'POS-80c',
+          printer_name: printerName,
         },
         producto: orden.producto || '',
         fecha: fechaActual,
@@ -62,15 +85,17 @@ const BoletaPreviewDialog: React.FC<BoletaPreviewDialogProps> = ({ open, onOpenC
         // Logo se carga desde logo_escpos.bin en el servidor
       };
 
+      console.log('🖨️ [PRINT] Enviando ticket a impresora:', printerName);
       const result = await printTicket(printData);
 
       if (result.success) {
         toast.success('Ticket enviado a impresión correctamente');
       } else {
+        console.error('❌ [PRINT] Error al imprimir:', result.error);
         toast.error(result.error || 'Error al imprimir ticket');
       }
     } catch (error) {
-      console.error('Error al imprimir:', error);
+      console.error('❌ [PRINT] Error al imprimir:', error);
       toast.error('Error al comunicarse con la impresora');
     } finally {
       setIsPrinting(false);

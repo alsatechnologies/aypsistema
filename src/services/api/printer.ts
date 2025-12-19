@@ -27,6 +27,15 @@ export interface PrintTicketResponse {
   error?: string;
 }
 
+export interface ListPrintersResponse {
+  success: boolean;
+  printers?: string[];
+  count?: number;
+  platform?: string;
+  message?: string;
+  error?: string;
+}
+
 /**
  * Imprime un ticket térmico usando la API de impresión
  * Usa una función serverless de Vercel como proxy para evitar problemas de CORS
@@ -72,6 +81,57 @@ export async function printTicket(data: PrintTicketRequest): Promise<PrintTicket
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Error desconocido al imprimir',
+    };
+  }
+}
+
+/**
+ * Lista las impresoras USB disponibles en el servidor de impresión
+ * @param rol_usuario Rol del usuario para determinar qué API usar (opcional)
+ */
+export async function listPrinters(rol_usuario?: string): Promise<ListPrintersResponse> {
+  try {
+    const apiUrl = '/api/list-printers';
+    const url = rol_usuario ? `${apiUrl}?rol_usuario=${encodeURIComponent(rol_usuario)}` : apiUrl;
+    
+    // Timeout de 12 segundos
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      signal: controller.signal,
+    }).catch((fetchError: any) => {
+      clearTimeout(timeoutId);
+      if (fetchError.name === 'AbortError') {
+        throw new Error('Timeout al listar impresoras (más de 12 segundos)');
+      }
+      throw fetchError;
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }));
+      throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    return {
+      success: result.success || true,
+      printers: result.printers || [],
+      count: result.count || 0,
+      platform: result.platform,
+      message: result.message || 'Impresoras listadas correctamente',
+    };
+  } catch (error) {
+    console.error('Error al listar impresoras:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Error desconocido al listar impresoras',
     };
   }
 }

@@ -40,10 +40,12 @@ export default async function handler(
     const { rol_usuario, ...printData } = req.body;
     
     // Seleccionar API según el rol del usuario
+    // TEMPORAL: Usuario Oficina usa apiticket.alsatechnologies.com para prueba
     let apiUrl = PRINTER_API_URL;
     if (rol_usuario === 'Oficina') {
-      apiUrl = PRINTER_API_URL_2;
-      console.log('🔧 [PRINT-TICKET] Usando API 2 (apiticket2) para usuario Oficina');
+      // TEMPORAL: Cambiar a PRINTER_API_URL_2 cuando termine la prueba
+      apiUrl = PRINTER_API_URL; // Temporalmente usando API 1 para prueba
+      console.log('🔧 [PRINT-TICKET] TEMPORAL: Usando API 1 (apiticket) para usuario Oficina (PRUEBA)');
     } else {
       console.log('🔧 [PRINT-TICKET] Usando API 1 (apiticket) para otros usuarios');
     }
@@ -51,6 +53,14 @@ export default async function handler(
     // Timeout de 15 segundos para impresión
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    // Log para debugging
+    console.log('🔧 [PRINT-TICKET] Enviando a:', apiUrl);
+    console.log('🔧 [PRINT-TICKET] Configuración impresora:', {
+      connection_type: printData.printer_config?.connection_type,
+      printer_name: printData.printer_config?.printer_name,
+      ip: printData.printer_config?.ip
+    });
 
     // Hacer la solicitud al servidor de impresión (sin incluir rol_usuario en el body)
     const response = await fetch(`${apiUrl}/api/printer/print-ticket`, {
@@ -71,6 +81,14 @@ export default async function handler(
     clearTimeout(timeoutId);
 
     const data = await response.json();
+    
+    // Log de respuesta
+    console.log('🔧 [PRINT-TICKET] Respuesta de API:', {
+      status: response.status,
+      success: data.success,
+      message: data.message,
+      error: data.error
+    });
 
     // Retornar la respuesta con los headers CORS necesarios
     res.setHeader('Access-Control-Allow-Origin', '*');
