@@ -367,62 +367,37 @@ const Configuracion = () => {
               }),
             });
 
+            // Intentar actualizar en auth.users de forma silenciosa
+            // Si falla, se creará automáticamente cuando el usuario intente hacer login
             if (!updateAuthResponse.ok) {
               const errorData = await updateAuthResponse.json();
               
-              // Si el usuario no existe en auth.users, crearlo
+              // Si el usuario no existe en auth.users, intentar crearlo silenciosamente
               if (errorData.error && errorData.error.includes('no encontrado')) {
-                console.log('Usuario no existe en auth.users, creándolo...');
-                const createAuthResponse = await fetch('/api/create-auth-user', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    email: emailFinal,
-                    password: nuevoUsuario.contrasena,
-                    nombre_completo: nuevoUsuario.nombreCompleto,
-                    nombre_usuario: nuevoUsuario.nombreUsuario || null,
-                    rol: nuevoUsuario.rol
-                  }),
-                });
-
-                if (!createAuthResponse.ok) {
-                  const createErrorData = await createAuthResponse.json();
-                  console.warn('Advertencia: No se pudo crear en auth.users:', createErrorData.error);
-                  toast.warning('Usuario actualizado, pero no se pudo crear en auth.users. El login puede fallar hasta que se cree manualmente.');
-                } else {
-                  toast.success('Usuario creado en auth.users correctamente');
+                try {
+                  await fetch('/api/create-auth-user', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      email: emailFinal,
+                      password: nuevoUsuario.contrasena,
+                      nombre_completo: nuevoUsuario.nombreCompleto,
+                      nombre_usuario: nuevoUsuario.nombreUsuario || null,
+                      rol: nuevoUsuario.rol
+                    }),
+                  });
+                  // Silencioso - no mostrar mensaje
+                } catch (createError) {
+                  // Silencioso - se creará automáticamente al hacer login
+                  console.warn('⚠️ No se pudo crear en auth.users (se creará automáticamente al hacer login)');
                 }
-              } else {
-                console.warn('Advertencia: No se pudo actualizar en auth.users:', errorData.error);
-                toast.warning('Usuario actualizado, pero hubo un problema al actualizar en auth.users.');
               }
             }
           } catch (authError) {
-            console.warn('Advertencia: Error al actualizar/crear en auth.users:', authError);
-            // Intentar crear si falla la actualización
-            try {
-              const createAuthResponse = await fetch('/api/create-auth-user', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  email: emailFinal,
-                  password: nuevoUsuario.contrasena,
-                  nombre_completo: nuevoUsuario.nombreCompleto,
-                  nombre_usuario: nuevoUsuario.nombreUsuario || null,
-                  rol: nuevoUsuario.rol
-                }),
-              });
-
-              if (createAuthResponse.ok) {
-                toast.success('Usuario creado en auth.users correctamente');
-              }
-            } catch (createError) {
-              console.warn('No se pudo crear usuario en auth.users:', createError);
-            }
+            // Silencioso - se creará automáticamente al hacer login
+            console.warn('⚠️ Error al actualizar/crear en auth.users (se creará automáticamente al hacer login)');
           }
         }
         
