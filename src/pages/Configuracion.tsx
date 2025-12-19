@@ -84,8 +84,13 @@ const Configuracion = () => {
     addUsuario: addUsuarioDB,
     updateUsuario: updateUsuarioDB,
     // deleteUsuario: deleteUsuarioDB, // NO USAR - siempre usar endpoint serverless
+    // IMPORTANTE: deleteUsuarioDB está comentado intencionalmente para prevenir uso directo
+    // Siempre usar el endpoint /api/delete-usuario que bypass RLS
     loadUsuarios
   } = useUsuarios();
+  
+  // Variable para prevenir uso accidental de deleteUsuarioDB
+  const deleteUsuarioDB = undefined; // NO USAR - siempre usar endpoint serverless
 
   // Estado local para productos con análisis cargados
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -510,8 +515,11 @@ const Configuracion = () => {
   const handleDelete = async () => {
     if (!deleteDialog) return;
 
-    // FORZAR REBUILD - Si ves un PATCH directo a Supabase, el código compilado está desactualizado
-    console.log('🚀 [HANDLE DELETE] Versión actualizada - usando endpoint serverless');
+    // FORZAR REBUILD COMPLETO - Versión 2.0
+    // Si ves un PATCH directo a Supabase, el código compilado está desactualizado
+    console.log('🚀🚀🚀 [HANDLE DELETE] VERSIÓN 2.0 - USANDO ENDPOINT SERVERLESS 🚀🚀🚀');
+    console.log('🚀 [HANDLE DELETE] NO se debe hacer PATCH directo a Supabase');
+    console.log('🚀 [HANDLE DELETE] Usando endpoint /api/delete-usuario');
 
     try {
       if (deleteDialog.type === 'producto') {
