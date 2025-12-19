@@ -59,9 +59,19 @@ export default async function handler(
 
     if (result.error) {
       console.error('Error de autenticación:', result.error);
+      // Mapear errores comunes de Supabase a mensajes más claros
+      let errorMessage = result.error.message || 'Credenciales incorrectas';
+      
+      if (result.error.message?.includes('Invalid login credentials') || 
+          result.error.message?.includes('Email not confirmed')) {
+        errorMessage = 'Usuario o contraseña incorrectos. Verifica tus credenciales.';
+      } else if (result.error.message?.includes('Email rate limit exceeded')) {
+        errorMessage = 'Demasiados intentos. Espera unos minutos antes de intentar de nuevo.';
+      }
+      
       return res.status(401).json({
         success: false,
-        error: result.error.message || 'Credenciales incorrectas',
+        error: errorMessage,
         details: result.error,
       });
     }
