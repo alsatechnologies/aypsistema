@@ -6,10 +6,17 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-// Leer variables de entorno - en Vercel las funciones serverless pueden acceder a VITE_ variables
-// pero también intentamos sin prefijo por si acaso
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+// Leer variables de entorno - en Vercel las funciones serverless pueden acceder a todas las variables
+// Intentar múltiples formas de leer las variables
+const SUPABASE_URL = 
+  process.env.VITE_SUPABASE_URL || 
+  process.env.SUPABASE_URL || 
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 
+  '';
+const SUPABASE_SERVICE_ROLE_KEY = 
+  process.env.SUPABASE_SERVICE_ROLE_KEY || 
+  process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || 
+  '';
 
 export default async function handler(
   req: VercelRequest,
@@ -28,22 +35,29 @@ export default async function handler(
 
   try {
     // Log para debugging (sin exponer valores sensibles)
+    const envKeys = Object.keys(process.env).filter(k => k.includes('SUPABASE'));
     console.log('🔧 [DELETE-USUARIO] Verificando variables de entorno...');
     console.log('🔧 [DELETE-USUARIO] SUPABASE_URL presente:', !!SUPABASE_URL);
     console.log('🔧 [DELETE-USUARIO] SUPABASE_SERVICE_ROLE_KEY presente:', !!SUPABASE_SERVICE_ROLE_KEY);
+    console.log('🔧 [DELETE-USUARIO] Variables de entorno disponibles:', envKeys);
+    console.log('🔧 [DELETE-USUARIO] VITE_SUPABASE_URL:', process.env.VITE_SUPABASE_URL ? 'presente' : 'FALTANTE');
+    console.log('🔧 [DELETE-USUARIO] SUPABASE_URL:', process.env.SUPABASE_URL ? 'presente' : 'FALTANTE');
+    console.log('🔧 [DELETE-USUARIO] SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'presente' : 'FALTANTE');
     
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       console.error('❌ [DELETE-USUARIO] Variables faltantes:', {
         SUPABASE_URL: SUPABASE_URL ? 'presente' : 'FALTANTE',
         SUPABASE_SERVICE_ROLE_KEY: SUPABASE_SERVICE_ROLE_KEY ? 'presente' : 'FALTANTE',
-        envKeys: Object.keys(process.env).filter(k => k.includes('SUPABASE'))
+        envKeys: envKeys,
+        allEnvKeys: Object.keys(process.env).slice(0, 20) // Primeras 20 para debugging
       });
       return res.status(500).json({
         success: false,
         error: 'Supabase no está configurado correctamente. Verifica que VITE_SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY estén configuradas en Vercel.',
         debug: {
           hasUrl: !!SUPABASE_URL,
-          hasKey: !!SUPABASE_SERVICE_ROLE_KEY
+          hasKey: !!SUPABASE_SERVICE_ROLE_KEY,
+          envKeysWithSupabase: envKeys
         }
       });
     }
