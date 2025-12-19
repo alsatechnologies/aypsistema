@@ -544,7 +544,10 @@ const Configuracion = () => {
           const result = await deleteResponse.json();
 
           if (!deleteResponse.ok || !result.success) {
-            throw new Error(result.error || 'Error al eliminar usuario');
+            // Mostrar error más detallado
+            const errorMsg = result.error || 'Error al eliminar usuario';
+            const details = result.details ? ` (${result.details.message || result.details.code || ''})` : '';
+            throw new Error(`${errorMsg}${details}`);
           }
 
           // Recargar lista de usuarios

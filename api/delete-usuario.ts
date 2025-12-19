@@ -73,12 +73,17 @@ export default async function handler(
 
     if (deleteError) {
       console.error('Error eliminando usuario:', deleteError);
+      console.error('Detalles del error:', JSON.stringify(deleteError, null, 2));
       return res.status(400).json({
         success: false,
         error: `Error al eliminar usuario: ${deleteError.message}`,
         details: deleteError,
+        code: deleteError.code,
+        hint: deleteError.hint,
       });
     }
+
+    console.log(`Usuario ${usuarioId} eliminado correctamente (soft delete)`);
 
     res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(200).json({
