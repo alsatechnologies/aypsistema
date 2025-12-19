@@ -541,16 +541,32 @@ const Reciba = () => {
   };
 
   const handleImprimir = async () => {
-    if (!selectedRecepcion) return;
+    if (!selectedRecepcion) {
+      toast.error('No hay recepción seleccionada');
+      return;
+    }
+    
+    console.log('🖨️ [RECIBA] Iniciando impresión de boleta:', selectedRecepcion.boleta);
+    console.log('🖨️ [RECIBA] Datos actuales:', {
+      productoSeleccionado,
+      proveedorSeleccionado,
+      pesoBruto,
+      pesoTara,
+      pesoNeto
+    });
     
     // Validar que tenga los datos necesarios
     if (!productoSeleccionado || !proveedorSeleccionado) {
       toast.error('Debe completar producto y proveedor antes de imprimir');
+      console.error('❌ [RECIBA] Validación fallida: producto o proveedor faltante');
       return;
     }
 
-    if (pesoBruto <= 0 || pesoTara <= 0) {
-      toast.error('Debe registrar los pesos antes de imprimir');
+    // Permitir imprimir aunque los pesos sean 0 (puede ser una boleta sin pesaje aún)
+    // Solo validar que existan los datos básicos
+    if (pesoBruto < 0 || pesoTara < 0) {
+      toast.error('Los pesos no pueden ser negativos');
+      console.error('❌ [RECIBA] Validación fallida: pesos negativos');
       return;
     }
 
@@ -560,22 +576,25 @@ const Reciba = () => {
       
       if (!producto || !proveedor) {
         toast.error('Error al obtener datos del producto o proveedor');
+        console.error('❌ [RECIBA] Producto o proveedor no encontrado:', { productoSeleccionado, proveedorSeleccionado });
         return;
       }
 
-      // Calcular descuentos
+      console.log('✅ [RECIBA] Producto y proveedor encontrados:', { producto: producto.nombre, proveedor: proveedor.empresa });
+
+      // Calcular descuentos (puede ser 0 si no hay análisis)
       const { totalDescuentoKg, pesoNetoAnalizado } = calcularDescuentos();
 
       // Preparar datos para la API
       const fechaActual = format(new Date(), 'dd/MM/yyyy', { locale: es });
       
-      // Formatear fechas y horas
+      // Formatear fechas y horas (usar valores por defecto si no existen)
       const fechaHoraBruto = formatearFechaHora(horaPesoBruto);
       const fechaHoraTara = formatearFechaHora(horaPesoTara);
       const fechaHoraNeto = formatearFechaHora(horaPesoNeto);
       
       // Convertir análisis a formato esperado por la API
-      const analisisArray = Object.entries(valoresAnalisis).map(([nombre, valor]) => ({
+      const analisisArray = Object.entries(valoresAnalisis || {}).map(([nombre, valor]) => ({
         nombre,
         valor,
         unidad: 'kg'
@@ -593,35 +612,41 @@ const Reciba = () => {
         chofer: selectedRecepcion.chofer || 'N/A',
         analisis: analisisArray,
         pesos_info1: {
-          peso_bruto: pesoBruto,
-          peso_tara: pesoTara,
-          peso_neto: pesoNeto,
-          fechaneto: fechaHoraNeto.fecha,
-          fechabruto: fechaHoraBruto.fecha,
-          fechatara: fechaHoraTara.fecha,
-          horabruto: fechaHoraBruto.hora,
-          horatara: fechaHoraTara.hora
+          peso_bruto: pesoBruto || 0,
+          peso_tara: pesoTara || 0,
+          peso_neto: pesoNeto || (pesoBruto - pesoTara) || 0,
+          fechaneto: fechaHoraNeto.fecha || fechaActual,
+          fechabruto: fechaHoraBruto.fecha || fechaActual,
+          fechatara: fechaHoraTara.fecha || fechaActual,
+          horabruto: fechaHoraBruto.hora || '00:00',
+          horatara: fechaHoraTara.hora || '00:00'
         },
         pesos_info2: {
-          deduccion: totalDescuentoKg,
-          peso_neto_analizado: pesoNetoAnalizado
+          deduccion: totalDescuentoKg || 0,
+          peso_neto_analizado: pesoNetoAnalizado || (pesoBruto - pesoTara) || 0
         },
         observaciones: observaciones || ''
       };
 
+      console.log('📄 [RECIBA] Datos de boleta preparados:', boletaData);
       toast.loading('Generando boleta PDF...', { id: 'generating-pdf' });
       
       const result = await generateBoletaRecibaPDF(boletaData);
       
+      console.log('📄 [RECIBA] Resultado de generación:', result);
+      
       if (result.success) {
         toast.success('Boleta generada correctamente', { id: 'generating-pdf' });
+        console.log('✅ [RECIBA] Abriendo PDF...');
         openPDF(result.pdf_url, result.pdf_base64);
       } else {
-        toast.error(result.error || 'Error al generar boleta PDF', { id: 'generating-pdf' });
+        console.error('❌ [RECIBA] Error al generar PDF:', result.error);
+        toast.error(result.error || 'Error al generar boleta PDF', { id: 'generating-pdf', duration: 5000 });
       }
     } catch (error) {
+      console.error('❌ [RECIBA] Error en handleImprimir:', error);
       handleError(error, { module: 'Reciba', action: 'imprimirBoleta' });
-      toast.dismiss('generating-pdf-reciba');
+      toast.error('Error al imprimir boleta. Revisa la consola para más detalles.', { id: 'generating-pdf', duration: 5000 });
     }
   };
 
