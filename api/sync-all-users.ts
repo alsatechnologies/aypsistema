@@ -113,7 +113,7 @@ export default async function handler(
     for (const usuario of usuariosData) {
       try {
         const existingAuthUser = authUsersList.users.find(
-          u => u.email?.toLowerCase() === usuario.correo.toLowerCase()
+          (u: any) => u.email?.toLowerCase() === usuario.correo.toLowerCase()
         );
 
         // Contraseña por defecto: Admin123 para administrador, el nombre_usuario para otros
