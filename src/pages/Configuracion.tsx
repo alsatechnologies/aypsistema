@@ -490,9 +490,18 @@ const Configuracion = () => {
           } else {
             toast.success('Usuario creado en la base de datos. Nota: Puede que necesite ser creado manualmente en auth.users para poder iniciar sesión.');
           }
-        } catch (dbError) {
+        } catch (dbError: any) {
           console.error('Error creando usuario en base de datos:', dbError);
-          toast.error('Error al crear usuario en la base de datos: ' + (dbError instanceof Error ? dbError.message : 'Error desconocido'));
+          
+          // Manejar error de duplicado de manera más clara
+          if (dbError?.code === '23505' || dbError?.message?.includes('duplicate key')) {
+            const campo = dbError?.message?.includes('correo') ? 'correo electrónico' : 
+                         dbError?.message?.includes('nombre_usuario') ? 'nombre de usuario' : 
+                         'dato';
+            toast.error(`Ya existe un usuario con este ${campo}. Si el usuario está inactivo, puedes reactivarlo desde la lista.`);
+          } else {
+            toast.error('Error al crear usuario en la base de datos: ' + (dbError instanceof Error ? dbError.message : 'Error desconocido'));
+          }
           throw dbError; // Re-lanzar para que el catch general lo maneje
         }
       }
