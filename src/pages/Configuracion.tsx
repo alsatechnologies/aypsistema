@@ -439,52 +439,41 @@ const Configuracion = () => {
         }
 
         // Crear en la tabla usuarios usando endpoint serverless (bypass RLS)
-        try {
-          console.log('🔧 [CREATE USUARIO] Llamando a endpoint serverless...');
-          const createUsuarioResponse = await fetch('/api/create-usuario', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              nombre_completo: nuevoUsuario.nombreCompleto,
-              nombre_usuario: nuevoUsuario.nombreUsuario || null,
-              correo: emailFinal,
-              contrasena_hash: contrasenaHash,
-              rol: nuevoUsuario.rol,
-              activo: true
-            }),
-          });
+        const createUsuarioResponse = await fetch('/api/create-usuario', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            nombre_completo: nuevoUsuario.nombreCompleto,
+            nombre_usuario: nuevoUsuario.nombreUsuario || null,
+            correo: emailFinal,
+            contrasena_hash: contrasenaHash,
+            rol: nuevoUsuario.rol,
+            activo: true
+          }),
+        });
 
-          const createUsuarioResult = await createUsuarioResponse.json();
+        const createUsuarioResult = await createUsuarioResponse.json();
 
-          if (!createUsuarioResponse.ok || !createUsuarioResult.success) {
-            const errorMsg = createUsuarioResult.error || 'Error al crear usuario';
-            console.error('❌ [CREATE USUARIO] Error del endpoint:', errorMsg);
-            
-            // Manejar error de duplicado de manera más clara
-            if (errorMsg.includes('duplicate key') || createUsuarioResult.code === '23505') {
-              const campo = errorMsg.includes('correo') ? 'correo electrónico' : 
-                           errorMsg.includes('nombre_usuario') ? 'nombre de usuario' : 
-                           'dato';
-              toast.error(`Ya existe un usuario con este ${campo}. Si el usuario está inactivo, puedes reactivarlo desde la lista.`);
-            } else {
-              toast.error(`Error al crear usuario: ${errorMsg}`);
-            }
-            return;
+        if (!createUsuarioResponse.ok || !createUsuarioResult.success) {
+          const errorMsg = createUsuarioResult.error || 'Error al crear usuario';
+          
+          // Manejar error de duplicado
+          if (errorMsg.includes('duplicate key') || createUsuarioResult.code === '23505') {
+            const campo = errorMsg.includes('correo') ? 'correo electrónico' : 
+                         errorMsg.includes('nombre_usuario') ? 'nombre de usuario' : 
+                         'dato';
+            toast.error(`Ya existe un usuario con este ${campo}`);
+          } else {
+            toast.error(`Error: ${errorMsg}`);
           }
-
-          console.log('✅ [CREATE USUARIO] Usuario creado correctamente');
-          
-          // Recargar lista de usuarios
-          await loadUsuarios();
-          
-          toast.success('Usuario creado correctamente');
-        } catch (dbError: any) {
-          console.error('❌ [CREATE USUARIO] Error en catch:', dbError);
-          toast.error('Error al crear usuario: ' + (dbError instanceof Error ? dbError.message : 'Error desconocido'));
-          return; // No re-lanzar para evitar que se cierre el diálogo
+          return;
         }
+
+        // Recargar lista de usuarios
+        await loadUsuarios();
+        toast.success('Usuario creado correctamente');
       }
 
       setNuevoUsuario({ nombreCompleto: '', nombreUsuario: '', correo: '', contrasena: '', rol: '' });
@@ -543,82 +532,32 @@ const Configuracion = () => {
           return;
         }
 
-        // IMPORTANTE: Usar endpoint serverless que bypass RLS usando Service Role Key
-        // NO usar deleteUsuarioDB directamente porque falla por RLS
-        // NUNCA llamar a deleteUsuarioDB aquí - siempre usar el endpoint
-        // Si ves un PATCH directo a Supabase, significa que el código compilado está desactualizado
-        try {
-          console.log('🔧 [DELETE USUARIO] ============================================');
-          console.log('🔧 [DELETE USUARIO] Iniciando eliminación vía endpoint serverless');
-          console.log('🔧 [DELETE USUARIO] ID:', deleteDialog.id);
-          console.log('🔧 [DELETE USUARIO] Email:', usuarioAEliminar.correo);
-          // Usar endpoint serverless (solo funciona en producción/Vercel)
-          const apiUrl = '/api/delete-usuario';
-          
-          console.log('🔧 [DELETE USUARIO] URL del endpoint:', apiUrl);
-          
-          // Verificar que NO estamos usando deleteUsuarioDB
-          // Si deleteUsuarioDB está definido, es un error - no debe usarse
-          if (deleteUsuarioDB !== undefined) {
-            console.error('❌❌❌ ERROR CRÍTICO: deleteUsuarioDB está disponible. NO DEBE USARSE. ❌❌❌');
-            throw new Error('deleteUsuarioDB no debe estar disponible. El código compilado está desactualizado.');
-          }
-          
-          const deleteResponse = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              usuarioId: deleteDialog.id,
-              email: usuarioAEliminar.correo
-            }),
-          });
+        // Usar endpoint serverless que bypass RLS
+        const deleteResponse = await fetch('/api/delete-usuario', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            usuarioId: deleteDialog.id,
+            email: usuarioAEliminar.correo
+          }),
+        });
 
-          console.log('🔧 [DELETE USUARIO] Response status:', deleteResponse.status);
-          console.log('🔧 [DELETE USUARIO] Response ok:', deleteResponse.ok);
-          console.log('🔧 [DELETE USUARIO] Response headers:', Object.fromEntries(deleteResponse.headers.entries()));
+        const result = await deleteResponse.json();
 
-          // Verificar si la respuesta tiene contenido antes de parsear
-          const responseText = await deleteResponse.text();
-          console.log('🔧 [DELETE USUARIO] Response text:', responseText);
-
-          if (!responseText || responseText.trim() === '') {
-            throw new Error('El servidor devolvió una respuesta vacía. Verifica que el endpoint /api/delete-usuario esté desplegado correctamente.');
-          }
-
-          let result;
-          try {
-            result = JSON.parse(responseText);
-            console.log('🔧 [DELETE USUARIO] Response data:', result);
-          } catch (parseError) {
-            console.error('❌ [DELETE USUARIO] Error parseando JSON:', parseError);
-            console.error('❌ [DELETE USUARIO] Response text recibido:', responseText);
-            throw new Error(`Error al parsear respuesta del servidor: ${parseError instanceof Error ? parseError.message : 'Error desconocido'}`);
-          }
-
-          if (!deleteResponse.ok || !result.success) {
-            // Mostrar error más detallado
-            const errorMsg = result.error || 'Error al eliminar usuario';
-            const details = result.details ? ` (${result.details.message || result.details.code || ''})` : '';
-            console.error('❌ [DELETE USUARIO] Error del endpoint:', errorMsg, details);
-            throw new Error(`${errorMsg}${details}`);
-          }
-
-          console.log('✅ [DELETE USUARIO] Usuario eliminado correctamente');
-          // Recargar lista de usuarios
-          await loadUsuarios();
-          toast.success('Usuario eliminado correctamente');
+        if (!deleteResponse.ok || !result.success) {
+          const errorMsg = result.error || 'Error al eliminar usuario';
+          toast.error(errorMsg);
           setDeleteDialog(null);
-        } catch (error) {
-          console.error('❌ [DELETE USUARIO] Error en catch:', error);
-          const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
-          toast.error(`Error al eliminar usuario: ${errorMessage}`);
-          // NO re-lanzar el error para evitar que se cierre el diálogo
-          setDeleteDialog(null);
-          return; // Salir temprano para evitar continuar
+          return;
         }
-        return; // Salir temprano después de eliminar usuario
+
+        // Recargar lista de usuarios
+        await loadUsuarios();
+        toast.success('Usuario eliminado correctamente');
+        setDeleteDialog(null);
+        return;
       }
 
       // Solo cerrar diálogo si no es usuario (usuarios ya lo manejan internamente)

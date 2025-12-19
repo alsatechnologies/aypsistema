@@ -6,9 +6,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-// Leer variables de entorno - en Vercel las funciones serverless pueden acceder a todas las variables
-// Intentar múltiples formas de leer las variables
-// IMPORTANTE: En Vercel, las variables pueden estar con o sin prefijo VITE_
+// Leer TODAS las variantes posibles de variables de entorno
 const SUPABASE_URL = 
   process.env.VITE_SUPABASE_URL || 
   process.env.SUPABASE_URL || 
@@ -24,10 +22,12 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ) {
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
   if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     return res.status(200).end();
   }
 
@@ -36,32 +36,12 @@ export default async function handler(
   }
 
   try {
-    // Log para debugging (sin exponer valores sensibles)
-    const envKeys = Object.keys(process.env).filter(k => k.includes('SUPABASE'));
-    console.log('🔧 [DELETE-USUARIO] Verificando variables de entorno...');
-    console.log('🔧 [DELETE-USUARIO] SUPABASE_URL presente:', !!SUPABASE_URL);
-    console.log('🔧 [DELETE-USUARIO] SUPABASE_SERVICE_ROLE_KEY presente:', !!SUPABASE_SERVICE_ROLE_KEY);
-    console.log('🔧 [DELETE-USUARIO] Variables de entorno disponibles:', envKeys);
-    console.log('🔧 [DELETE-USUARIO] VITE_SUPABASE_URL:', process.env.VITE_SUPABASE_URL ? 'presente' : 'FALTANTE');
-    console.log('🔧 [DELETE-USUARIO] SUPABASE_URL:', process.env.SUPABASE_URL ? 'presente' : 'FALTANTE');
-    console.log('🔧 [DELETE-USUARIO] SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'presente' : 'FALTANTE');
-    console.log('🔧 [DELETE-USUARIO] VITE_SUPABASE_SERVICE_ROLE_KEY:', process.env.VITE_SUPABASE_SERVICE_ROLE_KEY ? 'presente' : 'FALTANTE');
-    
+    // Verificar variables de entorno
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      console.error('❌ [DELETE-USUARIO] Variables faltantes:', {
-        SUPABASE_URL: SUPABASE_URL ? 'presente' : 'FALTANTE',
-        SUPABASE_SERVICE_ROLE_KEY: SUPABASE_SERVICE_ROLE_KEY ? 'presente' : 'FALTANTE',
-        envKeys: envKeys,
-        allEnvKeys: Object.keys(process.env).slice(0, 20) // Primeras 20 para debugging
-      });
+      console.error('❌ Variables de entorno faltantes');
       return res.status(500).json({
         success: false,
-        error: 'Supabase no está configurado correctamente. Verifica que VITE_SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY estén configuradas en Vercel.',
-        debug: {
-          hasUrl: !!SUPABASE_URL,
-          hasKey: !!SUPABASE_SERVICE_ROLE_KEY,
-          envKeysWithSupabase: envKeys
-        }
+        error: 'Configuración de Supabase incompleta',
       });
     }
 
@@ -74,6 +54,7 @@ export default async function handler(
       });
     }
 
+    // Crear cliente con Service Role Key
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: {
         autoRefreshToken: false,
@@ -81,67 +62,61 @@ export default async function handler(
       }
     });
 
+    // Verificar que no sea el administrador (protección)
+    const { data: usuarioData } = await supabaseAdmin
+      .from('usuarios')
+      .select('rol, correo')
+      .eq('id', usuarioId)
+      .single();
+
+    if (usuarioData?.rol === 'Administrador') {
+      return res.status(400).json({
+        success: false,
+        error: 'No se puede eliminar el usuario administrador',
+      });
+    }
+
     // Eliminar de auth.users si se proporciona el email
     if (email) {
       try {
-        // Buscar usuario por email usando listUsers (getUserByEmail no existe en la API)
-        const { data: usersList, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+        const { data: usersList } = await supabaseAdmin.auth.admin.listUsers();
+        const userToDelete = usersList?.users.find(
+          (u: any) => u.email?.toLowerCase() === email.toLowerCase()
+        );
         
-        if (listError) {
-          console.warn('Error al listar usuarios en auth.users:', listError.message);
-        } else {
-          // Buscar el usuario por email
-          const userToDelete = usersList.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
-          
-          if (userToDelete) {
-            const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(userToDelete.id);
-            if (deleteAuthError) {
-              console.warn('Advertencia: No se pudo eliminar de auth.users:', deleteAuthError.message);
-            } else {
-              console.log('Usuario eliminado de auth.users:', email);
-            }
-          } else {
-            console.log('Usuario no encontrado en auth.users (puede que no exista):', email);
-          }
+        if (userToDelete) {
+          await supabaseAdmin.auth.admin.deleteUser(userToDelete.id);
         }
       } catch (authError) {
-        console.warn('Advertencia: Error al eliminar de auth.users:', authError);
-        // Continuar de todas formas - el soft delete en usuarios es más importante
+        // Continuar aunque falle auth.users
+        console.warn('⚠️ No se pudo eliminar de auth.users:', authError);
       }
     }
 
-    // Eliminar PERMANENTEMENTE de la tabla usuarios (DELETE usando Service Role Key)
+    // Eliminar PERMANENTEMENTE de la tabla usuarios
     const { error: deleteError } = await supabaseAdmin
       .from('usuarios')
       .delete()
       .eq('id', usuarioId);
 
     if (deleteError) {
-      console.error('Error eliminando usuario:', deleteError);
-      console.error('Detalles del error:', JSON.stringify(deleteError, null, 2));
+      console.error('❌ Error eliminando usuario:', deleteError);
       return res.status(400).json({
         success: false,
-        error: `Error al eliminar usuario: ${deleteError.message}`,
-        details: deleteError,
+        error: deleteError.message || 'Error al eliminar usuario',
         code: deleteError.code,
-        hint: deleteError.hint,
       });
     }
 
-    console.log(`Usuario ${usuarioId} eliminado permanentemente`);
-
-    res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(200).json({
       success: true,
       message: 'Usuario eliminado correctamente',
     });
   } catch (error) {
-    console.error('Error en delete-usuario:', error);
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    console.error('❌ Error:', error);
     return res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Error desconocido',
     });
   }
 }
-
