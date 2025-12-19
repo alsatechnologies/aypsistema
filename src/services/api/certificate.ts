@@ -107,14 +107,52 @@ export async function generateBoletaRecibaPDF(data: BoletaRecibaRequest): Promis
       // Intentar leer como JSON primero (si es un error)
       const contentType = response.headers.get('content-type');
       let errorMessage = `Error ${response.status}: ${response.statusText}`;
+      let errorDetail = '';
       
       if (contentType && contentType.includes('application/json')) {
         try {
           const errorData = await response.json();
-          errorMessage = errorData.message || errorData.error || errorMessage;
           console.error('[CERTIFICATE] Error de API (JSON):', errorData);
+          
+          // Obtener el mensaje de error
+          errorMessage = errorData.message || errorData.error || errorMessage;
+          
+          // Intentar parsear el mensaje si viene como JSON string anidado
+          if (typeof errorMessage === 'string') {
+            // Si el mensaje es un JSON string, parsearlo
+            if (errorMessage.startsWith('{') || errorMessage.startsWith('[')) {
+              try {
+                const parsedMessage = JSON.parse(errorMessage);
+                errorDetail = parsedMessage.detail || parsedMessage.message || errorMessage;
+              } catch (e) {
+                errorDetail = errorMessage;
+              }
+            } else {
+              errorDetail = errorMessage;
+            }
+            
+            // También verificar si hay un campo detail directo
+            if (errorData.detail) {
+              errorDetail = errorData.detail;
+            }
+            
+            // Traducir errores comunes a mensajes más amigables
+            if (errorDetail.includes('logo.png') || errorDetail.includes('Cannot open resource')) {
+              errorDetail = 'Error en el servidor de generación de PDF: No se encuentra el archivo del logo. Por favor, contacta al administrador de la API de certificados.';
+            } else if (errorDetail.includes('Error generando el PDF')) {
+              // Extraer el detalle del error si está disponible
+              const match = errorDetail.match(/Error generando el PDF: (.+)/);
+              if (match && match[1]) {
+                errorDetail = `Error al generar el PDF: ${match[1]}`;
+              }
+            }
+          } else {
+            errorDetail = String(errorMessage);
+          }
+          
         } catch (e) {
           console.error('[CERTIFICATE] No se pudo parsear error como JSON:', e);
+          errorDetail = errorMessage;
         }
       } else {
         // Si no es JSON, intentar leer como texto
@@ -122,14 +160,28 @@ export async function generateBoletaRecibaPDF(data: BoletaRecibaRequest): Promis
           const errorText = await response.text();
           if (errorText) {
             errorMessage = errorText;
+            errorDetail = errorText;
+            // Intentar parsear si es JSON string
+            if (errorText.startsWith('{')) {
+              try {
+                const parsed = JSON.parse(errorText);
+                errorDetail = parsed.detail || parsed.message || errorText;
+                if (errorDetail.includes('logo.png') || errorDetail.includes('Cannot open resource')) {
+                  errorDetail = 'Error en el servidor de generación de PDF: No se encuentra el logo. Por favor, contacta al administrador del sistema.';
+                }
+              } catch (e) {
+                // No es JSON válido, usar el texto tal cual
+              }
+            }
             console.error('[CERTIFICATE] Error de API (texto):', errorText);
           }
         } catch (e) {
           console.error('[CERTIFICATE] No se pudo leer error:', e);
+          errorDetail = errorMessage;
         }
       }
       
-      throw new Error(errorMessage);
+      throw new Error(errorDetail || errorMessage);
     }
 
     // Verificar que la respuesta sea un PDF
