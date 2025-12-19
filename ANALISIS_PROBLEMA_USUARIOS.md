@@ -32,14 +32,35 @@ Y también con el prefijo `VITE_` para el frontend:
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 
-## Acción Requerida
+## Acción Requerida (URGENTE)
 
-1. En Vercel → Settings → Environment Variables
-2. Verificar que existan AMBAS versiones:
-   - `SUPABASE_URL` (para serverless)
-   - `VITE_SUPABASE_URL` (para frontend)
-   - `SUPABASE_SERVICE_ROLE_KEY` (para serverless)
-   - `VITE_SUPABASE_ANON_KEY` (para frontend)
+**Problema identificado**: Solo tienes variables con prefijo `VITE_`, pero las funciones serverless necesitan variables SIN prefijo.
 
-3. Si solo existen con prefijo `VITE_`, agregar las versiones sin prefijo
+### Variables que TIENES:
+- ✅ `VITE_SUPABASE_URL`
+- ✅ `VITE_SUPABASE_ANON_KEY`
+
+### Variables que FALTAN (CRÍTICAS):
+- ❌ `SUPABASE_URL` (sin VITE_)
+- ❌ `SUPABASE_SERVICE_ROLE_KEY` (sin VITE_)
+
+### Solución:
+
+1. Ve a Vercel → Settings → Environment Variables
+2. Agrega estas dos variables nuevas:
+
+   **Variable 1:**
+   - Key: `SUPABASE_URL`
+   - Value: El mismo valor que `VITE_SUPABASE_URL`
+   - Environments: Production, Preview, Development
+
+   **Variable 2:**
+   - Key: `SUPABASE_SERVICE_ROLE_KEY`
+   - Value: Tu Service Role Key de Supabase
+     - Obtenerla en: Supabase Dashboard → Settings → API → service_role key
+   - Environments: Production, Preview, Development
+
+3. Haz un redeploy manual después de agregar las variables
+
+**Ver archivo `CONFIGURAR_VARIABLES_VERCEL.md` para instrucciones detalladas**
 
