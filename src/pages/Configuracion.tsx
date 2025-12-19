@@ -83,7 +83,7 @@ const Configuracion = () => {
     loading: usuariosLoading,
     addUsuario: addUsuarioDB,
     updateUsuario: updateUsuarioDB,
-    deleteUsuario: deleteUsuarioDB,
+    // deleteUsuario: deleteUsuarioDB, // NO USAR - siempre usar endpoint serverless
     loadUsuarios
   } = useUsuarios();
 
@@ -531,10 +531,18 @@ const Configuracion = () => {
         // IMPORTANTE: Usar endpoint serverless que bypass RLS usando Service Role Key
         // NO usar deleteUsuarioDB directamente porque falla por RLS
         // NUNCA llamar a deleteUsuarioDB aquí - siempre usar el endpoint
+        // Si ves un PATCH directo a Supabase, significa que el código compilado está desactualizado
         try {
+          console.log('🔧 [DELETE USUARIO] ============================================');
           console.log('🔧 [DELETE USUARIO] Iniciando eliminación vía endpoint serverless');
           console.log('🔧 [DELETE USUARIO] ID:', deleteDialog.id);
           console.log('🔧 [DELETE USUARIO] Email:', usuarioAEliminar.correo);
+          console.log('🔧 [DELETE USUARIO] URL del endpoint:', '/api/delete-usuario');
+          
+          // Verificar que NO estamos usando deleteUsuarioDB
+          if (typeof deleteUsuarioDB === 'function') {
+            console.warn('⚠️ [DELETE USUARIO] ADVERTENCIA: deleteUsuarioDB está disponible pero NO debe usarse');
+          }
           
           const deleteResponse = await fetch('/api/delete-usuario', {
             method: 'POST',
