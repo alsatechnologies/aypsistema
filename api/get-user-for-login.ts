@@ -6,8 +6,17 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || '';
+// Leer variables de entorno - intentar múltiples formas
+const SUPABASE_URL = 
+  process.env.VITE_SUPABASE_URL || 
+  process.env.SUPABASE_URL || 
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 
+  '';
+const SUPABASE_ANON_KEY = 
+  process.env.VITE_SUPABASE_ANON_KEY || 
+  process.env.SUPABASE_ANON_KEY || 
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
+  '';
 
 export default async function handler(
   req: VercelRequest,
@@ -25,7 +34,17 @@ export default async function handler(
   }
 
   try {
+    // Log para debugging (sin exponer valores sensibles)
+    console.log('🔧 [GET-USER-FOR-LOGIN] Verificando variables de entorno...');
+    console.log('🔧 [GET-USER-FOR-LOGIN] SUPABASE_URL presente:', !!SUPABASE_URL);
+    console.log('🔧 [GET-USER-FOR-LOGIN] SUPABASE_ANON_KEY presente:', !!SUPABASE_ANON_KEY);
+    
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      console.error('❌ [GET-USER-FOR-LOGIN] Variables faltantes:', {
+        SUPABASE_URL: SUPABASE_URL ? 'presente' : 'FALTANTE',
+        SUPABASE_ANON_KEY: SUPABASE_ANON_KEY ? 'presente' : 'FALTANTE',
+        envKeys: Object.keys(process.env).filter(k => k.includes('SUPABASE'))
+      });
       return res.status(500).json({
         success: false,
         error: 'Supabase no está configurado en el servidor. Verifica las variables de entorno VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en Vercel.',
