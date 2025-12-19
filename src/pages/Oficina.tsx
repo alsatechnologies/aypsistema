@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Plus, Search, FileText, Clock, CheckCircle, Printer, Eye, Truck, Ship, Calendar, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -162,11 +162,33 @@ const Oficina = () => {
     }
 
     try {
-      // Generar boleta temporal
-      const tempBoleta = `TEMP-${Date.now()}`;
+      // Obtener producto para generar boleta
+      const producto = productos.find(p => p.id === parseInt(nuevaOrdenData.productoId));
+      if (!producto) {
+        toast.error('Producto no encontrado');
+        return;
+      }
 
-      await createOrden({
-        boleta: tempBoleta,
+      // Generar boleta final inmediatamente (no usar TEMP-)
+      const tipoOperacion: TipoOperacion = nuevaOrdenData.tipoOperacion === 'Reciba' 
+        ? 'Entradas' 
+        : nuevaOrdenData.tipoOperacion === 'Embarque Nacional' 
+        ? 'Embarque Nacional' 
+        : 'Exportación';
+      
+      // Usar codigo_boleta de la base de datos, con fallback al nombre si no existe
+      const codigoBoleta = producto.codigo_boleta || producto.nombre;
+      
+      // Calcular consecutivo anual considerando todas las boletas existentes
+      const { calcularSiguienteConsecutivo } = await import('@/utils/consecutivoBoleta');
+      const consecutivo = await calcularSiguienteConsecutivo(tipoOperacion, parseInt(nuevaOrdenData.productoId), codigoBoleta);
+      
+      // Generar boleta final
+      const boletaFinal = generateNumeroBoleta(tipoOperacion, codigoBoleta, consecutivo);
+
+      // Crear orden con boleta final
+      const ordenCreada = await createOrden({
+        boleta: boletaFinal,
         producto_id: parseInt(nuevaOrdenData.productoId),
         cliente_id: nuevaOrdenData.tipoOperacion === 'Reciba' ? null : (nuevaOrdenData.clienteId ? parseInt(nuevaOrdenData.clienteId) : null),
         proveedor_id: nuevaOrdenData.tipoOperacion === 'Reciba' ? (nuevaOrdenData.proveedorId ? parseInt(nuevaOrdenData.proveedorId) : null) : null,
@@ -175,13 +197,50 @@ const Oficina = () => {
         vehiculo: nuevaOrdenData.vehiculo || null,
         placas: nuevaOrdenData.placas || null,
         fecha_hora_ingreso: getCurrentDateTimeMST(),
-        estatus: 'Nuevo',
+        estatus: 'En Proceso', // Directamente en proceso, lista para imprimir
         tipo_operacion: nuevaOrdenData.tipoOperacion,
         tipo_transporte: nuevaOrdenData.tipoTransporte || null
       });
 
+      // Crear embarque o recepción según el tipo de operación
+      const fechaActual = new Date();
+      const fechaMST = `${fechaActual.getFullYear()}-${String(fechaActual.getMonth() + 1).padStart(2, '0')}-${String(fechaActual.getDate()).padStart(2, '0')}`;
+
+      if (nuevaOrdenData.tipoOperacion === 'Reciba') {
+        if (nuevaOrdenData.proveedorId) {
+          await createRecepcion({
+            boleta: boletaFinal,
+            producto_id: parseInt(nuevaOrdenData.productoId),
+            proveedor_id: parseInt(nuevaOrdenData.proveedorId),
+            chofer: nuevaOrdenData.chofer || null,
+            placas: nuevaOrdenData.placas || null,
+            fecha: fechaMST,
+            tipo_transporte: nuevaOrdenData.tipoTransporte || null,
+            tipo_bascula: nuevaOrdenData.tipoTransporte === 'Ferroviaria' ? 'Ferroviaria' : 'Camión',
+            estatus: 'Pendiente'
+          });
+        }
+      } else {
+        // Embarque Nacional o Exportación
+        if (nuevaOrdenData.clienteId) {
+          await createEmbarque({
+            boleta: boletaFinal,
+            producto_id: parseInt(nuevaOrdenData.productoId),
+            cliente_id: parseInt(nuevaOrdenData.clienteId),
+            chofer: nuevaOrdenData.chofer || null,
+            placas: nuevaOrdenData.placas || null,
+            destino: nuevaOrdenData.destino || null,
+            fecha: fechaMST,
+            tipo_transporte: nuevaOrdenData.tipoTransporte || null,
+            tipo_embarque: nuevaOrdenData.tipoOperacion === 'Embarque Nacional' ? 'Nacional' : 'Exportación',
+            estatus: 'Pendiente'
+          });
+        }
+      }
+
       await loadOrdenes();
-      toast.success('Orden creada correctamente');
+      
+      // Cerrar diálogo de creación
       setIsNuevaOrdenOpen(false);
       
       // Resetear formulario
@@ -196,6 +255,29 @@ const Oficina = () => {
         vehiculo: '',
         placas: ''
       });
+
+      // Preparar orden para vista previa
+      const ordenParaPreview: Orden = {
+        id: ordenCreada.id,
+        boleta: boletaFinal,
+        producto: producto.nombre,
+        cliente: nuevaOrdenData.tipoOperacion === 'Reciba' 
+          ? null 
+          : (clientesDB.find(c => c.id === parseInt(nuevaOrdenData.clienteId))?.empresa || null),
+        tipoOperacion: nuevaOrdenData.tipoOperacion,
+        destino: nuevaOrdenData.destino || null,
+        nombreChofer: nuevaOrdenData.chofer || null,
+        vehiculo: nuevaOrdenData.vehiculo || null,
+        placas: nuevaOrdenData.placas || null,
+        fechaHoraIngreso: getCurrentDateTimeMST(),
+        estatus: 'En Proceso'
+      };
+
+      // Abrir vista previa directamente
+      setSelectedOrden(ordenParaPreview);
+      setShowPreview(true);
+      
+      toast.success('Orden creada y lista para imprimir');
     } catch (error) {
       console.error('Error creating orden:', error);
       toast.error('Error al crear la orden');
@@ -489,12 +571,13 @@ const Oficina = () => {
             </div>
           </div>
           <Dialog open={isNuevaOrdenOpen} onOpenChange={setIsNuevaOrdenOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-primary hover:bg-primary/90">
-                <Plus className="h-4 w-4 mr-2" />
-                Nueva Orden
-              </Button>
-            </DialogTrigger>
+            <Button 
+              className="bg-primary hover:bg-primary/90"
+              onClick={() => setIsNuevaOrdenOpen(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Nueva Orden
+            </Button>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>Crear Nueva Orden</DialogTitle>
