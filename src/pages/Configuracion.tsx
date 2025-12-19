@@ -554,8 +554,10 @@ const Configuracion = () => {
           console.log('🔧 [DELETE USUARIO] URL del endpoint:', apiUrl);
           
           // Verificar que NO estamos usando deleteUsuarioDB
-          if (typeof deleteUsuarioDB === 'function') {
-            console.warn('⚠️ [DELETE USUARIO] ADVERTENCIA: deleteUsuarioDB está disponible pero NO debe usarse');
+          // Si deleteUsuarioDB está definido, es un error - no debe usarse
+          if (deleteUsuarioDB !== undefined) {
+            console.error('❌❌❌ ERROR CRÍTICO: deleteUsuarioDB está disponible. NO DEBE USARSE. ❌❌❌');
+            throw new Error('deleteUsuarioDB no debe estar disponible. El código compilado está desactualizado.');
           }
           
           const deleteResponse = await fetch(apiUrl, {
