@@ -540,14 +540,21 @@ const Configuracion = () => {
           console.log('🔧 [DELETE USUARIO] Iniciando eliminación vía endpoint serverless');
           console.log('🔧 [DELETE USUARIO] ID:', deleteDialog.id);
           console.log('🔧 [DELETE USUARIO] Email:', usuarioAEliminar.correo);
-          console.log('🔧 [DELETE USUARIO] URL del endpoint:', '/api/delete-usuario');
+          // En desarrollo local, usar el endpoint de Vercel directamente
+          const isDevelopment = import.meta.env.DEV;
+          const apiUrl = isDevelopment 
+            ? 'https://aypsistema.vercel.app/api/delete-usuario'
+            : '/api/delete-usuario';
+          
+          console.log('🔧 [DELETE USUARIO] URL del endpoint:', apiUrl);
+          console.log('🔧 [DELETE USUARIO] Modo desarrollo:', isDevelopment);
           
           // Verificar que NO estamos usando deleteUsuarioDB
           if (typeof deleteUsuarioDB === 'function') {
             console.warn('⚠️ [DELETE USUARIO] ADVERTENCIA: deleteUsuarioDB está disponible pero NO debe usarse');
           }
           
-          const deleteResponse = await fetch('/api/delete-usuario', {
+          const deleteResponse = await fetch(apiUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
