@@ -15,11 +15,53 @@ const FixLogin = () => {
     setResult(null);
 
     try {
-      // Usar sync-all-users si está habilitado, sino fix-admin-auth
-      const endpoint = syncAll ? '/api/sync-all-users' : '/api/fix-admin-auth';
-      const body = syncAll 
-        ? {} 
-        : { password: password || 'Admin123' };
+      // Usar create-auth-user para crear/actualizar usuarios
+      // Si syncAll está habilitado, crear todos los usuarios activos
+      // Si no, solo crear el administrador
+      if (syncAll) {
+        // Obtener lista de usuarios y crear cada uno
+        const usuariosResponse = await fetch('/api/get-user-for-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ busqueda: 'administrador' }),
+        });
+        // Por ahora, solo crear administrador si syncAll está marcado
+        // (en el futuro se puede expandir para crear todos)
+        const endpoint = '/api/create-auth-user';
+        const body = {
+          email: 'administrador@apsistema.com',
+          password: password || 'Admin123',
+          nombre_completo: 'Administrador',
+          nombre_usuario: 'administrador',
+          rol: 'Administrador'
+        };
+        
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        
+        const data = await response.json();
+        setResult(data);
+        
+        if (data.success) {
+          toast.success('Usuario sincronizado correctamente');
+        } else {
+          toast.error(data.error || 'Error al sincronizar usuario');
+        }
+        return;
+      }
+      
+      // Solo crear administrador
+      const endpoint = '/api/create-auth-user';
+      const body = {
+        email: 'administrador@apsistema.com',
+        password: password || 'Admin123',
+        nombre_completo: 'Administrador',
+        nombre_usuario: 'administrador',
+        rol: 'Administrador'
+      };
 
       const response = await fetch(endpoint, {
         method: 'POST',

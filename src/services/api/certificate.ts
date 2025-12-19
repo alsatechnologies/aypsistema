@@ -5,8 +5,7 @@
  */
 
 // Usar las funciones serverless de Vercel como proxy para evitar problemas de CORS
-const CERTIFICATE_ENTRADA_API_URL = '/api/generate-certificate-entrada';
-const CERTIFICATE_SALIDA_API_URL = '/api/generate-certificate-salida';
+const CERTIFICATE_API_URL = '/api/generate-certificate';
 
 export interface AnalisisItem {
   nombre: string;
@@ -83,12 +82,12 @@ export async function generateBoletaRecibaPDF(data: BoletaRecibaRequest): Promis
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 35000);
     
-    const response = await fetch(CERTIFICATE_ENTRADA_API_URL, {
+    const response = await fetch(CERTIFICATE_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify({ tipo: 'entrada', ...data }),
       signal: controller.signal,
     }).catch((fetchError: any) => {
       clearTimeout(timeoutId);
@@ -105,14 +104,14 @@ export async function generateBoletaRecibaPDF(data: BoletaRecibaRequest): Promis
       throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
     }
 
-    // La función serverless siempre devuelve JSON
-    const result = await response.json();
+    // El nuevo endpoint devuelve PDF directamente, no JSON
+    const pdfBlob = await response.blob();
+    const pdfBase64 = await blobToBase64(pdfBlob);
+    
     return {
-      success: result.success !== false,
-      pdf_url: result.pdf_url,
-      pdf_base64: result.pdf_base64,
-      message: result.message || 'Boleta de entrada generada correctamente',
-      error: result.error,
+      success: true,
+      pdf_base64: pdfBase64,
+      message: 'Boleta de entrada generada correctamente',
     };
   } catch (error) {
     console.error('Error al generar boleta de entrada PDF:', error);
@@ -134,12 +133,12 @@ export async function generateBoletaEmbarquePDF(data: BoletaEmbarqueRequest): Pr
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 35000);
     
-    const response = await fetch(CERTIFICATE_SALIDA_API_URL, {
+    const response = await fetch(CERTIFICATE_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify({ tipo: 'salida', ...data }),
       signal: controller.signal,
     }).catch((fetchError: any) => {
       clearTimeout(timeoutId);
@@ -156,14 +155,14 @@ export async function generateBoletaEmbarquePDF(data: BoletaEmbarqueRequest): Pr
       throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
     }
 
-    // La función serverless siempre devuelve JSON
-    const result = await response.json();
+    // El nuevo endpoint devuelve PDF directamente, no JSON
+    const pdfBlob = await response.blob();
+    const pdfBase64 = await blobToBase64(pdfBlob);
+    
     return {
-      success: result.success !== false,
-      pdf_url: result.pdf_url,
-      pdf_base64: result.pdf_base64,
-      message: result.message || 'Boleta de salida generada correctamente',
-      error: result.error,
+      success: true,
+      pdf_base64: pdfBase64,
+      message: 'Boleta de salida generada correctamente',
     };
   } catch (error) {
     console.error('Error al generar boleta de salida PDF:', error);
@@ -172,6 +171,21 @@ export async function generateBoletaEmbarquePDF(data: BoletaEmbarqueRequest): Pr
       error: error instanceof Error ? error.message : 'Error desconocido al generar PDF de salida',
     };
   }
+}
+
+/**
+ * Convierte un Blob a base64
+ */
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = (reader.result as string).split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }
 
 /**
