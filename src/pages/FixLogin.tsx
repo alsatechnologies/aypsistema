@@ -8,28 +8,34 @@ const FixLogin = () => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
 
+  const [syncAll, setSyncAll] = useState(false);
+
   const handleFix = async () => {
     setLoading(true);
     setResult(null);
 
     try {
-      const response = await fetch('/api/fix-admin-auth', {
+      // Usar sync-all-users si está habilitado, sino fix-admin-auth
+      const endpoint = syncAll ? '/api/sync-all-users' : '/api/fix-admin-auth';
+      const body = syncAll 
+        ? {} 
+        : { password: password || 'Admin123' };
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          password: password || 'Admin123',
-        }),
+        body: JSON.stringify(body),
       });
 
       const data = await response.json();
       setResult(data);
 
       if (data.success) {
-        toast.success(data.message || 'Usuario administrador sincronizado correctamente');
+        toast.success(data.message || 'Usuarios sincronizados correctamente');
       } else {
-        toast.error(data.error || 'Error al sincronizar usuario');
+        toast.error(data.error || 'Error al sincronizar usuarios');
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
@@ -45,32 +51,52 @@ const FixLogin = () => {
       <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-6">
         <h1 className="text-2xl font-bold mb-4 text-center">Fix de Login</h1>
         <p className="text-gray-600 mb-6 text-center">
-          Este endpoint sincroniza el usuario administrador con Supabase Auth.
+          Sincroniza usuarios con Supabase Auth para permitir el login.
         </p>
 
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Contraseña para el usuario administrador:
-            </label>
-            <Input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Admin123"
+          <div className="flex items-center space-x-2 mb-4">
+            <input
+              type="checkbox"
+              id="syncAll"
+              checked={syncAll}
+              onChange={(e) => setSyncAll(e.target.checked)}
               disabled={loading}
+              className="w-4 h-4"
             />
-            <p className="text-xs text-gray-500 mt-1">
-              Si dejas vacío, se usará "Admin123" por defecto
-            </p>
+            <label htmlFor="syncAll" className="text-sm font-medium">
+              Sincronizar TODOS los usuarios (recomendado)
+            </label>
           </div>
+
+          {!syncAll && (
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Contraseña para el usuario administrador:
+              </label>
+              <Input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Admin123"
+                disabled={loading}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Si dejas vacío, se usará "Admin123" por defecto
+              </p>
+            </div>
+          )}
 
           <Button
             onClick={handleFix}
             disabled={loading}
             className="w-full"
           >
-            {loading ? 'Sincronizando...' : 'Sincronizar Usuario Administrador'}
+            {loading 
+              ? 'Sincronizando...' 
+              : syncAll 
+                ? 'Sincronizar Todos los Usuarios' 
+                : 'Sincronizar Usuario Administrador'}
           </Button>
 
           {result && (
@@ -95,15 +121,42 @@ const FixLogin = () => {
             </div>
           )}
 
+          {result?.summary && (
+            <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded">
+              <h4 className="font-semibold mb-2">Resumen:</h4>
+              <ul className="text-sm space-y-1">
+                <li>Total: {result.summary.total}</li>
+                <li className="text-green-600">Creados: {result.summary.created}</li>
+                <li className="text-blue-600">Actualizados: {result.summary.updated}</li>
+                {result.summary.errors > 0 && (
+                  <li className="text-red-600">Errores: {result.summary.errors}</li>
+                )}
+              </ul>
+              {result.results?.created && result.results.created.length > 0 && (
+                <div className="mt-3">
+                  <p className="text-xs font-semibold mb-1">Usuarios creados:</p>
+                  <ul className="text-xs space-y-1">
+                    {result.results.created.map((u: any, i: number) => (
+                      <li key={i}>
+                        {u.email} - Contraseña: {u.password}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded">
             <p className="text-sm text-blue-800">
               <strong>Instrucciones:</strong>
             </p>
             <ol className="text-sm text-blue-700 mt-2 list-decimal list-inside space-y-1">
-              <li>Ingresa la contraseña que quieres usar para el usuario administrador</li>
-              <li>Haz clic en "Sincronizar Usuario Administrador"</li>
+              <li>Marca "Sincronizar TODOS los usuarios" (recomendado) o solo el administrador</li>
+              <li>Si solo sincronizas el administrador, ingresa la contraseña deseada</li>
+              <li>Haz clic en el botón de sincronización</li>
               <li>Espera a que se complete la sincronización</li>
-              <li>Intenta iniciar sesión con: usuario "administrador" y la contraseña que especificaste</li>
+              <li>Intenta iniciar sesión con el usuario y contraseña mostrados</li>
             </ol>
           </div>
         </div>
