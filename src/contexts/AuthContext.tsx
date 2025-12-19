@@ -237,6 +237,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           )
         ]) as Response;
 
+        // Si el endpoint no existe (404), usar fallback inmediatamente
+        if (!searchResponse.ok && searchResponse.status === 404) {
+          console.warn('⚠️ Endpoint /api/get-user-for-login no encontrado (404), usando fallback directo...');
+          throw new Error('Endpoint no disponible, usando fallback');
+        }
+
         const result = await searchResponse.json();
         
         if (result.success && result.usuario) {
@@ -247,24 +253,44 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           usuarioError = { message: result.error || 'Usuario no encontrado' };
         }
       } catch (timeoutError) {
-        console.error('❌ Timeout en búsqueda:', timeoutError);
+        console.warn('⚠️ Error con función serverless, usando fallback directo:', timeoutError);
         // Fallback: intentar búsqueda directa si la función serverless falla
         console.log('   Intentando búsqueda directa como fallback...');
         try {
-          const { data, error } = await supabase
+          if (!supabase) {
+            throw new Error('Supabase no está configurado');
+          }
+
+          // Buscar por nombre_usuario primero
+          const busquedaLower = busqueda.toLowerCase().trim();
+          const { data: dataPorUsuario, error: errorPorUsuario } = await supabase
             .from('usuarios')
             .select('*')
             .eq('activo', true)
-            .or(`nombre_usuario.eq.${busqueda},correo.eq.${busqueda}`)
+            .eq('nombre_usuario', busquedaLower)
             .maybeSingle();
           
-          if (data && !error) {
-            console.log('✅ Usuario encontrado (fallback directo)');
-            usuarioData = data;
+          if (dataPorUsuario && !errorPorUsuario) {
+            console.log('✅ Usuario encontrado (fallback directo por nombre_usuario)');
+            usuarioData = dataPorUsuario;
           } else {
-            usuarioError = error || { message: 'Usuario no encontrado' };
+            // Buscar por correo
+            const { data: dataPorCorreo, error: errorPorCorreo } = await supabase
+              .from('usuarios')
+              .select('*')
+              .eq('activo', true)
+              .eq('correo', busquedaLower)
+              .maybeSingle();
+            
+            if (dataPorCorreo && !errorPorCorreo) {
+              console.log('✅ Usuario encontrado (fallback directo por correo)');
+              usuarioData = dataPorCorreo;
+            } else {
+              usuarioError = errorPorCorreo || { message: 'Usuario no encontrado' };
+            }
           }
         } catch (fallbackError) {
+          console.error('❌ Error en fallback:', fallbackError);
           usuarioError = { message: 'Error al buscar usuario. Verifica tu conexión y las variables de entorno en Vercel.' };
         }
       }
