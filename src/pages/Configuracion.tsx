@@ -557,7 +557,9 @@ const Configuracion = () => {
           console.error('Error eliminando usuario:', error);
           const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
           toast.error(`Error al eliminar usuario: ${errorMessage}`);
-          throw error; // Re-lanzar para que el catch general lo maneje
+          // NO re-lanzar el error para evitar que se cierre el diálogo
+          setDeleteDialog(null);
+          return; // Salir temprano para evitar continuar
         }
       }
 
