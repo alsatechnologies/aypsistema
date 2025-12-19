@@ -375,9 +375,68 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       if (authError) {
-        console.error('❌ Error de autenticación:', authError);
-        toast.error(authError.message || 'Usuario o contraseña incorrectos');
-        return false;
+        // Si el error es que el usuario no existe en auth.users, intentar crearlo automáticamente
+        if (authError.message?.includes('Invalid login credentials') || 
+            authError.message?.includes('User not found')) {
+          console.log('🔄 Usuario no existe en auth.users, intentando crearlo automáticamente...');
+          
+          try {
+            const createAuthResponse = await fetch('/api/create-auth-user', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                email: usuarioData.correo,
+                password: contrasena,
+                nombre_completo: usuarioData.nombre_completo,
+                nombre_usuario: usuarioData.nombre_usuario || null,
+                rol: usuarioData.rol
+              }),
+            });
+
+            if (createAuthResponse.ok) {
+              console.log('✅ Usuario creado automáticamente en auth.users, reintentando login...');
+              // Reintentar login después de crear el usuario
+              const retryAuthResponse = await fetch('/api/auth-login', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  email: usuarioData.correo,
+                  password: contrasena,
+                }),
+              });
+
+              const retryResult = await retryAuthResponse.json();
+              
+              if (retryResult.success && retryResult.user) {
+                authData = { user: retryResult.user, session: retryResult.session };
+                
+                // Establecer la sesión en el cliente de Supabase
+                if (supabase && retryResult.session) {
+                  await supabase.auth.setSession({
+                    access_token: retryResult.session.access_token,
+                    refresh_token: retryResult.session.refresh_token,
+                  });
+                }
+              } else {
+                throw new Error(retryResult.error || 'Error al autenticar después de crear usuario');
+              }
+            } else {
+              throw new Error('No se pudo crear usuario en auth.users');
+            }
+          } catch (autoCreateError) {
+            console.error('❌ Error al crear usuario automáticamente:', autoCreateError);
+            toast.error('Usuario o contraseña incorrectos. Si el problema persiste, contacta al administrador.');
+            return false;
+          }
+        } else {
+          console.error('❌ Error de autenticación:', authError);
+          toast.error(authError.message || 'Usuario o contraseña incorrectos');
+          return false;
+        }
       }
 
       if (!authData?.user) {

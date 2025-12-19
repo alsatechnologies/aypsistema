@@ -434,9 +434,8 @@ const Configuracion = () => {
         toast.success('Usuario actualizado correctamente');
       } else {
         // Crear nuevo usuario
-        let authUserCreated = false;
-        
-        // Primero crear en auth.users
+        // Intentar crear en auth.users de forma silenciosa (no bloquear si falla)
+        // Si falla, se creará automáticamente cuando el usuario intente hacer login
         try {
           const createAuthResponse = await fetch('/api/create-auth-user', {
             method: 'POST',
@@ -452,23 +451,16 @@ const Configuracion = () => {
             }),
           });
 
-          if (createAuthResponse.ok) {
-            authUserCreated = true;
-          } else {
+          if (!createAuthResponse.ok) {
             const errorData = await createAuthResponse.json();
-            // Si el error es que el usuario ya existe, continuar de todas formas
-            if (errorData.error && errorData.error.includes('already registered')) {
-              console.warn('Usuario ya existe en auth.users, continuando...');
-              authUserCreated = true; // Considerar como éxito si ya existe
-            } else {
-              console.error('Error creando usuario en auth.users:', errorData.error);
-              // Continuar de todas formas pero mostrar advertencia
-              toast.warning('Advertencia: No se pudo crear en auth.users. El usuario se creará en la base de datos pero el login puede fallar hasta que se cree manualmente en auth.users.');
+            // Solo loggear, no mostrar advertencia al usuario
+            if (errorData.error && !errorData.error.includes('already registered')) {
+              console.warn('⚠️ No se pudo crear en auth.users (se creará automáticamente al hacer login):', errorData.error);
             }
           }
         } catch (authError) {
-          console.error('Error creando usuario en auth.users:', authError);
-          toast.warning('Advertencia: Error al crear usuario en auth.users. El usuario se creará en la base de datos pero el login puede fallar hasta que se cree manualmente en auth.users.');
+          // Silencioso - no mostrar error al usuario
+          console.warn('⚠️ Error al crear en auth.users (se creará automáticamente al hacer login):', authError);
         }
 
         // Crear en la tabla usuarios usando endpoint serverless (bypass RLS)
@@ -512,11 +504,7 @@ const Configuracion = () => {
           // Recargar lista de usuarios
           await loadUsuarios();
           
-          if (authUserCreated) {
-            toast.success('Usuario creado correctamente');
-          } else {
-            toast.success('Usuario creado en la base de datos. Nota: Puede que necesite ser creado manualmente en auth.users para poder iniciar sesión.');
-          }
+          toast.success('Usuario creado correctamente');
         } catch (dbError: any) {
           console.error('❌ [CREATE USUARIO] Error en catch:', dbError);
           toast.error('Error al crear usuario: ' + (dbError instanceof Error ? dbError.message : 'Error desconocido'));
