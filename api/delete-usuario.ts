@@ -107,13 +107,10 @@ export default async function handler(
       }
     }
 
-    // Eliminar de la tabla usuarios (soft delete usando Service Role Key)
+    // Eliminar PERMANENTEMENTE de la tabla usuarios (DELETE usando Service Role Key)
     const { error: deleteError } = await supabaseAdmin
       .from('usuarios')
-      .update({ 
-        activo: false, 
-        updated_at: new Date().toISOString() 
-      })
+      .delete()
       .eq('id', usuarioId);
 
     if (deleteError) {
@@ -128,7 +125,7 @@ export default async function handler(
       });
     }
 
-    console.log(`Usuario ${usuarioId} eliminado correctamente (soft delete)`);
+    console.log(`Usuario ${usuarioId} eliminado permanentemente`);
 
     res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(200).json({
