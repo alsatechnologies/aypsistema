@@ -1063,6 +1063,37 @@ const Configuracion = () => {
                   <Plus className="h-4 w-4 mr-2" />
                   Nuevo Usuario
                 </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={async () => {
+                    try {
+                      toast.loading('Verificando/creando usuario Oficina en auth.users...', { id: 'fix-oficina' });
+                      
+                      const response = await fetch('/api/fix-oficina-user', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                      });
+                      
+                      const result = await response.json();
+                      
+                      if (response.ok && result.success) {
+                        toast.success(result.message, { id: 'fix-oficina', duration: 8000 });
+                        await loadUsuarios();
+                      } else {
+                        throw new Error(result.error || 'Error al verificar/crear usuario');
+                      }
+                    } catch (error) {
+                      console.error('Error en fix usuario oficina:', error);
+                      toast.error(
+                        error instanceof Error ? error.message : 'Error al verificar/crear usuario. Verifica que el usuario Oficina exista en la tabla usuarios.',
+                        { id: 'fix-oficina', duration: 8000 }
+                      );
+                    }
+                  }}
+                  title="Verificar/crear usuario Oficina en auth.users"
+                >
+                  🔧 Fix Login Oficina
+                </Button>
               </div>
             </div>
 
