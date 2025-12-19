@@ -133,13 +133,13 @@ export async function deleteOrden(id: number) {
   // Verificar si hay referencias (embarques, recepciones, movimientos)
   const { data: embarques } = await supabase
     .from('embarques')
-    .select('id')
+    .select('id, estatus, peso_bruto, peso_tara, peso_neto')
     .eq('boleta', ordenAnterior.boleta)
     .limit(1);
   
   const { data: recepciones } = await supabase
     .from('recepciones')
-    .select('id')
+    .select('id, estatus, peso_bruto, peso_tara, peso_neto')
     .eq('boleta', ordenAnterior.boleta)
     .limit(1);
   
@@ -149,16 +149,45 @@ export async function deleteOrden(id: number) {
     .eq('boleta', ordenAnterior.boleta)
     .limit(1);
   
-  if (embarques && embarques.length > 0) {
-    throw new Error('No se puede eliminar: existe un embarque asociado con esta boleta');
-  }
-  
-  if (recepciones && recepciones.length > 0) {
-    throw new Error('No se puede eliminar: existe una recepción asociada con esta boleta');
-  }
-  
+  // Si hay movimientos, no se puede eliminar (son críticos)
   if (movimientos && movimientos.length > 0) {
     throw new Error('No se puede eliminar: existe un movimiento asociado con esta boleta');
+  }
+  
+  // Si hay embarque asociado, verificar si se puede eliminar
+  if (embarques && embarques.length > 0) {
+    const embarque = embarques[0];
+    // Solo permitir eliminar si está en estado inicial (Pendiente) y no tiene datos procesados
+    const puedeEliminarEmbarque = embarque.estatus === 'Pendiente' && 
+                                   !embarque.peso_bruto && 
+                                   !embarque.peso_tara && 
+                                   !embarque.peso_neto;
+    
+    if (puedeEliminarEmbarque) {
+      // Eliminar el embarque antes de eliminar la orden
+      const { deleteEmbarque } = await import('./embarques');
+      await deleteEmbarque(embarque.id);
+    } else {
+      throw new Error('No se puede eliminar: existe un embarque asociado con esta boleta que ya tiene datos procesados');
+    }
+  }
+  
+  // Si hay recepción asociada, verificar si se puede eliminar
+  if (recepciones && recepciones.length > 0) {
+    const recepcion = recepciones[0];
+    // Solo permitir eliminar si está en estado inicial (Pendiente) y no tiene datos procesados
+    const puedeEliminarRecepcion = recepcion.estatus === 'Pendiente' && 
+                                    !recepcion.peso_bruto && 
+                                    !recepcion.peso_tara && 
+                                    !recepcion.peso_neto;
+    
+    if (puedeEliminarRecepcion) {
+      // Eliminar la recepción antes de eliminar la orden
+      const { deleteRecepcion } = await import('./recepciones');
+      await deleteRecepcion(recepcion.id);
+    } else {
+      throw new Error('No se puede eliminar: existe una recepción asociada con esta boleta que ya tiene datos procesados');
+    }
   }
   
   // Registrar en auditoría antes de eliminar
