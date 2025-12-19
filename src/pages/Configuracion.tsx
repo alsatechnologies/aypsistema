@@ -471,16 +471,43 @@ const Configuracion = () => {
           toast.warning('Advertencia: Error al crear usuario en auth.users. El usuario se creará en la base de datos pero el login puede fallar hasta que se cree manualmente en auth.users.');
         }
 
-        // Crear en la tabla usuarios (siempre, incluso si auth.users falla)
+        // Crear en la tabla usuarios usando endpoint serverless (bypass RLS)
         try {
-          await addUsuarioDB({
-            nombre_completo: nuevoUsuario.nombreCompleto,
-            nombre_usuario: nuevoUsuario.nombreUsuario || null,
-            correo: emailFinal,
-            contrasena_hash: contrasenaHash,
-            rol: nuevoUsuario.rol,
-            activo: true
+          console.log('🔧 [CREATE USUARIO] Llamando a endpoint serverless...');
+          const createUsuarioResponse = await fetch('/api/create-usuario', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              nombre_completo: nuevoUsuario.nombreCompleto,
+              nombre_usuario: nuevoUsuario.nombreUsuario || null,
+              correo: emailFinal,
+              contrasena_hash: contrasenaHash,
+              rol: nuevoUsuario.rol,
+              activo: true
+            }),
           });
+
+          const createUsuarioResult = await createUsuarioResponse.json();
+
+          if (!createUsuarioResponse.ok || !createUsuarioResult.success) {
+            const errorMsg = createUsuarioResult.error || 'Error al crear usuario';
+            console.error('❌ [CREATE USUARIO] Error del endpoint:', errorMsg);
+            
+            // Manejar error de duplicado de manera más clara
+            if (errorMsg.includes('duplicate key') || createUsuarioResult.code === '23505') {
+              const campo = errorMsg.includes('correo') ? 'correo electrónico' : 
+                           errorMsg.includes('nombre_usuario') ? 'nombre de usuario' : 
+                           'dato';
+              toast.error(`Ya existe un usuario con este ${campo}. Si el usuario está inactivo, puedes reactivarlo desde la lista.`);
+            } else {
+              toast.error(`Error al crear usuario: ${errorMsg}`);
+            }
+            return;
+          }
+
+          console.log('✅ [CREATE USUARIO] Usuario creado correctamente');
           
           // Recargar lista de usuarios
           await loadUsuarios();
@@ -491,18 +518,9 @@ const Configuracion = () => {
             toast.success('Usuario creado en la base de datos. Nota: Puede que necesite ser creado manualmente en auth.users para poder iniciar sesión.');
           }
         } catch (dbError: any) {
-          console.error('Error creando usuario en base de datos:', dbError);
-          
-          // Manejar error de duplicado de manera más clara
-          if (dbError?.code === '23505' || dbError?.message?.includes('duplicate key')) {
-            const campo = dbError?.message?.includes('correo') ? 'correo electrónico' : 
-                         dbError?.message?.includes('nombre_usuario') ? 'nombre de usuario' : 
-                         'dato';
-            toast.error(`Ya existe un usuario con este ${campo}. Si el usuario está inactivo, puedes reactivarlo desde la lista.`);
-          } else {
-            toast.error('Error al crear usuario en la base de datos: ' + (dbError instanceof Error ? dbError.message : 'Error desconocido'));
-          }
-          throw dbError; // Re-lanzar para que el catch general lo maneje
+          console.error('❌ [CREATE USUARIO] Error en catch:', dbError);
+          toast.error('Error al crear usuario: ' + (dbError instanceof Error ? dbError.message : 'Error desconocido'));
+          return; // No re-lanzar para evitar que se cierre el diálogo
         }
       }
 
