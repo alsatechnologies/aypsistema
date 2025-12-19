@@ -305,10 +305,24 @@ const Configuracion = () => {
 
       // Verificar si el email ya existe (solo para nuevos usuarios)
       if (!editingUsuario) {
-        const emailExiste = usuariosDB.some(u => u.correo.toLowerCase() === emailFinal.toLowerCase() && u.activo);
-        if (emailExiste) {
-          toast.error('Ya existe un usuario activo con este correo electrónico');
-          return;
+        const usuarioExistente = usuariosDB.find(u => u.correo.toLowerCase() === emailFinal.toLowerCase());
+        if (usuarioExistente) {
+          if (usuarioExistente.activo) {
+            toast.error('Ya existe un usuario activo con este correo electrónico');
+            return;
+          } else {
+            // Usuario existe pero está inactivo, preguntar si quiere reactivarlo
+            const reactivar = window.confirm(
+              `Ya existe un usuario inactivo con este correo (${usuarioExistente.nombre_completo}). ¿Deseas reactivarlo y actualizarlo con los nuevos datos?`
+            );
+            if (reactivar) {
+              // Cambiar a modo edición para actualizar el usuario existente
+              setEditingUsuario(usuarioExistente);
+              // Continuar con el flujo de actualización
+            } else {
+              return;
+            }
+          }
         }
       }
 

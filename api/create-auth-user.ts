@@ -1,8 +1,16 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+// Leer variables de entorno - intentar múltiples formas
+const SUPABASE_URL = 
+  process.env.VITE_SUPABASE_URL || 
+  process.env.SUPABASE_URL || 
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 
+  '';
+const SUPABASE_SERVICE_ROLE_KEY = 
+  process.env.SUPABASE_SERVICE_ROLE_KEY || 
+  process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || 
+  '';
 
 export default async function handler(
   req: VercelRequest,
@@ -22,11 +30,21 @@ export default async function handler(
   }
 
   try {
+    // Log para debugging (sin exponer valores sensibles)
+    console.log('🔧 [CREATE-AUTH-USER] Verificando variables de entorno...');
+    console.log('🔧 [CREATE-AUTH-USER] SUPABASE_URL presente:', !!SUPABASE_URL);
+    console.log('🔧 [CREATE-AUTH-USER] SUPABASE_SERVICE_ROLE_KEY presente:', !!SUPABASE_SERVICE_ROLE_KEY);
+    
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('❌ [CREATE-AUTH-USER] Variables faltantes:', {
+        SUPABASE_URL: SUPABASE_URL ? 'presente' : 'FALTANTE',
+        SUPABASE_SERVICE_ROLE_KEY: SUPABASE_SERVICE_ROLE_KEY ? 'presente' : 'FALTANTE',
+        envKeys: Object.keys(process.env).filter(k => k.includes('SUPABASE'))
+      });
       res.setHeader('Access-Control-Allow-Origin', '*');
       return res.status(500).json({
         success: false,
-        error: 'Supabase no está configurado correctamente',
+        error: 'Supabase no está configurado correctamente. Verifica las variables de entorno en Vercel.',
       });
     }
 
