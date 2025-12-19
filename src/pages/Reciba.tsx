@@ -218,9 +218,11 @@ const Reciba = () => {
         return;
       }
       
-      // Usar codigo_boleta de la base de datos, con fallback al nombre si no existe
+      // Calcular consecutivo considerando todas las boletas existentes (órdenes, embarques y recepciones)
+      const { calcularSiguienteConsecutivo } = await import('@/utils/consecutivoBoleta');
       const codigoBoleta = producto.codigo_boleta || producto.nombre;
-      const nuevaBoleta = generarBoletaEntradas(codigoBoleta, recepciones.length + 1);
+      const siguienteConsecutivo = await calcularSiguienteConsecutivo('Entradas', operacion.productoId, codigoBoleta);
+      const nuevaBoleta = generarBoletaEntradas(codigoBoleta, siguienteConsecutivo);
     
       await addRecepcion({
         boleta: nuevaBoleta,
@@ -406,21 +408,11 @@ const Reciba = () => {
         return;
       }
 
-      // Calcular consecutivo: contar recepciones del año actual para el mismo producto
-      const fechaActual = new Date();
-      const añoActual = fechaActual.getFullYear();
-      
-      const recepcionesDelAño = recepciones.filter(r => {
-        if (!r.fecha || r.productoId !== productoSeleccionado) return false;
-        const fechaRecepcion = new Date(r.fecha);
-        return fechaRecepcion.getFullYear() === añoActual &&
-               r.boleta && !r.boleta.startsWith('TEMP-');
-      });
-      
-      const consecutivo = recepcionesDelAño.length + 1;
-      // Usar codigo_boleta de la base de datos, con fallback al nombre si no existe
+      // Calcular consecutivo considerando todas las boletas existentes (órdenes, embarques y recepciones)
+      const { calcularSiguienteConsecutivo } = await import('@/utils/consecutivoBoleta');
       const codigoBoleta = producto.codigo_boleta || producto.nombre;
-      boletaFinal = generarBoletaEntradas(codigoBoleta, consecutivo);
+      const siguienteConsecutivo = await calcularSiguienteConsecutivo('Entradas', productoSeleccionado, codigoBoleta);
+      boletaFinal = generarBoletaEntradas(codigoBoleta, siguienteConsecutivo);
     }
 
     // El código de lote se generará automáticamente en updateRecepcion si se proporciona almacen_id

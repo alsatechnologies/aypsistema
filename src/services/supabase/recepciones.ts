@@ -181,6 +181,30 @@ export async function updateRecepcion(id: number, recepcion: Partial<Recepcion>)
   return data;
 }
 
+// Obtener recepción por boleta
+export async function getRecepcionByBoleta(boleta: string) {
+  if (!supabase) {
+    throw new Error('Supabase no está configurado');
+  }
+  
+  const { data, error } = await supabase
+    .from('recepciones')
+    .select(`
+      *,
+      producto:productos(id, nombre),
+      proveedor:proveedores(id, empresa)
+    `)
+    .eq('boleta', boleta)
+    .eq('activo', true)
+    .single();
+
+  if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+    throw error;
+  }
+
+  return data || null;
+}
+
 // Eliminar recepción permanentemente
 export async function deleteRecepcion(id: number) {
   if (!supabase) {

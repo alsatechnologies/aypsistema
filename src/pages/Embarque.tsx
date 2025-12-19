@@ -324,7 +324,7 @@ const EmbarquePage = () => {
       // Usar codigo_boleta de la base de datos, con fallback al nombre si no existe
       const codigoBoleta = producto.codigo_boleta || producto.nombre;
       
-      // Calcular consecutivo considerando tanto órdenes como embarques existentes
+      // Calcular consecutivo considerando todas las boletas existentes (órdenes, embarques y recepciones)
       const { calcularSiguienteConsecutivo } = await import('@/utils/consecutivoBoleta');
       const siguienteConsecutivo = await calcularSiguienteConsecutivo(tipoOperacion, data.productoId, codigoBoleta);
     

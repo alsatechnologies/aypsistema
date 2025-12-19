@@ -23,12 +23,14 @@ interface Proveedor {
 }
 
 const Proveedores = () => {
-  const { proveedores: proveedoresDB, loading, loadingMore, hasMore, addProveedor, loadProveedores, loadMore } = useProveedores();
+  const { proveedores: proveedoresDB, loading, loadingMore, hasMore, addProveedor, updateProveedor, loadProveedores, loadMore } = useProveedores();
   
   const [search, setSearch] = useState('');
   const [isNuevoDialogOpen, setIsNuevoDialogOpen] = useState(false);
   const [isDetalleDialogOpen, setIsDetalleDialogOpen] = useState(false);
   const [selectedProveedor, setSelectedProveedor] = useState<Proveedor | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingProveedorId, setEditingProveedorId] = useState<number | null>(null);
   
   const [formData, setFormData] = useState({
     empresa: '',
@@ -55,6 +57,12 @@ const Proveedores = () => {
     p.ubicacion.toLowerCase().includes(search.toLowerCase())
   );
 
+  const resetForm = () => {
+    setFormData({ empresa: '', producto: '', telefono: '', email: '', ubicacion: '' });
+    setIsEditMode(false);
+    setEditingProveedorId(null);
+  };
+
   const handleNuevoProveedor = async () => {
     if (!formData.empresa || !formData.producto) {
       toast.error('Complete los campos obligatorios');
@@ -62,22 +70,53 @@ const Proveedores = () => {
     }
 
     try {
-      await addProveedor({
-        empresa: formData.empresa,
-        producto: formData.producto || null,
-        telefono: formData.telefono || null,
-        email: formData.email || null,
-        ubicacion: formData.ubicacion || null,
-        fecha_alta: new Date().toISOString().split('T')[0]
-      });
-      await loadProveedores();
-      setFormData({ empresa: '', producto: '', telefono: '', email: '', ubicacion: '' });
-      setIsNuevoDialogOpen(false);
-      toast.success('Proveedor agregado correctamente');
+      if (isEditMode && editingProveedorId) {
+        // Modo edición
+        await updateProveedor(editingProveedorId, {
+          empresa: formData.empresa,
+          producto: formData.producto || null,
+          telefono: formData.telefono || null,
+          email: formData.email || null,
+          ubicacion: formData.ubicacion || null
+        });
+        await loadProveedores();
+        resetForm();
+        setIsNuevoDialogOpen(false);
+        toast.success('Proveedor actualizado correctamente');
+      } else {
+        // Modo creación
+        await addProveedor({
+          empresa: formData.empresa,
+          producto: formData.producto || null,
+          telefono: formData.telefono || null,
+          email: formData.email || null,
+          ubicacion: formData.ubicacion || null,
+          fecha_alta: new Date().toISOString().split('T')[0]
+        });
+        await loadProveedores();
+        resetForm();
+        setIsNuevoDialogOpen(false);
+        toast.success('Proveedor agregado correctamente');
+      }
     } catch (error) {
       console.error('Error saving proveedor:', error);
       toast.error('Error al guardar proveedor');
     }
+  };
+
+  const handleEditar = (proveedor: Proveedor) => {
+    setSelectedProveedor(proveedor);
+    setFormData({
+      empresa: proveedor.empresa,
+      producto: proveedor.producto || '',
+      telefono: proveedor.telefono || '',
+      email: proveedor.email || '',
+      ubicacion: proveedor.ubicacion || ''
+    });
+    setIsEditMode(true);
+    setEditingProveedorId(proveedor.id);
+    setIsDetalleDialogOpen(false);
+    setIsNuevoDialogOpen(true);
   };
 
   const handleVerDetalle = (proveedor: Proveedor) => {
@@ -124,7 +163,10 @@ const Proveedores = () => {
               <Download className="h-4 w-4 mr-2" />
               Exportar
             </Button>
-            <Button onClick={() => setIsNuevoDialogOpen(true)}>
+            <Button onClick={() => {
+              resetForm();
+              setIsNuevoDialogOpen(true);
+            }}>
               <Plus className="h-4 w-4 mr-2" />
               Nuevo Proveedor
             </Button>
@@ -197,13 +239,18 @@ const Proveedores = () => {
           </CardContent>
         </Card>
 
-        {/* Nuevo Proveedor Dialog */}
-        <Dialog open={isNuevoDialogOpen} onOpenChange={setIsNuevoDialogOpen}>
+        {/* Nuevo/Editar Proveedor Dialog */}
+        <Dialog open={isNuevoDialogOpen} onOpenChange={(open) => {
+          setIsNuevoDialogOpen(open);
+          if (!open) {
+            resetForm();
+          }
+        }}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Building2 className="h-5 w-5" />
-                Nuevo Proveedor
+                {isEditMode ? 'Editar Proveedor' : 'Nuevo Proveedor'}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -253,11 +300,20 @@ const Proveedores = () => {
             </div>
             <DialogFooter>
               <DialogClose asChild>
-                <Button variant="outline">Cancelar</Button>
+                <Button variant="outline" onClick={resetForm}>Cancelar</Button>
               </DialogClose>
               <Button onClick={handleNuevoProveedor}>
-                <Plus className="h-4 w-4 mr-2" />
-                Agregar Proveedor
+                {isEditMode ? (
+                  <>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Guardar Cambios
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Agregar Proveedor
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -311,7 +367,7 @@ const Proveedores = () => {
                   <DialogClose asChild>
                     <Button variant="outline">Cerrar</Button>
                   </DialogClose>
-                  <Button variant="outline">
+                  <Button variant="outline" onClick={() => handleEditar(selectedProveedor)}>
                     <Edit className="h-4 w-4 mr-2" />
                     Editar
                   </Button>

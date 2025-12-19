@@ -22,6 +22,7 @@ import CompletarOrdenDialog from '@/components/oficina/CompletarOrdenDialog';
 import { toast } from 'sonner';
 import { formatDateTimeMST } from '@/utils/dateUtils';
 import { createEmbarque, getEmbarqueByBoleta, updateEmbarque } from '@/services/supabase/embarques';
+import { createRecepcion, getRecepcionByBoleta, updateRecepcion } from '@/services/supabase/recepciones';
 import { getMovimientoByBoleta, updateMovimiento } from '@/services/supabase/movimientos';
 import { createOrden, deleteOrden } from '@/services/supabase/ordenes';
 import { getCurrentDateTimeMST } from '@/utils/dateUtils';
@@ -237,11 +238,11 @@ const Oficina = () => {
         // Usar codigo_boleta de la base de datos, con fallback al nombre si no existe
         const codigoBoleta = producto.codigo_boleta || producto.nombre;
         
-        // Calcular consecutivo anual considerando tanto órdenes como embarques
+        // Calcular consecutivo anual considerando todas las boletas existentes (órdenes, embarques y recepciones)
         const { calcularSiguienteConsecutivo } = await import('@/utils/consecutivoBoleta');
         const consecutivo = await calcularSiguienteConsecutivo(tipoOperacion, data.producto_id, codigoBoleta);
         
-        // El consecutivo ya fue calculado arriba considerando órdenes y embarques
+        // Generar boleta final con el consecutivo calculado
         ticketFinal = generateNumeroBoleta(tipoOperacion, codigoBoleta, consecutivo);
       }
 
@@ -260,6 +261,60 @@ const Oficina = () => {
       }
 
       await updateOrden(ordenId, updateData);
+
+      // Si es una orden de Reciba, crear o actualizar el registro en recepciones
+      if (orden.tipo_operacion === 'Reciba') {
+        if (data.proveedor_id && data.producto_id) {
+          try {
+            const fechaActual = new Date();
+            const fechaMST = `${fechaActual.getFullYear()}-${String(fechaActual.getMonth() + 1).padStart(2, '0')}-${String(fechaActual.getDate()).padStart(2, '0')}`;
+            
+            // Verificar si ya existe una recepción con esta boleta
+            const recepcionExistente = await getRecepcionByBoleta(ticketFinal);
+            
+            const recepcionData = {
+              producto_id: data.producto_id,
+              proveedor_id: data.proveedor_id,
+              chofer: orden.nombre_chofer || null,
+              placas: orden.placas || null,
+              fecha: fechaMST,
+              tipo_transporte: data.tipo_transporte || null,
+              estatus: 'Pendiente'
+            };
+            
+            if (recepcionExistente) {
+              // Actualizar recepción existente
+              await updateRecepcion(recepcionExistente.id, recepcionData);
+              
+              // Actualizar también el movimiento asociado si existe
+              try {
+                const movimientoExistente = await getMovimientoByBoleta(ticketFinal);
+                if (movimientoExistente && proveedoresDB && proveedoresDB.length > 0) {
+                  // Obtener el nombre del proveedor actualizado
+                  const proveedorActualizado = proveedoresDB.find(p => p.id === data.proveedor_id);
+                  if (proveedorActualizado && proveedorActualizado.empresa) {
+                    await updateMovimiento(movimientoExistente.id, {
+                      cliente_proveedor: proveedorActualizado.empresa
+                    });
+                  }
+                }
+              } catch (error) {
+                console.error('Error updating movimiento:', error);
+                // No lanzamos error para no interrumpir el flujo
+              }
+            } else {
+              // Crear nueva recepción
+              await createRecepcion({
+                boleta: ticketFinal,
+                ...recepcionData
+              });
+            }
+          } catch (error) {
+            console.error('Error creating/updating recepcion:', error);
+            // No lanzamos error para no interrumpir el flujo, solo lo registramos
+          }
+        }
+      }
 
       // Si es una orden de Embarque, crear o actualizar el registro en embarques
       if (orden.tipo_operacion === 'Embarque Nacional' || orden.tipo_operacion === 'Embarque Exportación') {

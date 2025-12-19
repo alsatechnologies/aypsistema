@@ -1,10 +1,12 @@
 import { getEmbarques } from '@/services/supabase/embarques';
 import { getOrdenes } from '@/services/supabase/ordenes';
+import { getRecepciones } from '@/services/supabase/recepciones';
 import { parseNumeroBoleta } from './folioGenerator';
 import type { TipoOperacion } from './folioGenerator';
 
 /**
- * Calcula el siguiente consecutivo para una boleta considerando tanto órdenes como embarques
+ * Calcula el siguiente consecutivo para una boleta considerando órdenes, embarques Y recepciones
+ * Esto asegura que no se repitan consecutivos sin importar desde dónde se cree la boleta
  * @param tipoOperacion - Tipo de operación (Embarque Nacional, Exportación, Entradas)
  * @param productoId - ID del producto
  * @param codigoBoleta - Código de boleta del producto (2 dígitos)
@@ -104,7 +106,43 @@ export async function calcularSiguienteConsecutivo(
     console.error('Error al obtener embarques para calcular consecutivo:', error);
   }
   
-  // Extraer todos los consecutivos de órdenes y embarques
+  // Buscar todas las recepciones del año actual (solo para Entradas)
+  let recepcionesDelAño: any[] = [];
+  if (tipoOperacion === 'Entradas') {
+    try {
+      const recepcionesResult = await getRecepciones();
+      // Manejar tanto el formato antiguo (array) como el nuevo ({ data, count })
+      const recepciones = Array.isArray(recepcionesResult) ? recepcionesResult : (recepcionesResult.data || []);
+      recepcionesDelAño = recepciones.filter(r => {
+        // Debe tener boleta (no temporal)
+        if (!r.boleta || r.boleta.startsWith('TEMP-')) return false;
+        
+        // Debe tener el mismo producto
+        if (r.producto_id !== productoId) return false;
+        
+        // Debe ser del año actual
+        const fechaRecepcion = r.fecha ? new Date(r.fecha) : 
+                              r.created_at ? new Date(r.created_at) : null;
+        if (!fechaRecepcion || fechaRecepcion.getFullYear() !== añoActual) return false;
+        
+        // Verificar que la boleta tenga el formato correcto
+        const parsed = parseNumeroBoleta(r.boleta);
+        if (!parsed) return false;
+        
+        // Verificar que coincida el tipo y producto
+        if (parsed.tipoCode !== tipoCode || parsed.productoBoleta !== productoCode) return false;
+        
+        // Ignorar boletas que contengan "1212"
+        if (r.boleta.includes('1212')) return false;
+        
+        return true;
+      });
+    } catch (error) {
+      console.error('Error al obtener recepciones para calcular consecutivo:', error);
+    }
+  }
+  
+  // Extraer todos los consecutivos de órdenes, embarques Y recepciones
   const consecutivos: number[] = [];
   
   ordenesDelAño.forEach(o => {
@@ -116,6 +154,13 @@ export async function calcularSiguienteConsecutivo(
   
   embarquesDelAño.forEach(e => {
     const parsed = parseNumeroBoleta(e.boleta);
+    if (parsed) {
+      consecutivos.push(parsed.consecutivo);
+    }
+  });
+  
+  recepcionesDelAño.forEach(r => {
+    const parsed = parseNumeroBoleta(r.boleta);
     if (parsed) {
       consecutivos.push(parsed.consecutivo);
     }

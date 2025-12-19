@@ -1063,62 +1063,6 @@ const Configuracion = () => {
                   <Plus className="h-4 w-4 mr-2" />
                   Nuevo Usuario
                 </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={async () => {
-                    try {
-                      toast.loading('Creando/actualizando usuario Oficina en auth.users...', { id: 'fix-oficina' });
-                      
-                      // Buscar el usuario oficina
-                      const usuarioOficina = usuariosDB.find(u => 
-                        u.correo === 'oficina@apsistema.com' || u.nombre_usuario === 'oficina'
-                      );
-                      
-                      if (!usuarioOficina) {
-                        toast.error('Usuario Oficina no encontrado en la base de datos', { id: 'fix-oficina' });
-                        return;
-                      }
-                      
-                      // Usar create-auth-user directamente (fix-oficina-user fue eliminado)
-                      
-                      // Método alternativo: usar create-auth-user directamente
-                      const createResponse = await fetch('/api/create-auth-user', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          email: usuarioOficina.correo,
-                          password: 'Admin123',
-                          nombre_completo: usuarioOficina.nombre_completo,
-                          nombre_usuario: usuarioOficina.nombre_usuario || null,
-                          rol: usuarioOficina.rol
-                        })
-                      });
-                      
-                      const createResult = await createResponse.json();
-                      if (createResponse.ok && createResult.success) {
-                        toast.success('Usuario Oficina creado en auth.users. Ahora puedes iniciar sesión con: oficina / Admin123', { id: 'fix-oficina' });
-                        await loadUsuarios();
-                      } else {
-                        // Si ya existe, intentar actualizar contraseña
-                        if (createResult.error && createResult.error.includes('already registered')) {
-                          toast.success('Usuario Oficina ya existe en auth.users. Contraseña actualizada a: Admin123', { id: 'fix-oficina' });
-                          await loadUsuarios();
-                        } else {
-                          throw new Error(createResult.error || 'Error al crear usuario');
-                        }
-                      }
-                    } catch (error) {
-                      console.error('Error en fix usuario oficina:', error);
-                      toast.error(
-                        error instanceof Error ? error.message : 'Error al crear usuario. Intenta editar el usuario y cambiarle la contraseña manualmente.',
-                        { id: 'fix-oficina', duration: 5000 }
-                      );
-                    }
-                  }}
-                  title="Crear/actualizar usuario Oficina en auth.users"
-                >
-                  🔧 Fix Usuario Oficina
-                </Button>
               </div>
             </div>
 
