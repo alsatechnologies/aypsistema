@@ -530,8 +530,12 @@ const Configuracion = () => {
 
         // IMPORTANTE: Usar endpoint serverless que bypass RLS usando Service Role Key
         // NO usar deleteUsuarioDB directamente porque falla por RLS
+        // NUNCA llamar a deleteUsuarioDB aquí - siempre usar el endpoint
         try {
-          console.log('🔧 Eliminando usuario vía endpoint serverless:', deleteDialog.id);
+          console.log('🔧 [DELETE USUARIO] Iniciando eliminación vía endpoint serverless');
+          console.log('🔧 [DELETE USUARIO] ID:', deleteDialog.id);
+          console.log('🔧 [DELETE USUARIO] Email:', usuarioAEliminar.correo);
+          
           const deleteResponse = await fetch('/api/delete-usuario', {
             method: 'POST',
             headers: {
@@ -543,33 +547,45 @@ const Configuracion = () => {
             }),
           });
 
+          console.log('🔧 [DELETE USUARIO] Response status:', deleteResponse.status);
+          console.log('🔧 [DELETE USUARIO] Response ok:', deleteResponse.ok);
+
           const result = await deleteResponse.json();
+          console.log('🔧 [DELETE USUARIO] Response data:', result);
 
           if (!deleteResponse.ok || !result.success) {
             // Mostrar error más detallado
             const errorMsg = result.error || 'Error al eliminar usuario';
             const details = result.details ? ` (${result.details.message || result.details.code || ''})` : '';
+            console.error('❌ [DELETE USUARIO] Error del endpoint:', errorMsg, details);
             throw new Error(`${errorMsg}${details}`);
           }
 
+          console.log('✅ [DELETE USUARIO] Usuario eliminado correctamente');
           // Recargar lista de usuarios
           await loadUsuarios();
           toast.success('Usuario eliminado correctamente');
+          setDeleteDialog(null);
         } catch (error) {
-          console.error('Error eliminando usuario:', error);
+          console.error('❌ [DELETE USUARIO] Error en catch:', error);
           const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
           toast.error(`Error al eliminar usuario: ${errorMessage}`);
           // NO re-lanzar el error para evitar que se cierre el diálogo
           setDeleteDialog(null);
           return; // Salir temprano para evitar continuar
         }
+        return; // Salir temprano después de eliminar usuario
       }
 
-      setDeleteDialog(null);
+      // Solo cerrar diálogo si no es usuario (usuarios ya lo manejan internamente)
+      if (deleteDialog.type !== 'usuario') {
+        setDeleteDialog(null);
+      }
     } catch (error) {
-      console.error('Error deleting:', error);
+      console.error('❌ [HANDLE DELETE] Error general:', error);
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       toast.error(`Error al eliminar: ${errorMessage}`);
+      setDeleteDialog(null);
     }
   };
 
