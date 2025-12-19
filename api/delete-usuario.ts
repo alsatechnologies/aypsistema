@@ -45,6 +45,7 @@ export default async function handler(
     console.log('🔧 [DELETE-USUARIO] VITE_SUPABASE_URL:', process.env.VITE_SUPABASE_URL ? 'presente' : 'FALTANTE');
     console.log('🔧 [DELETE-USUARIO] SUPABASE_URL:', process.env.SUPABASE_URL ? 'presente' : 'FALTANTE');
     console.log('🔧 [DELETE-USUARIO] SUPABASE_SERVICE_ROLE_KEY:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'presente' : 'FALTANTE');
+    console.log('🔧 [DELETE-USUARIO] VITE_SUPABASE_SERVICE_ROLE_KEY:', process.env.VITE_SUPABASE_SERVICE_ROLE_KEY ? 'presente' : 'FALTANTE');
     
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       console.error('❌ [DELETE-USUARIO] Variables faltantes:', {
