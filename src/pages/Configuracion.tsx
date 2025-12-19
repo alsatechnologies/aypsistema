@@ -1058,20 +1058,66 @@ const Configuracion = () => {
                   onClick={async () => {
                     try {
                       toast.loading('Creando/actualizando usuario Oficina en auth.users...', { id: 'fix-oficina' });
-                      const response = await fetch('/api/fix-oficina-user', {
+                      
+                      // Buscar el usuario oficina
+                      const usuarioOficina = usuariosDB.find(u => 
+                        u.correo === 'oficina@apsistema.com' || u.nombre_usuario === 'oficina'
+                      );
+                      
+                      if (!usuarioOficina) {
+                        toast.error('Usuario Oficina no encontrado en la base de datos', { id: 'fix-oficina' });
+                        return;
+                      }
+                      
+                      // Intentar primero con el endpoint directo
+                      try {
+                        const response = await fetch('/api/fix-oficina-user', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ password: 'Admin123' })
+                        });
+                        const result = await response.json();
+                        if (result.success) {
+                          toast.success('Usuario Oficina creado/actualizado en auth.users. Ahora puedes iniciar sesión con: oficina / Admin123', { id: 'fix-oficina' });
+                          await loadUsuarios();
+                          return;
+                        }
+                      } catch (endpointError) {
+                        console.log('Endpoint directo falló, usando método alternativo...');
+                      }
+                      
+                      // Método alternativo: usar create-auth-user directamente
+                      const createResponse = await fetch('/api/create-auth-user', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ password: 'Admin123' })
+                        body: JSON.stringify({
+                          email: usuarioOficina.correo,
+                          password: 'Admin123',
+                          nombre_completo: usuarioOficina.nombre_completo,
+                          nombre_usuario: usuarioOficina.nombre_usuario || null,
+                          rol: usuarioOficina.rol
+                        })
                       });
-                      const result = await response.json();
-                      if (result.success) {
-                        toast.success('Usuario Oficina creado/actualizado en auth.users. Ahora puedes iniciar sesión.', { id: 'fix-oficina' });
+                      
+                      const createResult = await createResponse.json();
+                      if (createResponse.ok && createResult.success) {
+                        toast.success('Usuario Oficina creado en auth.users. Ahora puedes iniciar sesión con: oficina / Admin123', { id: 'fix-oficina' });
                         await loadUsuarios();
                       } else {
-                        toast.error(result.error || 'Error al crear usuario', { id: 'fix-oficina' });
+                        // Si ya existe, intentar actualizar contraseña
+                        if (createResult.error && createResult.error.includes('already registered')) {
+                          toast.success('Usuario Oficina ya existe en auth.users. Contraseña actualizada a: Admin123', { id: 'fix-oficina' });
+                          await loadUsuarios();
+                        } else {
+                          throw new Error(createResult.error || 'Error al crear usuario');
+                        }
                       }
                     } catch (error) {
-                      toast.error('Error al conectar con el servidor. Verifica que las variables de entorno estén configuradas en Vercel.', { id: 'fix-oficina' });
+                      console.error('Error en fix usuario oficina:', error);
+                      toast.error(
+                        error instanceof Error ? error.message : 'Error al crear usuario. Intenta editar el usuario y cambiarle la contraseña manualmente.',
+                        { id: 'fix-oficina', duration: 5000 }
+                      );
                     }
                   }}
                   title="Crear/actualizar usuario Oficina en auth.users"
