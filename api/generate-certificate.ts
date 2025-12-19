@@ -62,6 +62,9 @@ export default async function handler(
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 segundos timeout
 
     try {
+      console.log(`[CERTIFICATE] Llamando a: ${endpoint}`);
+      console.log(`[CERTIFICATE] Datos enviados:`, JSON.stringify(data, null, 2));
+      
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
@@ -73,13 +76,26 @@ export default async function handler(
 
       clearTimeout(timeoutId);
 
+      console.log(`[CERTIFICATE] Respuesta status: ${response.status} ${response.statusText}`);
+      console.log(`[CERTIFICATE] Content-Type: ${response.headers.get('content-type')}`);
+
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Error de API externa (${tipo}):`, errorText);
+        let errorText = '';
+        try {
+          errorText = await response.text();
+          console.error(`[CERTIFICATE] Error de API externa (${tipo}):`, errorText);
+        } catch (e) {
+          errorText = `Error ${response.status}: ${response.statusText}`;
+          console.error(`[CERTIFICATE] No se pudo leer el error de la API:`, e);
+        }
+        
         res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Content-Type', 'application/json');
         return res.status(response.status).json({
           error: `Error al generar certificado ${tipo}`,
-          message: errorText
+          message: errorText || `Error ${response.status}: ${response.statusText}`,
+          status: response.status,
+          endpoint: endpoint
         });
       }
 
@@ -96,12 +112,27 @@ export default async function handler(
     } catch (fetchError: any) {
       clearTimeout(timeoutId);
       
+      console.error(`[CERTIFICATE] Error en fetch (${tipo}):`, fetchError);
+      
       if (fetchError.name === 'AbortError') {
-        console.error(`Timeout generando certificado ${tipo}`);
+        console.error(`[CERTIFICATE] Timeout generando certificado ${tipo}`);
         res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Content-Type', 'application/json');
         return res.status(504).json({
           error: 'Timeout',
-          message: 'La generación del certificado está tardando demasiado'
+          message: 'La generación del certificado está tardando demasiado',
+          endpoint: endpoint
+        });
+      }
+
+      // Si es un error de conexión o red
+      if (fetchError.message && (fetchError.message.includes('fetch') || fetchError.message.includes('network'))) {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Content-Type', 'application/json');
+        return res.status(503).json({
+          error: 'Error de conexión',
+          message: `No se pudo conectar con la API externa: ${fetchError.message}`,
+          endpoint: endpoint
         });
       }
 
@@ -109,11 +140,13 @@ export default async function handler(
     }
 
   } catch (error) {
-    console.error('Error generando certificado:', error);
+    console.error('[CERTIFICATE] Error generando certificado:', error);
     res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Content-Type', 'application/json');
     return res.status(500).json({
       error: 'Error interno',
-      message: error instanceof Error ? error.message : 'Error desconocido'
+      message: error instanceof Error ? error.message : 'Error desconocido',
+      stack: error instanceof Error ? error.stack : undefined
     });
   }
 }

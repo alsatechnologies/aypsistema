@@ -76,7 +76,8 @@ export interface CertificateResponse {
  */
 export async function generateBoletaRecibaPDF(data: BoletaRecibaRequest): Promise<CertificateResponse> {
   try {
-    console.log('Generando boleta de ENTRADA (Reciba):', data.boleta_no);
+    console.log('[CERTIFICATE] Generando boleta de ENTRADA (Reciba):', data.boleta_no);
+    console.log('[CERTIFICATE] Datos:', JSON.stringify(data, null, 2));
     
     // Timeout de 35 segundos en frontend (el servidor tiene 30s)
     const controller = new AbortController();
@@ -99,13 +100,50 @@ export async function generateBoletaRecibaPDF(data: BoletaRecibaRequest): Promis
 
     clearTimeout(timeoutId);
 
+    console.log('[CERTIFICATE] Respuesta status:', response.status, response.statusText);
+    console.log('[CERTIFICATE] Content-Type:', response.headers.get('content-type'));
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }));
-      throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
+      // Intentar leer como JSON primero (si es un error)
+      const contentType = response.headers.get('content-type');
+      let errorMessage = `Error ${response.status}: ${response.statusText}`;
+      
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+          console.error('[CERTIFICATE] Error de API (JSON):', errorData);
+        } catch (e) {
+          console.error('[CERTIFICATE] No se pudo parsear error como JSON:', e);
+        }
+      } else {
+        // Si no es JSON, intentar leer como texto
+        try {
+          const errorText = await response.text();
+          if (errorText) {
+            errorMessage = errorText;
+            console.error('[CERTIFICATE] Error de API (texto):', errorText);
+          }
+        } catch (e) {
+          console.error('[CERTIFICATE] No se pudo leer error:', e);
+        }
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    // Verificar que la respuesta sea un PDF
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/pdf')) {
+      const responseText = await response.text();
+      console.error('[CERTIFICATE] Respuesta no es PDF. Content-Type:', contentType);
+      console.error('[CERTIFICATE] Respuesta:', responseText.substring(0, 500));
+      throw new Error(`La API no devolvió un PDF. Content-Type: ${contentType}. Respuesta: ${responseText.substring(0, 200)}`);
     }
 
     // El nuevo endpoint devuelve PDF directamente, no JSON
     const pdfBlob = await response.blob();
+    console.log('[CERTIFICATE] PDF recibido, tamaño:', pdfBlob.size, 'bytes');
     const pdfBase64 = await blobToBase64(pdfBlob);
     
     return {
@@ -114,7 +152,7 @@ export async function generateBoletaRecibaPDF(data: BoletaRecibaRequest): Promis
       message: 'Boleta de entrada generada correctamente',
     };
   } catch (error) {
-    console.error('Error al generar boleta de entrada PDF:', error);
+    console.error('[CERTIFICATE] Error al generar boleta de entrada PDF:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Error desconocido al generar PDF de entrada',
