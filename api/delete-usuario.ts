@@ -67,15 +67,24 @@ export default async function handler(
     // Eliminar de auth.users si se proporciona el email
     if (email) {
       try {
-        const { data: userData, error: getUserError } = await supabaseAdmin.auth.admin.getUserByEmail(email);
-        if (getUserError) {
-          console.warn('Usuario no encontrado en auth.users (puede que no exista):', getUserError.message);
-        } else if (userData?.user) {
-          const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(userData.user.id);
-          if (deleteAuthError) {
-            console.warn('Advertencia: No se pudo eliminar de auth.users:', deleteAuthError.message);
+        // Buscar usuario por email usando listUsers (getUserByEmail no existe en la API)
+        const { data: usersList, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+        
+        if (listError) {
+          console.warn('Error al listar usuarios en auth.users:', listError.message);
+        } else {
+          // Buscar el usuario por email
+          const userToDelete = usersList.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+          
+          if (userToDelete) {
+            const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(userToDelete.id);
+            if (deleteAuthError) {
+              console.warn('Advertencia: No se pudo eliminar de auth.users:', deleteAuthError.message);
+            } else {
+              console.log('Usuario eliminado de auth.users:', email);
+            }
           } else {
-            console.log('Usuario eliminado de auth.users:', email);
+            console.log('Usuario no encontrado en auth.users (puede que no exista):', email);
           }
         }
       } catch (authError) {

@@ -47,10 +47,20 @@ export default async function handler(
       }
     });
 
-    // Buscar usuario por email
-    const { data: userData, error: getUserError } = await supabaseAdmin.auth.admin.getUserByEmail(email);
+    // Buscar usuario por email usando listUsers (getUserByEmail no existe en la API)
+    const { data: usersList, error: listError } = await supabaseAdmin.auth.admin.listUsers();
 
-    if (getUserError || !userData.user) {
+    if (listError) {
+      return res.status(500).json({
+        success: false,
+        error: `Error al buscar usuario: ${listError.message}`,
+      });
+    }
+
+    // Buscar el usuario por email
+    const userToDelete = usersList.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+
+    if (!userToDelete) {
       return res.status(404).json({
         success: false,
         error: `Usuario con email ${email} no encontrado en auth.users`,
@@ -58,7 +68,7 @@ export default async function handler(
     }
 
     // Eliminar usuario
-    const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userData.user.id);
+    const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userToDelete.id);
 
     if (deleteError) {
       return res.status(400).json({
