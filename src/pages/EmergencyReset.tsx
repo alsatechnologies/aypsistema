@@ -21,12 +21,16 @@ const EmergencyReset = () => {
     setResult(null);
 
     try {
-      const response = await fetch('/api/reset-admin-password-direct', {
-        method: 'POST',
+      // Usar update-auth-user en lugar de reset-admin-password-direct (eliminado)
+      const response = await fetch('/api/update-auth-user', {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ 
+          email: 'administrador@apsistema.com',
+          password: password 
+        }),
       });
 
       const data = await response.json();
