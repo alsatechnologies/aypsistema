@@ -522,36 +522,40 @@ const Configuracion = () => {
         // Obtener el usuario antes de eliminarlo para tener el email
         const usuarioAEliminar = usuariosDB.find(u => u.id === deleteDialog.id);
         
-        if (usuarioAEliminar) {
-          // Intentar eliminar de auth.users también
-          try {
-            const deleteAuthResponse = await fetch('/api/delete-auth-user', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                email: usuarioAEliminar.correo
-              }),
-            });
-
-            if (!deleteAuthResponse.ok) {
-              const errorData = await deleteAuthResponse.json();
-              // Si el usuario no existe en auth.users, no es un error crítico
-              if (!errorData.error || !errorData.error.includes('no encontrado')) {
-                console.warn('Advertencia: No se pudo eliminar de auth.users:', errorData.error);
-              }
-            }
-          } catch (authError) {
-            console.warn('Advertencia: Error al eliminar de auth.users:', authError);
-            // Continuar de todas formas
-          }
+        if (!usuarioAEliminar) {
+          toast.error('Usuario no encontrado');
+          setDeleteDialog(null);
+          return;
         }
 
-        // Eliminar de la tabla usuarios (soft delete)
-        await deleteUsuarioDB(deleteDialog.id);
-        await loadUsuarios();
-        toast.success('Usuario eliminado correctamente');
+        // Usar endpoint serverless que bypass RLS usando Service Role Key
+        try {
+          const deleteResponse = await fetch('/api/delete-usuario', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              usuarioId: deleteDialog.id,
+              email: usuarioAEliminar.correo
+            }),
+          });
+
+          const result = await deleteResponse.json();
+
+          if (!deleteResponse.ok || !result.success) {
+            throw new Error(result.error || 'Error al eliminar usuario');
+          }
+
+          // Recargar lista de usuarios
+          await loadUsuarios();
+          toast.success('Usuario eliminado correctamente');
+        } catch (error) {
+          console.error('Error eliminando usuario:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+          toast.error(`Error al eliminar usuario: ${errorMessage}`);
+          throw error; // Re-lanzar para que el catch general lo maneje
+        }
       }
 
       setDeleteDialog(null);
