@@ -528,8 +528,10 @@ const Configuracion = () => {
           return;
         }
 
-        // Usar endpoint serverless que bypass RLS usando Service Role Key
+        // IMPORTANTE: Usar endpoint serverless que bypass RLS usando Service Role Key
+        // NO usar deleteUsuarioDB directamente porque falla por RLS
         try {
+          console.log('🔧 Eliminando usuario vía endpoint serverless:', deleteDialog.id);
           const deleteResponse = await fetch('/api/delete-usuario', {
             method: 'POST',
             headers: {
