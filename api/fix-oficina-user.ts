@@ -53,25 +53,50 @@ export default async function handler(
     );
 
     // Buscar usuario oficina en la tabla usuarios
-    const { data: usuarioDB, error: errorDB } = await supabaseAnon
+    let usuarioDB = null;
+    const { data: usuarioExistente, error: errorDB } = await supabaseAnon
       .from('usuarios')
       .select('*')
       .or('nombre_usuario.eq.oficina,correo.eq.oficina@apsistema.com')
-      .eq('activo', true)
       .maybeSingle();
 
-    if (errorDB) {
+    if (errorDB && errorDB.code !== 'PGRST116') {
       return res.status(500).json({
         success: false,
         error: `Error buscando usuario: ${errorDB.message}`,
       });
     }
 
+    usuarioDB = usuarioExistente;
+
+    // Si no existe en usuarios, crearlo
     if (!usuarioDB) {
-      return res.status(404).json({
-        success: false,
-        error: 'Usuario Oficina no encontrado en la tabla usuarios. Debe crearlo primero desde Configuración → Usuarios.',
-      });
+      console.log('📝 Usuario Oficina no existe en tabla usuarios, creándolo...');
+      
+      const nuevoUsuario = {
+        nombre_completo: 'Usuario Oficina',
+        nombre_usuario: 'oficina',
+        correo: 'oficina@apsistema.com',
+        contrasena_hash: '********',
+        rol: 'Oficina',
+        activo: true
+      };
+
+      const { data: usuarioCreado, error: errorCrear } = await supabaseAdmin
+        .from('usuarios')
+        .insert(nuevoUsuario)
+        .select()
+        .single();
+
+      if (errorCrear) {
+        return res.status(500).json({
+          success: false,
+          error: `Error creando usuario en tabla usuarios: ${errorCrear.message}`,
+        });
+      }
+
+      usuarioDB = usuarioCreado;
+      console.log('✅ Usuario Oficina creado en tabla usuarios');
     }
 
     const correoOficina = usuarioDB.correo || 'oficina@apsistema.com';
