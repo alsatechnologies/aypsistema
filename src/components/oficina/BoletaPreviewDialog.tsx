@@ -7,6 +7,7 @@ import { Printer, X } from 'lucide-react';
 import { formatDateTimeMST } from '@/utils/dateUtils';
 import { printTicket } from '@/services/api/printer';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 // Logo se carga desde el servidor (logo_escpos.bin)
 
 interface Orden {
@@ -32,6 +33,7 @@ interface BoletaPreviewDialogProps {
 const BoletaPreviewDialog: React.FC<BoletaPreviewDialogProps> = ({ open, onOpenChange, orden }) => {
   const printRef = useRef<HTMLDivElement>(null);
   const [isPrinting, setIsPrinting] = useState(false);
+  const { usuario } = useAuth();
 
   const handlePrint = async () => {
     if (!orden) return;
@@ -43,6 +45,7 @@ const BoletaPreviewDialog: React.FC<BoletaPreviewDialogProps> = ({ open, onOpenC
 
       // Preparar datos para la API (el logo se carga desde el servidor)
       const printData = {
+        rol_usuario: usuario?.rol, // Enviar rol del usuario para determinar qué API usar
         printer_config: {
           connection_type: 'usb' as const,
           printer_name: 'POS-80c',

@@ -15,7 +15,9 @@ El health check muestra que las APIs externas están en "error". Esto se debe a 
 #### API de Impresión (Printer)
 ```
 PRINTER_API_URL=https://apiticket.alsatechnologies.com
+PRINTER_API_URL_2=https://apiticket2.alsatechnologies.com
 ```
+**Nota:** `PRINTER_API_URL_2` se usa automáticamente para usuarios con rol "Oficina"
 
 #### API de Básculas (Scales)
 ```
@@ -53,6 +55,7 @@ CERTIFICATE_SALIDA_API_URL=https://pdf-salida.alsatechnologies.com
 4. **Variables a Agregar:**
    ```
    PRINTER_API_URL=https://apiticket.alsatechnologies.com
+   PRINTER_API_URL_2=https://apiticket2.alsatechnologies.com
    SCALES_API_URL=http://apiscales.alsatechnologies.com
    CERTIFICATE_ENTRADA_API_URL=https://pdf-entrada.alsatechnologies.com
    CERTIFICATE_SALIDA_API_URL=https://pdf-salida.alsatechnologies.com

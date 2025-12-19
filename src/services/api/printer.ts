@@ -7,6 +7,7 @@ export interface PrinterConfig {
 }
 
 export interface PrintTicketRequest {
+  rol_usuario?: string; // Rol del usuario para determinar qué API usar (Opcional)
   printer_config: PrinterConfig;
   producto: string;
   fecha: string;

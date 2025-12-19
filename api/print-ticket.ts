@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { checkRateLimit, getClientIP } from './utils/rateLimit.js';
 
 const PRINTER_API_URL = process.env.PRINTER_API_URL || 'https://apiticket.alsatechnologies.com';
+const PRINTER_API_URL_2 = process.env.PRINTER_API_URL_2 || 'https://apiticket2.alsatechnologies.com';
 
 export default async function handler(
   req: VercelRequest,
@@ -35,17 +36,29 @@ export default async function handler(
   }
 
   try {
+    // Obtener rol del usuario del body (se enviará desde el frontend)
+    const { rol_usuario, ...printData } = req.body;
+    
+    // Seleccionar API según el rol del usuario
+    let apiUrl = PRINTER_API_URL;
+    if (rol_usuario === 'Oficina') {
+      apiUrl = PRINTER_API_URL_2;
+      console.log('🔧 [PRINT-TICKET] Usando API 2 (apiticket2) para usuario Oficina');
+    } else {
+      console.log('🔧 [PRINT-TICKET] Usando API 1 (apiticket) para otros usuarios');
+    }
+
     // Timeout de 15 segundos para impresión
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-    // Hacer la solicitud al servidor de impresión
-    const response = await fetch(`${PRINTER_API_URL}/api/printer/print-ticket`, {
+    // Hacer la solicitud al servidor de impresión (sin incluir rol_usuario en el body)
+    const response = await fetch(`${apiUrl}/api/printer/print-ticket`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(req.body),
+      body: JSON.stringify(printData),
       signal: controller.signal,
     }).catch((fetchError: any) => {
       clearTimeout(timeoutId);

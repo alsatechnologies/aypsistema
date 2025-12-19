@@ -18,6 +18,7 @@ SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key-aqui
 # APIs EXTERNAS - Integraciones
 # ============================================
 PRINTER_API_URL=https://apiticket.alsatechnologies.com
+PRINTER_API_URL_2=https://apiticket2.alsatechnologies.com
 SCALES_API_URL=http://apiscales.alsatechnologies.com
 CERTIFICATE_ENTRADA_API_URL=https://pdf-entrada.alsatechnologies.com
 CERTIFICATE_SALIDA_API_URL=https://pdf-salida.alsatechnologies.com
