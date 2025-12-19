@@ -69,15 +69,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       console.log('📥 Cargando usuario desde tabla usuarios, email:', email);
       
-      // Intentar usar función serverless primero (más confiable)
+      // Buscar usuario directamente (get-user-by-email fue eliminado para reducir funciones)
       try {
         const response = await Promise.race([
-          fetch('/api/get-user-by-email', {
+          fetch('/api/get-user-for-login', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ email }),
+            body: JSON.stringify({ busqueda: email }),
           }),
           new Promise((_, reject) => 
             setTimeout(() => reject(new Error('Timeout')), 3000)

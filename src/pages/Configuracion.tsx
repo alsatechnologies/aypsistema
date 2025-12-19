@@ -1136,22 +1136,7 @@ const Configuracion = () => {
                         return;
                       }
                       
-                      // Intentar primero con el endpoint directo
-                      try {
-                        const response = await fetch('/api/fix-oficina-user', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ password: 'Admin123' })
-                        });
-                        const result = await response.json();
-                        if (result.success) {
-                          toast.success('Usuario Oficina creado/actualizado en auth.users. Ahora puedes iniciar sesión con: oficina / Admin123', { id: 'fix-oficina' });
-                          await loadUsuarios();
-                          return;
-                        }
-                      } catch (endpointError) {
-                        console.log('Endpoint directo falló, usando método alternativo...');
-                      }
+                      // Usar create-auth-user directamente (fix-oficina-user fue eliminado)
                       
                       // Método alternativo: usar create-auth-user directamente
                       const createResponse = await fetch('/api/create-auth-user', {
