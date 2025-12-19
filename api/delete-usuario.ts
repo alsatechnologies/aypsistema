@@ -27,10 +27,24 @@ export default async function handler(
   }
 
   try {
+    // Log para debugging (sin exponer valores sensibles)
+    console.log('🔧 [DELETE-USUARIO] Verificando variables de entorno...');
+    console.log('🔧 [DELETE-USUARIO] SUPABASE_URL presente:', !!SUPABASE_URL);
+    console.log('🔧 [DELETE-USUARIO] SUPABASE_SERVICE_ROLE_KEY presente:', !!SUPABASE_SERVICE_ROLE_KEY);
+    
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('❌ [DELETE-USUARIO] Variables faltantes:', {
+        SUPABASE_URL: SUPABASE_URL ? 'presente' : 'FALTANTE',
+        SUPABASE_SERVICE_ROLE_KEY: SUPABASE_SERVICE_ROLE_KEY ? 'presente' : 'FALTANTE',
+        envKeys: Object.keys(process.env).filter(k => k.includes('SUPABASE'))
+      });
       return res.status(500).json({
         success: false,
-        error: 'Supabase no está configurado correctamente. Verifica las variables de entorno en Vercel.',
+        error: 'Supabase no está configurado correctamente. Verifica que VITE_SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY estén configuradas en Vercel.',
+        debug: {
+          hasUrl: !!SUPABASE_URL,
+          hasKey: !!SUPABASE_SERVICE_ROLE_KEY
+        }
       });
     }
 
