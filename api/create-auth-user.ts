@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
 // Leer variables de entorno - intentar múltiples formas
+// IMPORTANTE: En Vercel, las variables pueden estar con o sin prefijo VITE_
 const SUPABASE_URL = 
   process.env.VITE_SUPABASE_URL || 
   process.env.SUPABASE_URL || 
@@ -10,6 +11,7 @@ const SUPABASE_URL =
 const SUPABASE_SERVICE_ROLE_KEY = 
   process.env.SUPABASE_SERVICE_ROLE_KEY || 
   process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || 
+  process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY ||
   '';
 
 export default async function handler(
