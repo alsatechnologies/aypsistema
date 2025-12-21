@@ -531,11 +531,24 @@ const Produccion = () => {
                                   <SelectValue placeholder="Seleccionar producto" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {productosDB.map((producto) => (
-                                    <SelectItem key={producto.id} value={String(producto.id)}>
-                                      {producto.nombre}
-                                    </SelectItem>
-                                  ))}
+                                  {productosDB
+                                    .filter(producto => {
+                                      const nombreUpper = producto.nombre.toUpperCase();
+                                      return (
+                                        nombreUpper.includes('CARTAMO') && nombreUpper.includes('PRENSA') ||
+                                        nombreUpper.includes('GIRASOL') && nombreUpper.includes('PRENSA') ||
+                                        nombreUpper.includes('CARTAMO') && nombreUpper.includes('SOLVENTE') ||
+                                        nombreUpper.includes('GIRASOL') && nombreUpper.includes('SOLVENTE') ||
+                                        nombreUpper.includes('CARTAMO') && nombreUpper.includes('ORGANICO') ||
+                                        nombreUpper.includes('GIRASOL') && nombreUpper.includes('ORGANICO') ||
+                                        nombreUpper.includes('MEZCLAS')
+                                      );
+                                    })
+                                    .map((producto) => (
+                                      <SelectItem key={producto.id} value={String(producto.id)}>
+                                        {producto.nombre}
+                                      </SelectItem>
+                                    ))}
                                 </SelectContent>
                               </Select>
                             </TableCell>
