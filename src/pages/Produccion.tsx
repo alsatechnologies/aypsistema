@@ -352,15 +352,15 @@ const Produccion = () => {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Tanque</TableHead>
-                          <TableHead>Nivel (%)</TableHead>
-                          <TableHead>Gomas (%)</TableHead>
+                          <TableHead className="text-center">Nivel (%)</TableHead>
+                          <TableHead className="text-center">Gomas (%)</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {tanques.map((tanque) => (
                           <TableRow key={tanque.id}>
                             <TableCell className="font-medium">{tanque.nombre.trim()}</TableCell>
-                            <TableCell>
+                            <TableCell className="text-center">
                               <Input
                                 type="number"
                                 step="0.01"
@@ -372,10 +372,10 @@ const Produccion = () => {
                                     [tanque.id]: e.target.value
                                   });
                                 }}
-                                className="w-32"
+                                className="w-32 mx-auto"
                               />
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="text-center">
                               <Input
                                 type="number"
                                 step="0.01"
@@ -387,7 +387,7 @@ const Produccion = () => {
                                     [tanque.id]: e.target.value
                                   });
                                 }}
-                                className="w-32"
+                                className="w-32 mx-auto"
                               />
                             </TableCell>
                           </TableRow>
