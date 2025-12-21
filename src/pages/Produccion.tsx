@@ -372,7 +372,8 @@ const Produccion = () => {
                                     [tanque.id]: e.target.value
                                   });
                                 }}
-                                className="w-32 ml-auto text-right"
+                                className="w-32 ml-auto text-right [&::-webkit-inner-spin-button]:ml-2 [&::-webkit-outer-spin-button]:ml-2 pr-8"
+                                style={{ paddingRight: '2rem' }}
                               />
                             </TableCell>
                             <TableCell className="text-right">
@@ -387,7 +388,8 @@ const Produccion = () => {
                                     [tanque.id]: e.target.value
                                   });
                                 }}
-                                className="w-32 ml-auto text-right"
+                                className="w-32 ml-auto text-right [&::-webkit-inner-spin-button]:ml-2 [&::-webkit-outer-spin-button]:ml-2 pr-8"
+                                style={{ paddingRight: '2rem' }}
                               />
                             </TableCell>
                           </TableRow>
