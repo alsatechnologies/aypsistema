@@ -87,7 +87,7 @@ async def draw_logo(c: canvas.Canvas, logo_color: int):
     logo_width = 78
     logo_height = 60
 
-    # Dibujar logo en la parte superior e inferior
+    # Dibujar logo en la parte superior e inferior   
     c.drawImage(logo_path, 25, letter[1] - 80, width=logo_width, height=logo_height)
     c.drawImage(logo_path, 25, (letter[1] / 2) - 80, width=logo_width, height=logo_height)
 

@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { useProduccion } from '@/services/hooks/useProduccion';
 import type { ReporteProduccion, NivelTanque, NivelGoma } from '@/services/supabase/produccion';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAlmacenes } from '@/services/hooks/useAlmacenes';
 
 const Produccion = () => {
   const [search, setSearch] = useState('');
@@ -24,12 +25,31 @@ const Produccion = () => {
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
   const { usuario } = useAuth();
+  const { almacenes } = useAlmacenes();
+
+  // Filtrar tanques (almacenes que contienen "TQ" en el nombre) y ordenar por nombre
+  const tanques = almacenes
+    .filter(a => a.nombre.includes('TQ') || a.nombre.includes('TANQUE'))
+    .sort((a, b) => {
+      // Extraer números de los nombres para ordenar correctamente (TQ 201, TQ 202, etc.)
+      const numA = parseInt(a.nombre.match(/\d+/)?.[0] || '999') || 999;
+      const numB = parseInt(b.nombre.match(/\d+/)?.[0] || '999') || 999;
+      return numA - numB;
+    });
+  
+  // Filtrar gomas (si existen almacenes con "GOMA" en el nombre)
+  const gomas = almacenes.filter(a => 
+    a.nombre.toUpperCase().includes('GOMA') || 
+    a.nombre.toUpperCase().includes('GOMAS')
+  );
+
+  // Estado para niveles: key es el ID del almacén, value es el nivel
+  const [nivelesTanques, setNivelesTanques] = useState<Record<number, string>>({});
+  const [nivelesGomas, setNivelesGomas] = useState<Record<number, string>>({});
 
   const [formData, setFormData] = useState({
     turno: 'Matutino' as 'Matutino' | 'Vespertino' | 'Nocturno',
     responsable: usuario?.nombre_completo || '',
-    nivelesTanques: [{ tanque: '', nivel: '', unidad: 'L' }] as Array<{ tanque: string; nivel: string; unidad: string }>,
-    nivelesGomas: [{ goma: '', nivel: '', unidad: 'L' }] as Array<{ goma: string; nivel: string; unidad: string }>,
     observaciones: ''
   });
 
@@ -58,27 +78,45 @@ const Produccion = () => {
       return;
     }
 
-    // Validar que haya al menos un tanque o una goma
-    const tanquesValidos = formData.nivelesTanques.filter(t => t.tanque && t.nivel);
-    const gomasValidas = formData.nivelesGomas.filter(g => g.goma && g.nivel);
+    // Validar que haya al menos un nivel de tanque registrado
+    const tanquesConDatos = tanques
+      .map(almacen => {
+        const nivel = nivelesTanques[almacen.id];
+        const nivelGomas = nivelesGomas[almacen.id];
+        const nivelNum = nivel ? parseFloat(nivel) : 0;
+        const gomasNum = nivelGomas ? parseFloat(nivelGomas) : 0;
+        
+        // Incluir si tiene al menos nivel o gomas
+        if (nivelNum > 0 || gomasNum > 0) {
+          return { almacen, nivel: nivelNum, gomas: gomasNum };
+        }
+        return null;
+      })
+      .filter((item): item is { almacen: typeof tanques[0]; nivel: number; gomas: number } => item !== null);
 
-    if (tanquesValidos.length === 0 && gomasValidas.length === 0) {
-      toast.error('Debe registrar al menos un nivel de tanque o goma');
+    if (tanquesConDatos.length === 0) {
+      toast.error('Debe registrar al menos un nivel de tanque o gomas');
       return;
     }
 
     try {
-      const nivelesTanques: NivelTanque[] = tanquesValidos.map(t => ({
-        tanque: t.tanque,
-        nivel: parseFloat(t.nivel) || 0,
-        unidad: t.unidad || 'L'
-      }));
+      // Convertir niveles de tanques a formato esperado
+      const nivelesTanquesData: NivelTanque[] = tanquesConDatos
+        .filter(item => item.nivel > 0)
+        .map(({ almacen, nivel }) => ({
+          tanque: almacen.nombre,
+          nivel: nivel,
+          unidad: almacen.unidad || 'Kg'
+        }));
 
-      const nivelesGomas: NivelGoma[] = gomasValidas.map(g => ({
-        goma: g.goma,
-        nivel: parseFloat(g.nivel) || 0,
-        unidad: g.unidad || 'L'
-      }));
+      // Convertir niveles de gomas a formato esperado (gomas por tanque)
+      const nivelesGomasData: NivelGoma[] = tanquesConDatos
+        .filter(item => item.gomas > 0)
+        .map(({ almacen, gomas }) => ({
+          goma: almacen.nombre,
+          nivel: gomas,
+          unidad: almacen.unidad || 'Kg'
+        }));
 
       await addReporte({
         id: '', // Se generará automáticamente
@@ -86,8 +124,8 @@ const Produccion = () => {
         responsable: formData.responsable,
         turno: formData.turno,
         estatus: 'Completado',
-        niveles_tanques: nivelesTanques.length > 0 ? nivelesTanques : null,
-        niveles_gomas: nivelesGomas.length > 0 ? nivelesGomas : null,
+        niveles_tanques: nivelesTanquesData.length > 0 ? nivelesTanquesData : null,
+        niveles_gomas: nivelesGomasData.length > 0 ? nivelesGomasData : null,
         observaciones: formData.observaciones || null
       });
       
@@ -97,12 +135,12 @@ const Produccion = () => {
       setFormData({
         turno: 'Matutino',
         responsable: usuario?.nombre_completo || '',
-        nivelesTanques: [{ tanque: '', nivel: '', unidad: 'L' }],
-        nivelesGomas: [{ goma: '', nivel: '', unidad: 'L' }],
         observaciones: ''
       });
+      setNivelesTanques({});
+      setNivelesGomas({});
       setIsNuevoReporteOpen(false);
-      toast.success('Reporte de producción creado');
+      toast.success('Reporte de producción creado exitosamente');
     } catch (error) {
       console.error('Error creating reporte:', error);
       toast.error('Error al crear reporte');
@@ -127,29 +165,6 @@ const Produccion = () => {
     }
   };
 
-  const agregarTanque = () => {
-    setFormData({
-      ...formData,
-      nivelesTanques: [...formData.nivelesTanques, { tanque: '', nivel: '', unidad: 'L' }]
-    });
-  };
-
-  const eliminarTanque = (index: number) => {
-    const nuevos = formData.nivelesTanques.filter((_, i) => i !== index);
-    setFormData({ ...formData, nivelesTanques: nuevos.length > 0 ? nuevos : [{ tanque: '', nivel: '', unidad: 'L' }] });
-  };
-
-  const agregarGoma = () => {
-    setFormData({
-      ...formData,
-      nivelesGomas: [...formData.nivelesGomas, { goma: '', nivel: '', unidad: 'L' }]
-    });
-  };
-
-  const eliminarGoma = (index: number) => {
-    const nuevos = formData.nivelesGomas.filter((_, i) => i !== index);
-    setFormData({ ...formData, nivelesGomas: nuevos.length > 0 ? nuevos : [{ goma: '', nivel: '', unidad: 'L' }] });
-  };
 
   const getEstatusBadge = (estatus: string) => {
     switch (estatus) {
@@ -330,152 +345,59 @@ const Produccion = () => {
               </div>
 
               {/* Niveles de Tanques */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
+              {tanques.length > 0 && (
+                <div className="space-y-3">
                   <Label className="text-base font-semibold">Niveles de Tanques</Label>
-                  <Button type="button" variant="outline" size="sm" onClick={agregarTanque}>
-                    <Plus className="h-4 w-4 mr-1" />
-                    Agregar Tanque
-                  </Button>
-                </div>
-                {formData.nivelesTanques.map((tanque, index) => (
-                  <div key={index} className="grid grid-cols-12 gap-2 items-end">
-                    <div className="col-span-4">
-                      <Label>Tanque</Label>
-                      <Input
-                        value={tanque.tanque}
-                        onChange={(e) => {
-                          const nuevos = [...formData.nivelesTanques];
-                          nuevos[index].tanque = e.target.value;
-                          setFormData({ ...formData, nivelesTanques: nuevos });
-                        }}
-                        placeholder="Ej: TANQUE 1"
-                      />
-                    </div>
-                    <div className="col-span-3">
-                      <Label>Nivel</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={tanque.nivel}
-                        onChange={(e) => {
-                          const nuevos = [...formData.nivelesTanques];
-                          nuevos[index].nivel = e.target.value;
-                          setFormData({ ...formData, nivelesTanques: nuevos });
-                        }}
-                        placeholder="0.00"
-                      />
-                    </div>
-                    <div className="col-span-3">
-                      <Label>Unidad</Label>
-                      <Select
-                        value={tanque.unidad}
-                        onValueChange={(v) => {
-                          const nuevos = [...formData.nivelesTanques];
-                          nuevos[index].unidad = v;
-                          setFormData({ ...formData, nivelesTanques: nuevos });
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="L">L (Litros)</SelectItem>
-                          <SelectItem value="m³">m³ (Metros cúbicos)</SelectItem>
-                          <SelectItem value="gal">gal (Galones)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="col-span-2">
-                      {formData.nivelesTanques.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => eliminarTanque(index)}
-                          className="text-red-600"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tanque</TableHead>
+                          <TableHead className="text-right">Nivel (Kg)</TableHead>
+                          <TableHead className="text-right">Gomas (Kg)</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {tanques.map((tanque) => (
+                          <TableRow key={tanque.id}>
+                            <TableCell className="font-medium">{tanque.nombre.trim()}</TableCell>
+                            <TableCell className="text-right">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                placeholder="0"
+                                value={nivelesTanques[tanque.id] || ''}
+                                onChange={(e) => {
+                                  setNivelesTanques({
+                                    ...nivelesTanques,
+                                    [tanque.id]: e.target.value
+                                  });
+                                }}
+                                className="w-32 ml-auto text-right"
+                              />
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                placeholder="0"
+                                value={nivelesGomas[tanque.id] || ''}
+                                onChange={(e) => {
+                                  setNivelesGomas({
+                                    ...nivelesGomas,
+                                    [tanque.id]: e.target.value
+                                  });
+                                }}
+                                className="w-32 ml-auto text-right"
+                              />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
-                ))}
-              </div>
-
-              {/* Niveles de Gomas */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="text-base font-semibold">Niveles de Gomas</Label>
-                  <Button type="button" variant="outline" size="sm" onClick={agregarGoma}>
-                    <Plus className="h-4 w-4 mr-1" />
-                    Agregar Goma
-                  </Button>
                 </div>
-                {formData.nivelesGomas.map((goma, index) => (
-                  <div key={index} className="grid grid-cols-12 gap-2 items-end">
-                    <div className="col-span-4">
-                      <Label>Goma</Label>
-                      <Input
-                        value={goma.goma}
-                        onChange={(e) => {
-                          const nuevos = [...formData.nivelesGomas];
-                          nuevos[index].goma = e.target.value;
-                          setFormData({ ...formData, nivelesGomas: nuevos });
-                        }}
-                        placeholder="Ej: GOMA 1"
-                      />
-                    </div>
-                    <div className="col-span-3">
-                      <Label>Nivel</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={goma.nivel}
-                        onChange={(e) => {
-                          const nuevos = [...formData.nivelesGomas];
-                          nuevos[index].nivel = e.target.value;
-                          setFormData({ ...formData, nivelesGomas: nuevos });
-                        }}
-                        placeholder="0.00"
-                      />
-                    </div>
-                    <div className="col-span-3">
-                      <Label>Unidad</Label>
-                      <Select
-                        value={goma.unidad}
-                        onValueChange={(v) => {
-                          const nuevos = [...formData.nivelesGomas];
-                          nuevos[index].unidad = v;
-                          setFormData({ ...formData, nivelesGomas: nuevos });
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="L">L (Litros)</SelectItem>
-                          <SelectItem value="m³">m³ (Metros cúbicos)</SelectItem>
-                          <SelectItem value="gal">gal (Galones)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="col-span-2">
-                      {formData.nivelesGomas.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => eliminarGoma(index)}
-                          className="text-red-600"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              )}
 
               {/* Observaciones */}
               <div>
