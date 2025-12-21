@@ -192,6 +192,47 @@ const Produccion = () => {
     }
   };
 
+  const handleEditar = (reporte: ReporteProduccion) => {
+    setReporteEditando(reporte);
+    
+    // Cargar datos del reporte en el formulario
+    setFormData({
+      responsable: reporte.responsable,
+      observaciones: reporte.observaciones || ''
+    });
+
+    // Cargar niveles de tanques
+    const tanquesData: Record<number, string> = {};
+    if (reporte.niveles_tanques) {
+      reporte.niveles_tanques.forEach(t => {
+        const tanque = tanques.find(a => a.nombre.trim() === t.tanque.trim());
+        if (tanque) {
+          tanquesData[tanque.id] = String(t.nivel);
+        }
+      });
+    }
+    setNivelesTanques(tanquesData);
+
+    // Cargar niveles de gomas
+    const gomasData: Record<number, string> = {};
+    if (reporte.niveles_gomas) {
+      reporte.niveles_gomas.forEach(g => {
+        const tanque = tanques.find(a => a.nombre.trim() === g.goma.trim());
+        if (tanque) {
+          gomasData[tanque.id] = String(g.nivel);
+        }
+      });
+    }
+    setNivelesGomas(gomasData);
+
+    // Cargar campos adicionales
+    setExpanderLitros(reporte.expander_litros ? reporte.expander_litros.toLocaleString('es-MX', { maximumFractionDigits: 2 }) : '');
+    setCombAlternoPorcentaje(reporte.comb_alterno_porcentaje ? String(reporte.comb_alterno_porcentaje) : '');
+    setCombustoleoPorcentaje(reporte.combustoleo_porcentaje ? String(reporte.combustoleo_porcentaje) : '');
+
+    setIsNuevoReporteOpen(true);
+  };
+
   const handleVerDetalle = (reporte: ReporteProduccion) => {
     setSelectedReporte(reporte);
     setIsDetalleOpen(true);
