@@ -412,6 +412,8 @@ const Produccion = () => {
                       placeholder="0.00"
                       value={expanderLitros}
                       onChange={(e) => setExpanderLitros(e.target.value)}
+                      className="pr-8"
+                      style={{ paddingRight: '2rem' }}
                     />
                   </div>
                   <div>
@@ -422,6 +424,8 @@ const Produccion = () => {
                       placeholder="0.00"
                       value={combAlternoPorcentaje}
                       onChange={(e) => setCombAlternoPorcentaje(e.target.value)}
+                      className="pr-8"
+                      style={{ paddingRight: '2rem' }}
                     />
                   </div>
                   <div>
@@ -432,6 +436,8 @@ const Produccion = () => {
                       placeholder="0.00"
                       value={combustoleoPorcentaje}
                       onChange={(e) => setCombustoleoPorcentaje(e.target.value)}
+                      className="pr-8"
+                      style={{ paddingRight: '2rem' }}
                     />
                   </div>
                 </div>
