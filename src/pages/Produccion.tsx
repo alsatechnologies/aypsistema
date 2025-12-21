@@ -22,6 +22,7 @@ const Produccion = () => {
   const [isNuevoReporteOpen, setIsNuevoReporteOpen] = useState(false);
   const [isDetalleOpen, setIsDetalleOpen] = useState(false);
   const [selectedReporte, setSelectedReporte] = useState<ReporteProduccion | null>(null);
+  const [reporteEditando, setReporteEditando] = useState<ReporteProduccion | null>(null);
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
   const { usuario } = useAuth();
@@ -139,19 +140,37 @@ const Produccion = () => {
         return isNaN(parsed) || parsed <= 0 ? null : parsed;
       };
 
-      await addReporte({
-        id: '', // Se generará automáticamente
-        fecha: new Date().toISOString().split('T')[0],
-        responsable: formData.responsable,
-        turno: 'Matutino', // Mantener turno en BD pero no mostrar en formulario
-        estatus: 'Completado',
-        niveles_tanques: nivelesTanquesData.length > 0 ? nivelesTanquesData : null,
-        niveles_gomas: nivelesGomasData.length > 0 ? nivelesGomasData : null,
-        expander_litros: parseNumber(expanderLitros),
-        comb_alterno_porcentaje: parseNumber(combAlternoPorcentaje),
-        combustoleo_porcentaje: parseNumber(combustoleoPorcentaje),
-        observaciones: formData.observaciones || null
-      });
+      if (reporteEditando) {
+        // Actualizar reporte existente
+        await updateReporte(reporteEditando.id, {
+          responsable: formData.responsable,
+          turno: reporteEditando.turno, // Mantener el turno original
+          estatus: reporteEditando.estatus, // Mantener el estatus original
+          niveles_tanques: nivelesTanquesData.length > 0 ? nivelesTanquesData : null,
+          niveles_gomas: nivelesGomasData.length > 0 ? nivelesGomasData : null,
+          expander_litros: parseNumber(expanderLitros),
+          comb_alterno_porcentaje: parseNumber(combAlternoPorcentaje),
+          combustoleo_porcentaje: parseNumber(combustoleoPorcentaje),
+          observaciones: formData.observaciones || null
+        });
+        toast.success('Reporte de producción actualizado exitosamente');
+      } else {
+        // Crear nuevo reporte
+        await addReporte({
+          id: '', // Se generará automáticamente
+          fecha: new Date().toISOString().split('T')[0],
+          responsable: formData.responsable,
+          turno: 'Matutino', // Mantener turno en BD pero no mostrar en formulario
+          estatus: 'Completado',
+          niveles_tanques: nivelesTanquesData.length > 0 ? nivelesTanquesData : null,
+          niveles_gomas: nivelesGomasData.length > 0 ? nivelesGomasData : null,
+          expander_litros: parseNumber(expanderLitros),
+          comb_alterno_porcentaje: parseNumber(combAlternoPorcentaje),
+          combustoleo_porcentaje: parseNumber(combustoleoPorcentaje),
+          observaciones: formData.observaciones || null
+        });
+        toast.success('Reporte de producción creado exitosamente');
+      }
       
       await loadReportes();
       
@@ -165,8 +184,8 @@ const Produccion = () => {
       setExpanderLitros('');
       setCombAlternoPorcentaje('');
       setCombustoleoPorcentaje('');
+      setReporteEditando(null);
       setIsNuevoReporteOpen(false);
-      toast.success('Reporte de producción creado exitosamente');
     } catch (error) {
       console.error('Error creating reporte:', error);
       toast.error('Error al crear reporte');
@@ -257,7 +276,19 @@ const Produccion = () => {
               )}
             </div>
           </div>
-          <Button onClick={() => setIsNuevoReporteOpen(true)}>
+          <Button onClick={() => {
+            setReporteEditando(null);
+            setFormData({
+              responsable: usuario?.nombre_completo || '',
+              observaciones: ''
+            });
+            setNivelesTanques({});
+            setNivelesGomas({});
+            setExpanderLitros('');
+            setCombAlternoPorcentaje('');
+            setCombustoleoPorcentaje('');
+            setIsNuevoReporteOpen(true);
+          }}>
             <Plus className="h-4 w-4 mr-2" />
             Nuevo Reporte
           </Button>
@@ -310,6 +341,14 @@ const Produccion = () => {
                             title="Ver detalle"
                           >
                             <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEditar(reporte)}
+                            title="Editar"
+                          >
+                            <Edit className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
@@ -491,7 +530,9 @@ const Produccion = () => {
               <DialogClose asChild>
                 <Button variant="outline">Cancelar</Button>
               </DialogClose>
-              <Button onClick={handleNuevoReporte}>Guardar Reporte</Button>
+              <Button onClick={handleNuevoReporte}>
+                {reporteEditando ? 'Actualizar Reporte' : 'Guardar Reporte'}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
