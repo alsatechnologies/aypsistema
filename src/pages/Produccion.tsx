@@ -489,7 +489,15 @@ const Produccion = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-muted-foreground">Fecha</Label>
-                    <p className="font-medium">{new Date(selectedReporte.fecha).toLocaleDateString('es-MX')}</p>
+                    <p className="font-medium">{(() => {
+                      const fecha = new Date(selectedReporte.fecha);
+                      const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                      const diaSemana = diasSemana[fecha.getDay()];
+                      const dia = String(fecha.getDate()).padStart(2, '0');
+                      const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+                      const año = fecha.getFullYear();
+                      return `${diaSemana} ${dia}/${mes}/${año}`;
+                    })()}</p>
                   </div>
                   <div>
                     <Label className="text-muted-foreground">Responsable</Label>
