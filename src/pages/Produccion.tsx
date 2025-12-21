@@ -352,8 +352,8 @@ const Produccion = () => {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Tanque</TableHead>
-                          <TableHead className="text-right">Nivel (%)</TableHead>
-                          <TableHead className="text-right">Gomas (%)</TableHead>
+                          <TableHead>Nivel (%)</TableHead>
+                          <TableHead>Gomas (%)</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
