@@ -24,6 +24,7 @@ const Movimientos = lazy(() => import("./pages/Movimientos"));
 const Ingreso = lazy(() => import("./pages/Ingreso"));
 const ControlCalidad = lazy(() => import("./pages/ControlCalidad"));
 const Laboratorio = lazy(() => import("./pages/Laboratorio"));
+const Produccion = lazy(() => import("./pages/Produccion"));
 const Configuracion = lazy(() => import("./pages/Configuracion"));
 const EmergencyReset = lazy(() => import("./pages/EmergencyReset"));
 const FixLogin = lazy(() => import("./pages/FixLogin"));
@@ -155,6 +156,14 @@ const App = () => (
               element={
                 <ProtectedRoute requiredModule="reportes">
                   <Reportes />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/produccion" 
+              element={
+                <ProtectedRoute requiredModule="produccion">
+                  <Produccion />
                 </ProtectedRoute>
               } 
             />

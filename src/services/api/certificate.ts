@@ -116,38 +116,67 @@ export async function generateBoletaRecibaPDF(data: BoletaRecibaRequest): Promis
           
           // Obtener el mensaje de error
           errorMessage = errorData.message || errorData.error || errorMessage;
+          console.log('[CERTIFICATE] errorMessage original:', errorMessage);
+          console.log('[CERTIFICATE] errorData.detail:', errorData.detail);
           
-          // Intentar parsear el mensaje si viene como JSON string anidado
-          if (typeof errorMessage === 'string') {
-            // Si el mensaje es un JSON string, parsearlo
-            if (errorMessage.startsWith('{') || errorMessage.startsWith('[')) {
+          // Primero verificar si hay un campo detail directo
+          if (errorData.detail) {
+            errorDetail = errorData.detail;
+            console.log('[CERTIFICATE] Usando errorData.detail directo:', errorDetail);
+          } else if (typeof errorMessage === 'string') {
+            // Intentar parsear el mensaje si viene como JSON string anidado
+            // El mensaje puede ser: '{"detail":"Error generando el PDF: Cannot open resource \"./images/logo.png\""}'
+            const trimmedMessage = errorMessage.trim();
+            console.log('[CERTIFICATE] Mensaje trimmeado:', trimmedMessage);
+            console.log('[CERTIFICATE] ¿Es JSON?', trimmedMessage.startsWith('{') || trimmedMessage.startsWith('['));
+            
+            if (trimmedMessage.startsWith('{') || trimmedMessage.startsWith('[')) {
               try {
-                const parsedMessage = JSON.parse(errorMessage);
+                // Intentar parsear el JSON, manejando posibles caracteres de escape
+                let jsonString = errorMessage;
+                // Limpiar posibles escapes dobles
+                jsonString = jsonString.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+                const parsedMessage = JSON.parse(jsonString);
+                console.log('[CERTIFICATE] Mensaje parseado:', parsedMessage);
                 errorDetail = parsedMessage.detail || parsedMessage.message || errorMessage;
+                console.log('[CERTIFICATE] errorDetail después de parsear:', errorDetail);
               } catch (e) {
-                errorDetail = errorMessage;
+                console.error('[CERTIFICATE] Error al parsear JSON:', e);
+                // Si falla el parse, intentar extraer el mensaje manualmente
+                const detailMatch = errorMessage.match(/"detail"\s*:\s*"([^"]+)"/);
+                if (detailMatch && detailMatch[1]) {
+                  errorDetail = detailMatch[1];
+                  console.log('[CERTIFICATE] Extraído con regex:', errorDetail);
+                } else {
+                  // Si falla todo, usar el mensaje tal cual
+                  errorDetail = errorMessage;
+                }
               }
             } else {
               errorDetail = errorMessage;
             }
-            
-            // También verificar si hay un campo detail directo
-            if (errorData.detail) {
-              errorDetail = errorData.detail;
-            }
-            
-            // Traducir errores comunes a mensajes más amigables
+          } else {
+            errorDetail = String(errorMessage);
+          }
+          
+          console.log('[CERTIFICATE] errorDetail final antes de traducción:', errorDetail);
+          
+          // Traducir errores comunes a mensajes más amigables
+          if (errorDetail && typeof errorDetail === 'string') {
             if (errorDetail.includes('logo.png') || errorDetail.includes('Cannot open resource')) {
-              errorDetail = 'Error en el servidor de generación de PDF: No se encuentra el archivo del logo. Por favor, contacta al administrador de la API de certificados.';
+              errorDetail = 'Error en el servidor de generación de PDF: No se encuentra el archivo del logo. Por favor, contacta al administrador de la API de certificados (pdf-entrada.alsatechnologies.com).';
             } else if (errorDetail.includes('Error generando el PDF')) {
               // Extraer el detalle del error si está disponible
               const match = errorDetail.match(/Error generando el PDF: (.+)/);
               if (match && match[1]) {
-                errorDetail = `Error al generar el PDF: ${match[1]}`;
+                const errorCause = match[1];
+                if (errorCause.includes('logo.png') || errorCause.includes('Cannot open resource')) {
+                  errorDetail = 'Error en el servidor de generación de PDF: No se encuentra el archivo del logo. Por favor, contacta al administrador de la API de certificados (pdf-entrada.alsatechnologies.com).';
+                } else {
+                  errorDetail = `Error al generar el PDF: ${errorCause}`;
+                }
               }
             }
-          } else {
-            errorDetail = String(errorMessage);
           }
           
         } catch (e) {
