@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Search, Plus, Factory, Clock, CheckCircle, Eye, Trash2, Calendar, X } from 'lucide-react';
+import { Search, Plus, Factory, Clock, CheckCircle, Eye, Trash2, Calendar, X, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import { useProduccion } from '@/services/hooks/useProduccion';
 import type { ReporteProduccion, NivelTanque, NivelGoma } from '@/services/supabase/produccion';
@@ -376,7 +376,7 @@ const Produccion = () => {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Factory className="h-5 w-5" />
-                Nuevo Reporte de Producción
+                {reporteEditando ? 'Editar Reporte de Producción' : 'Nuevo Reporte de Producción'}
               </DialogTitle>
             </DialogHeader>
 
@@ -388,7 +388,7 @@ const Produccion = () => {
                   <Input 
                     type="text" 
                     value={(() => {
-                      const fecha = new Date();
+                      const fecha = reporteEditando ? new Date(reporteEditando.fecha) : new Date();
                       const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
                       const diaSemana = diasSemana[fecha.getDay()];
                       const dia = String(fecha.getDate()).padStart(2, '0');
