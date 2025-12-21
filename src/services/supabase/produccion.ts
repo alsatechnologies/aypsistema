@@ -20,6 +20,9 @@ export interface ReporteProduccion {
   estatus: 'Pendiente' | 'En proceso' | 'Completado';
   niveles_tanques?: NivelTanque[] | null;
   niveles_gomas?: NivelGoma[] | null;
+  expander_litros?: number | null;
+  comb_alterno_porcentaje?: number | null;
+  combustoleo_porcentaje?: number | null;
   observaciones?: string | null;
   activo?: boolean;
   created_at?: string;

@@ -28,14 +28,27 @@ const Produccion = () => {
   const { almacenes } = useAlmacenes();
 
   // Filtrar tanques (almacenes que contienen "TQ" en el nombre) y ordenar por nombre
+  // Excluir COMBUSTÓLEO, DIESEL y HEXANO
   const tanques = almacenes
-    .filter(a => a.nombre.includes('TQ') || a.nombre.includes('TANQUE'))
+    .filter(a => {
+      const nombreUpper = a.nombre.toUpperCase();
+      return (a.nombre.includes('TQ') || a.nombre.includes('TANQUE')) &&
+             !nombreUpper.includes('COMBUSTÓLEO') &&
+             !nombreUpper.includes('COMBUSTOLEO') &&
+             !nombreUpper.includes('DIESEL') &&
+             !nombreUpper.includes('HEXANO');
+    })
     .sort((a, b) => {
       // Extraer números de los nombres para ordenar correctamente (TQ 201, TQ 202, etc.)
       const numA = parseInt(a.nombre.match(/\d+/)?.[0] || '999') || 999;
       const numB = parseInt(b.nombre.match(/\d+/)?.[0] || '999') || 999;
       return numA - numB;
     });
+  
+  // Campos adicionales al final
+  const [expanderLitros, setExpanderLitros] = useState<string>('');
+  const [combAlternoPorcentaje, setCombAlternoPorcentaje] = useState<string>('');
+  const [combustoleoPorcentaje, setCombustoleoPorcentaje] = useState<string>('');
   
   // Filtrar gomas (si existen almacenes con "GOMA" en el nombre)
   const gomas = almacenes.filter(a => 
@@ -48,7 +61,6 @@ const Produccion = () => {
   const [nivelesGomas, setNivelesGomas] = useState<Record<number, string>>({});
 
   const [formData, setFormData] = useState({
-    turno: 'Matutino' as 'Matutino' | 'Vespertino' | 'Nocturno',
     responsable: usuario?.nombre_completo || '',
     observaciones: ''
   });
@@ -122,10 +134,13 @@ const Produccion = () => {
         id: '', // Se generará automáticamente
         fecha: new Date().toISOString().split('T')[0],
         responsable: formData.responsable,
-        turno: formData.turno,
+        turno: 'Matutino', // Mantener turno en BD pero no mostrar en formulario
         estatus: 'Completado',
         niveles_tanques: nivelesTanquesData.length > 0 ? nivelesTanquesData : null,
         niveles_gomas: nivelesGomasData.length > 0 ? nivelesGomasData : null,
+        expander_litros: expanderLitros && parseFloat(expanderLitros) > 0 ? parseFloat(expanderLitros) : null,
+        comb_alterno_porcentaje: combAlternoPorcentaje && parseFloat(combAlternoPorcentaje) > 0 ? parseFloat(combAlternoPorcentaje) : null,
+        combustoleo_porcentaje: combustoleoPorcentaje && parseFloat(combustoleoPorcentaje) > 0 ? parseFloat(combustoleoPorcentaje) : null,
         observaciones: formData.observaciones || null
       });
       
@@ -133,12 +148,14 @@ const Produccion = () => {
       
       // Resetear formulario
       setFormData({
-        turno: 'Matutino',
         responsable: usuario?.nombre_completo || '',
         observaciones: ''
       });
       setNivelesTanques({});
       setNivelesGomas({});
+      setExpanderLitros('');
+      setCombAlternoPorcentaje('');
+      setCombustoleoPorcentaje('');
       setIsNuevoReporteOpen(false);
       toast.success('Reporte de producción creado exitosamente');
     } catch (error) {
@@ -255,7 +272,6 @@ const Produccion = () => {
                     <TableHead>ID</TableHead>
                     <TableHead>FECHA</TableHead>
                     <TableHead>RESPONSABLE</TableHead>
-                    <TableHead>TURNO</TableHead>
                     <TableHead>ESTATUS</TableHead>
                     <TableHead>ACCIONES</TableHead>
                   </TableRow>
@@ -266,9 +282,6 @@ const Produccion = () => {
                       <TableCell className="font-medium">{reporte.id}</TableCell>
                       <TableCell>{new Date(reporte.fecha).toLocaleDateString('es-MX')}</TableCell>
                       <TableCell>{reporte.responsable}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{reporte.turno}</Badge>
-                      </TableCell>
                       <TableCell>{getEstatusBadge(reporte.estatus)}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -321,27 +334,13 @@ const Produccion = () => {
                   />
                 </div>
                 <div>
-                  <Label>Turno *</Label>
-                  <Select value={formData.turno} onValueChange={(v: any) => setFormData({ ...formData, turno: v })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Matutino">Matutino</SelectItem>
-                      <SelectItem value="Vespertino">Vespertino</SelectItem>
-                      <SelectItem value="Nocturno">Nocturno</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label>Responsable *</Label>
+                  <Input 
+                    value={formData.responsable}
+                    onChange={(e) => setFormData({ ...formData, responsable: e.target.value })}
+                    placeholder="Nombre del responsable"
+                  />
                 </div>
-              </div>
-
-              <div>
-                <Label>Responsable *</Label>
-                <Input 
-                  value={formData.responsable}
-                  onChange={(e) => setFormData({ ...formData, responsable: e.target.value })}
-                  placeholder="Nombre del responsable"
-                />
               </div>
 
               {/* Niveles de Tanques */}
@@ -399,6 +398,43 @@ const Produccion = () => {
                 </div>
               )}
 
+              {/* Campos adicionales */}
+              <div className="space-y-4 border-t pt-4">
+                <Label className="text-base font-semibold">Información Adicional</Label>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label>Expander (Litros)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={expanderLitros}
+                      onChange={(e) => setExpanderLitros(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Comb. Alterno (%)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={combAlternoPorcentaje}
+                      onChange={(e) => setCombAlternoPorcentaje(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Combustóleo (%)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={combustoleoPorcentaje}
+                      onChange={(e) => setCombustoleoPorcentaje(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* Observaciones */}
               <div>
                 <Label>Observaciones</Label>
@@ -440,10 +476,6 @@ const Produccion = () => {
                   <div>
                     <Label className="text-muted-foreground">Responsable</Label>
                     <p className="font-medium">{selectedReporte.responsable}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Turno</Label>
-                    <p className="font-medium">{selectedReporte.turno}</p>
                   </div>
                   <div>
                     <Label className="text-muted-foreground">Estatus</Label>
@@ -496,6 +528,33 @@ const Produccion = () => {
                         ))}
                       </TableBody>
                     </Table>
+                  </div>
+                )}
+
+                {/* Campos adicionales en detalle */}
+                {(selectedReporte.expander_litros || selectedReporte.comb_alterno_porcentaje || selectedReporte.combustoleo_porcentaje) && (
+                  <div>
+                    <Label className="text-base font-semibold mb-3 block">Información Adicional</Label>
+                    <div className="grid grid-cols-3 gap-4">
+                      {selectedReporte.expander_litros && (
+                        <div>
+                          <Label className="text-muted-foreground text-sm">Expander</Label>
+                          <p className="font-medium">{selectedReporte.expander_litros.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} L</p>
+                        </div>
+                      )}
+                      {selectedReporte.comb_alterno_porcentaje && (
+                        <div>
+                          <Label className="text-muted-foreground text-sm">Comb. Alterno</Label>
+                          <p className="font-medium">{selectedReporte.comb_alterno_porcentaje.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %</p>
+                        </div>
+                      )}
+                      {selectedReporte.combustoleo_porcentaje && (
+                        <div>
+                          <Label className="text-muted-foreground text-sm">Combustóleo</Label>
+                          <p className="font-medium">{selectedReporte.combustoleo_porcentaje.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
