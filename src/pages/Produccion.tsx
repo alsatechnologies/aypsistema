@@ -568,7 +568,7 @@ const Produccion = () => {
                     <Label>Expander (Litros)</Label>
                     <Input
                       type="text"
-                      placeholder="0 o 0.00 o 25,000"
+                      placeholder="0"
                       value={expanderLitros}
                       onChange={(e) => {
                         // Permitir números, comas, puntos y espacios
