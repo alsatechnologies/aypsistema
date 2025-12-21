@@ -130,6 +130,15 @@ const Produccion = () => {
           unidad: '%' // Gomas se miden en porcentaje
         }));
 
+      // Función helper para parsear números con comas
+      const parseNumber = (value: string): number | null => {
+        if (!value) return null;
+        // Remover comas y espacios, luego parsear
+        const cleanValue = value.replace(/,/g, '').replace(/\s/g, '');
+        const parsed = parseFloat(cleanValue);
+        return isNaN(parsed) || parsed <= 0 ? null : parsed;
+      };
+
       await addReporte({
         id: '', // Se generará automáticamente
         fecha: new Date().toISOString().split('T')[0],
@@ -138,9 +147,9 @@ const Produccion = () => {
         estatus: 'Completado',
         niveles_tanques: nivelesTanquesData.length > 0 ? nivelesTanquesData : null,
         niveles_gomas: nivelesGomasData.length > 0 ? nivelesGomasData : null,
-        expander_litros: expanderLitros && parseFloat(expanderLitros) > 0 ? parseFloat(expanderLitros) : null,
-        comb_alterno_porcentaje: combAlternoPorcentaje && parseFloat(combAlternoPorcentaje) > 0 ? parseFloat(combAlternoPorcentaje) : null,
-        combustoleo_porcentaje: combustoleoPorcentaje && parseFloat(combustoleoPorcentaje) > 0 ? parseFloat(combustoleoPorcentaje) : null,
+        expander_litros: parseNumber(expanderLitros),
+        comb_alterno_porcentaje: parseNumber(combAlternoPorcentaje),
+        combustoleo_porcentaje: parseNumber(combustoleoPorcentaje),
         observaciones: formData.observaciones || null
       });
       
@@ -423,11 +432,24 @@ const Produccion = () => {
                   <div>
                     <Label>Expander (Litros)</Label>
                     <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
+                      type="text"
+                      placeholder="0 o 0.00 o 25,000"
                       value={expanderLitros}
-                      onChange={(e) => setExpanderLitros(e.target.value)}
+                      onChange={(e) => {
+                        // Permitir números, comas, puntos y espacios
+                        const value = e.target.value.replace(/[^\d.,]/g, '');
+                        setExpanderLitros(value);
+                      }}
+                      onBlur={(e) => {
+                        // Formatear con comas cuando pierde el foco
+                        const value = e.target.value.replace(/,/g, '').replace(/\s/g, '');
+                        if (value && !isNaN(parseFloat(value))) {
+                          const num = parseFloat(value);
+                          if (num >= 1000) {
+                            setExpanderLitros(num.toLocaleString('es-MX', { maximumFractionDigits: 2 }));
+                          }
+                        }
+                      }}
                     />
                   </div>
                   <div>
