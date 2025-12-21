@@ -360,7 +360,7 @@ const Produccion = () => {
                         {tanques.map((tanque) => (
                           <TableRow key={tanque.id}>
                             <TableCell className="font-medium">{tanque.nombre.trim()}</TableCell>
-                            <TableCell className="text-right">
+                            <TableCell>
                               <Input
                                 type="number"
                                 step="0.01"
@@ -372,10 +372,10 @@ const Produccion = () => {
                                     [tanque.id]: e.target.value
                                   });
                                 }}
-                                className="w-32 ml-auto text-right"
+                                className="w-32"
                               />
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell>
                               <Input
                                 type="number"
                                 step="0.01"
@@ -387,7 +387,7 @@ const Produccion = () => {
                                     [tanque.id]: e.target.value
                                   });
                                 }}
-                                className="w-32 ml-auto text-right"
+                                className="w-32"
                               />
                             </TableCell>
                           </TableRow>
