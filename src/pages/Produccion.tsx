@@ -277,12 +277,21 @@ const Produccion = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredReportes.map((reporte) => (
-                    <TableRow key={reporte.id}>
-                      <TableCell className="font-medium">{reporte.id}</TableCell>
-                      <TableCell>{new Date(reporte.fecha).toLocaleDateString('es-MX')}</TableCell>
-                      <TableCell>{reporte.responsable}</TableCell>
-                      <TableCell>{getEstatusBadge(reporte.estatus)}</TableCell>
+                  {filteredReportes.map((reporte) => {
+                    const fecha = new Date(reporte.fecha);
+                    const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                    const diaSemana = diasSemana[fecha.getDay()];
+                    const dia = String(fecha.getDate()).padStart(2, '0');
+                    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+                    const año = fecha.getFullYear();
+                    const fechaFormateada = `${diaSemana} ${dia}/${mes}/${año}`;
+                    
+                    return (
+                      <TableRow key={reporte.id}>
+                        <TableCell className="font-medium">{reporte.id}</TableCell>
+                        <TableCell>{fechaFormateada}</TableCell>
+                        <TableCell>{reporte.responsable}</TableCell>
+                        <TableCell>{getEstatusBadge(reporte.estatus)}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Button
@@ -305,7 +314,8 @@ const Produccion = () => {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}
