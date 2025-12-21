@@ -478,15 +478,45 @@ const Produccion = () => {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Tanque</TableHead>
-                          <TableHead>Producto</TableHead>
                           <TableHead className="text-center">Nivel (%)</TableHead>
                           <TableHead className="text-center">Gomas (%)</TableHead>
+                          <TableHead>Producto</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {tanques.map((tanque) => (
                           <TableRow key={tanque.id}>
                             <TableCell className="font-medium">{tanque.nombre.trim()}</TableCell>
+                            <TableCell className="text-center">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                placeholder="0"
+                                value={nivelesTanques[tanque.id] || ''}
+                                onChange={(e) => {
+                                  setNivelesTanques({
+                                    ...nivelesTanques,
+                                    [tanque.id]: e.target.value
+                                  });
+                                }}
+                                className="w-32 mx-auto"
+                              />
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                placeholder="0"
+                                value={nivelesGomas[tanque.id] || ''}
+                                onChange={(e) => {
+                                  setNivelesGomas({
+                                    ...nivelesGomas,
+                                    [tanque.id]: e.target.value
+                                  });
+                                }}
+                                className="w-32 mx-auto"
+                              />
+                            </TableCell>
                             <TableCell>
                               <Select
                                 value={productosTanques[tanque.id] || ''}
@@ -518,36 +548,6 @@ const Produccion = () => {
                                     ))}
                                 </SelectContent>
                               </Select>
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Input
-                                type="number"
-                                step="0.01"
-                                placeholder="0"
-                                value={nivelesTanques[tanque.id] || ''}
-                                onChange={(e) => {
-                                  setNivelesTanques({
-                                    ...nivelesTanques,
-                                    [tanque.id]: e.target.value
-                                  });
-                                }}
-                                className="w-32 mx-auto"
-                              />
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Input
-                                type="number"
-                                step="0.01"
-                                placeholder="0"
-                                value={nivelesGomas[tanque.id] || ''}
-                                onChange={(e) => {
-                                  setNivelesGomas({
-                                    ...nivelesGomas,
-                                    [tanque.id]: e.target.value
-                                  });
-                                }}
-                                className="w-32 mx-auto"
-                              />
                             </TableCell>
                           </TableRow>
                         ))}
@@ -706,7 +706,6 @@ const Produccion = () => {
                             return (
                               <TableRow key={index}>
                                 <TableCell className="font-medium">{tanqueNombre}</TableCell>
-                                <TableCell>{tanqueData?.producto || '-'}</TableCell>
                                 <TableCell className="text-center">
                                   {tanqueData 
                                     ? tanqueData.nivel.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -717,6 +716,7 @@ const Produccion = () => {
                                     ? gomaData.nivel.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                                     : '-'}
                                 </TableCell>
+                                <TableCell>{tanqueData?.producto || '-'}</TableCell>
                               </TableRow>
                             );
                           });
