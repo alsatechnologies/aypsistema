@@ -328,8 +328,16 @@ const Produccion = () => {
                 <div>
                   <Label>Fecha</Label>
                   <Input 
-                    type="date" 
-                    value={new Date().toISOString().split('T')[0]}
+                    type="text" 
+                    value={(() => {
+                      const fecha = new Date();
+                      const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                      const diaSemana = diasSemana[fecha.getDay()];
+                      const dia = String(fecha.getDate()).padStart(2, '0');
+                      const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+                      const año = fecha.getFullYear();
+                      return `${diaSemana} ${dia}/${mes}/${año}`;
+                    })()}
                     disabled
                   />
                 </div>
