@@ -533,15 +533,15 @@ const Produccion = () => {
                                 <SelectContent>
                                   {productosDB
                                     .filter(producto => {
-                                      const nombreUpper = producto.nombre.toUpperCase();
+                                      const nombreUpper = producto.nombre.toUpperCase().trim();
                                       return (
-                                        nombreUpper.includes('CARTAMO') && nombreUpper.includes('PRENSA') ||
-                                        nombreUpper.includes('GIRASOL') && nombreUpper.includes('PRENSA') ||
-                                        nombreUpper.includes('CARTAMO') && nombreUpper.includes('SOLVENTE') ||
-                                        nombreUpper.includes('GIRASOL') && nombreUpper.includes('SOLVENTE') ||
-                                        nombreUpper.includes('CARTAMO') && nombreUpper.includes('ORGANICO') ||
-                                        nombreUpper.includes('GIRASOL') && nombreUpper.includes('ORGANICO') ||
-                                        nombreUpper.includes('MEZCLAS')
+                                        (nombreUpper.includes('CARTAMO') && nombreUpper.includes('PRENSA')) ||
+                                        (nombreUpper.includes('GIRASOL') && nombreUpper.includes('PRENSA')) ||
+                                        (nombreUpper.includes('CARTAMO') && nombreUpper.includes('SOLVENTE')) ||
+                                        (nombreUpper.includes('GIRASOL') && nombreUpper.includes('SOLVENTE')) ||
+                                        (nombreUpper.includes('CARTAMO') && nombreUpper.includes('ORGANICO')) ||
+                                        (nombreUpper.includes('GIRASOL') && nombreUpper.includes('ORGANICO')) ||
+                                        nombreUpper === 'MEZCLAS'
                                       );
                                     })
                                     .map((producto) => (
