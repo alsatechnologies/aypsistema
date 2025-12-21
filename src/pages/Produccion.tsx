@@ -118,7 +118,7 @@ const Produccion = () => {
         .map(({ almacen, nivel }) => ({
           tanque: almacen.nombre,
           nivel: nivel,
-          unidad: almacen.unidad || 'Kg'
+          unidad: '%' // Nivel se mide en porcentaje
         }));
 
       // Convertir niveles de gomas a formato esperado (gomas por tanque)
@@ -127,7 +127,7 @@ const Produccion = () => {
         .map(({ almacen, gomas }) => ({
           goma: almacen.nombre,
           nivel: gomas,
-          unidad: almacen.unidad || 'Kg'
+          unidad: '%' // Gomas se miden en porcentaje
         }));
 
       await addReporte({
