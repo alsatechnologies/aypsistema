@@ -16,6 +16,7 @@ import { useProduccion } from '@/services/hooks/useProduccion';
 import type { ReporteProduccion, NivelTanque, NivelGoma } from '@/services/supabase/produccion';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAlmacenes } from '@/services/hooks/useAlmacenes';
+import { useProductos } from '@/services/hooks/useProductos';
 
 const Produccion = () => {
   const [search, setSearch] = useState('');
@@ -27,6 +28,7 @@ const Produccion = () => {
   const [fechaHasta, setFechaHasta] = useState('');
   const { usuario } = useAuth();
   const { almacenes } = useAlmacenes();
+  const { productos: productosDB } = useProductos();
 
   // Filtrar tanques (almacenes que contienen "TQ" en el nombre) y ordenar por nombre
   // Excluir COMBUSTÓLEO, DIESEL y HEXANO
@@ -60,6 +62,8 @@ const Produccion = () => {
   // Estado para niveles: key es el ID del almacén, value es el nivel
   const [nivelesTanques, setNivelesTanques] = useState<Record<number, string>>({});
   const [nivelesGomas, setNivelesGomas] = useState<Record<number, string>>({});
+  // Estado para productos por tanque: key es el ID del almacén, value es el ID del producto
+  const [productosTanques, setProductosTanques] = useState<Record<number, string>>({});
 
   const [formData, setFormData] = useState({
     responsable: usuario?.nombre_completo || '',
@@ -116,11 +120,16 @@ const Produccion = () => {
       // Convertir niveles de tanques a formato esperado
       const nivelesTanquesData: NivelTanque[] = tanquesConDatos
         .filter(item => item.nivel > 0)
-        .map(({ almacen, nivel }) => ({
-          tanque: almacen.nombre,
-          nivel: nivel,
-          unidad: '%' // Nivel se mide en porcentaje
-        }));
+        .map(({ almacen, nivel }) => {
+          const productoId = productosTanques[almacen.id];
+          const producto = productoId ? productosDB.find(p => p.id === parseInt(productoId)) : null;
+          return {
+            tanque: almacen.nombre,
+            producto: producto?.nombre || null,
+            nivel: nivel,
+            unidad: '%' // Nivel se mide en porcentaje
+          };
+        });
 
       // Convertir niveles de gomas a formato esperado (gomas por tanque)
       const nivelesGomasData: NivelGoma[] = tanquesConDatos
@@ -181,6 +190,7 @@ const Produccion = () => {
       });
       setNivelesTanques({});
       setNivelesGomas({});
+      setProductosTanques({});
       setExpanderLitros('');
       setCombAlternoPorcentaje('');
       setCombustoleoPorcentaje('');
@@ -203,15 +213,24 @@ const Produccion = () => {
 
     // Cargar niveles de tanques
     const tanquesData: Record<number, string> = {};
+    const productosData: Record<number, string> = {};
     if (reporte.niveles_tanques) {
       reporte.niveles_tanques.forEach(t => {
         const tanque = tanques.find(a => a.nombre.trim() === t.tanque.trim());
         if (tanque) {
           tanquesData[tanque.id] = String(t.nivel);
+          // Cargar producto si existe
+          if (t.producto) {
+            const producto = productosDB.find(p => p.nombre === t.producto);
+            if (producto) {
+              productosData[tanque.id] = String(producto.id);
+            }
+          }
         }
       });
     }
     setNivelesTanques(tanquesData);
+    setProductosTanques(productosData);
 
     // Cargar niveles de gomas
     const gomasData: Record<number, string> = {};
@@ -459,6 +478,7 @@ const Produccion = () => {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Tanque</TableHead>
+                          <TableHead>Producto</TableHead>
                           <TableHead className="text-center">Nivel (%)</TableHead>
                           <TableHead className="text-center">Gomas (%)</TableHead>
                         </TableRow>
@@ -467,6 +487,28 @@ const Produccion = () => {
                         {tanques.map((tanque) => (
                           <TableRow key={tanque.id}>
                             <TableCell className="font-medium">{tanque.nombre.trim()}</TableCell>
+                            <TableCell>
+                              <Select
+                                value={productosTanques[tanque.id] || ''}
+                                onValueChange={(value) => {
+                                  setProductosTanques({
+                                    ...productosTanques,
+                                    [tanque.id]: value
+                                  });
+                                }}
+                              >
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder="Seleccionar producto" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {productosDB.map((producto) => (
+                                    <SelectItem key={producto.id} value={String(producto.id)}>
+                                      {producto.nombre}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
                             <TableCell className="text-center">
                               <Input
                                 type="number"
@@ -621,6 +663,7 @@ const Produccion = () => {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Tanque</TableHead>
+                          <TableHead>Producto</TableHead>
                           <TableHead className="text-center">Nivel (%)</TableHead>
                           <TableHead className="text-center">Gomas (%)</TableHead>
                         </TableRow>
@@ -630,7 +673,7 @@ const Produccion = () => {
                           // Crear un mapa de tanques para fácil acceso
                           const tanquesMap = new Map();
                           selectedReporte.niveles_tanques?.forEach(t => {
-                            tanquesMap.set(t.tanque, { nivel: t.nivel, unidad: t.unidad });
+                            tanquesMap.set(t.tanque, { producto: t.producto, nivel: t.nivel, unidad: t.unidad });
                           });
 
                           // Crear un mapa de gomas
@@ -653,6 +696,7 @@ const Produccion = () => {
                             return (
                               <TableRow key={index}>
                                 <TableCell className="font-medium">{tanqueNombre}</TableCell>
+                                <TableCell>{tanqueData?.producto || '-'}</TableCell>
                                 <TableCell className="text-center">
                                   {tanqueData 
                                     ? tanqueData.nivel.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })

@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 
 export interface NivelTanque {
   tanque: string;
+  producto?: string | null;
   nivel: number;
   unidad: string;
 }
