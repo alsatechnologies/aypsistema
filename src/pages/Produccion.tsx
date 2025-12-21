@@ -501,11 +501,21 @@ const Produccion = () => {
                                   <SelectValue placeholder="Seleccionar producto" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {productosDB.map((producto) => (
-                                    <SelectItem key={producto.id} value={String(producto.id)}>
-                                      {producto.nombre}
-                                    </SelectItem>
-                                  ))}
+                                  {productosDB
+                                    .filter(producto => 
+                                      producto.nombre === 'CARTAMO PRENSA' ||
+                                      producto.nombre === 'GIRASOL PRENSA' ||
+                                      producto.nombre === 'CARTAMO SOLVENTE' ||
+                                      producto.nombre === 'GIRASOL SOLVENTE' ||
+                                      producto.nombre === 'MEZCLAS' ||
+                                      producto.nombre === 'CARTAMO ORGANICO' ||
+                                      producto.nombre === 'GIRASOL ORGANICO'
+                                    )
+                                    .map((producto) => (
+                                      <SelectItem key={producto.id} value={String(producto.id)}>
+                                        {producto.nombre}
+                                      </SelectItem>
+                                    ))}
                                 </SelectContent>
                               </Select>
                             </TableCell>
