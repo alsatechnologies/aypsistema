@@ -372,8 +372,7 @@ const Produccion = () => {
                                     [tanque.id]: e.target.value
                                   });
                                 }}
-                                className="w-32 ml-auto text-right [&::-webkit-inner-spin-button]:ml-2 [&::-webkit-outer-spin-button]:ml-2 pr-8"
-                                style={{ paddingRight: '2rem' }}
+                                className="w-32 ml-auto text-right"
                               />
                             </TableCell>
                             <TableCell className="text-right">
@@ -388,8 +387,7 @@ const Produccion = () => {
                                     [tanque.id]: e.target.value
                                   });
                                 }}
-                                className="w-32 ml-auto text-right [&::-webkit-inner-spin-button]:ml-2 [&::-webkit-outer-spin-button]:ml-2 pr-8"
-                                style={{ paddingRight: '2rem' }}
+                                className="w-32 ml-auto text-right"
                               />
                             </TableCell>
                           </TableRow>
@@ -412,8 +410,6 @@ const Produccion = () => {
                       placeholder="0.00"
                       value={expanderLitros}
                       onChange={(e) => setExpanderLitros(e.target.value)}
-                      className="pr-8"
-                      style={{ paddingRight: '2rem' }}
                     />
                   </div>
                   <div>
@@ -424,8 +420,6 @@ const Produccion = () => {
                       placeholder="0.00"
                       value={combAlternoPorcentaje}
                       onChange={(e) => setCombAlternoPorcentaje(e.target.value)}
-                      className="pr-8"
-                      style={{ paddingRight: '2rem' }}
                     />
                   </div>
                   <div>
@@ -436,8 +430,6 @@ const Produccion = () => {
                       placeholder="0.00"
                       value={combustoleoPorcentaje}
                       onChange={(e) => setCombustoleoPorcentaje(e.target.value)}
-                      className="pr-8"
-                      style={{ paddingRight: '2rem' }}
                     />
                   </div>
                 </div>
