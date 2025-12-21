@@ -491,49 +491,60 @@ const Produccion = () => {
                   </div>
                 </div>
 
-                {selectedReporte.niveles_tanques && selectedReporte.niveles_tanques.length > 0 && (
+                {((selectedReporte.niveles_tanques && selectedReporte.niveles_tanques.length > 0) || 
+                  (selectedReporte.niveles_gomas && selectedReporte.niveles_gomas.length > 0)) && (
                   <div>
-                    <Label className="text-base font-semibold mb-3 block">Niveles de Tanques</Label>
+                    <Label className="text-base font-semibold mb-3 block">Niveles de Tanques y Gomas</Label>
                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead>Tanque</TableHead>
-                          <TableHead>Nivel</TableHead>
-                          <TableHead>Unidad</TableHead>
+                          <TableHead className="text-center">Nivel (%)</TableHead>
+                          <TableHead className="text-center">Gomas (%)</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {selectedReporte.niveles_tanques.map((tanque, index) => (
-                          <TableRow key={index}>
-                            <TableCell className="font-medium">{tanque.tanque}</TableCell>
-                            <TableCell>{tanque.nivel.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                            <TableCell>{tanque.unidad}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
+                        {(() => {
+                          // Crear un mapa de tanques para fácil acceso
+                          const tanquesMap = new Map();
+                          selectedReporte.niveles_tanques?.forEach(t => {
+                            tanquesMap.set(t.tanque, { nivel: t.nivel, unidad: t.unidad });
+                          });
 
-                {selectedReporte.niveles_gomas && selectedReporte.niveles_gomas.length > 0 && (
-                  <div>
-                    <Label className="text-base font-semibold mb-3 block">Niveles de Gomas</Label>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Goma</TableHead>
-                          <TableHead>Nivel</TableHead>
-                          <TableHead>Unidad</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {selectedReporte.niveles_gomas.map((goma, index) => (
-                          <TableRow key={index}>
-                            <TableCell className="font-medium">{goma.goma}</TableCell>
-                            <TableCell>{goma.nivel.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
-                            <TableCell>{goma.unidad}</TableCell>
-                          </TableRow>
-                        ))}
+                          // Crear un mapa de gomas
+                          const gomasMap = new Map();
+                          selectedReporte.niveles_gomas?.forEach(g => {
+                            gomasMap.set(g.goma, { nivel: g.nivel, unidad: g.unidad });
+                          });
+
+                          // Obtener todos los tanques únicos (de niveles_tanques y niveles_gomas)
+                          const todosTanques = new Set([
+                            ...(selectedReporte.niveles_tanques?.map(t => t.tanque) || []),
+                            ...(selectedReporte.niveles_gomas?.map(g => g.goma) || [])
+                          ]);
+
+                          // Crear filas combinadas
+                          return Array.from(todosTanques).map((tanqueNombre, index) => {
+                            const tanqueData = tanquesMap.get(tanqueNombre);
+                            const gomaData = gomasMap.get(tanqueNombre);
+                            
+                            return (
+                              <TableRow key={index}>
+                                <TableCell className="font-medium">{tanqueNombre}</TableCell>
+                                <TableCell className="text-center">
+                                  {tanqueData 
+                                    ? tanqueData.nivel.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                    : '-'}
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  {gomaData 
+                                    ? gomaData.nivel.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                    : '-'}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          });
+                        })()}
                       </TableBody>
                     </Table>
                   </div>
