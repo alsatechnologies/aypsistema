@@ -168,10 +168,13 @@ const Produccion = () => {
         });
         toast.success('Reporte de producción actualizado exitosamente');
       } else {
-        // Crear nuevo reporte
+        // Crear nuevo reporte - Obtener fecha local sin problemas de zona horaria
+        const ahora = new Date();
+        const fechaLocal = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`;
+        
         await addReporte({
           id: '', // Se generará automáticamente
-          fecha: new Date().toISOString().split('T')[0],
+          fecha: fechaLocal,
           responsable: formData.responsable,
           turno: 'Matutino', // Mantener turno en BD pero no mostrar en formulario
           estatus: 'Completado',
@@ -452,13 +455,20 @@ const Produccion = () => {
                   <Input 
                     type="text" 
                     value={(() => {
-                      const fecha = reporteEditando ? new Date(reporteEditando.fecha) : new Date();
+                      // Parsear fecha desde string YYYY-MM-DD sin problemas de zona horaria
+                      let fecha: Date;
+                      if (reporteEditando) {
+                        const [año, mes, dia] = reporteEditando.fecha.split('-').map(Number);
+                        fecha = new Date(año, mes - 1, dia);
+                      } else {
+                        fecha = new Date();
+                      }
                       const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
                       const diaSemana = diasSemana[fecha.getDay()];
                       const dia = String(fecha.getDate()).padStart(2, '0');
-                      const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+                      const mesStr = String(fecha.getMonth() + 1).padStart(2, '0');
                       const año = fecha.getFullYear();
-                      return `${diaSemana} ${dia}/${mes}/${año}`;
+                      return `${diaSemana} ${dia}/${mesStr}/${año}`;
                     })()}
                     disabled
                   />
