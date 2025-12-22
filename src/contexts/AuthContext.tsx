@@ -237,9 +237,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           )
         ]) as Response;
 
-        // Si el endpoint no existe (404), usar fallback inmediatamente
-        if (!searchResponse.ok && searchResponse.status === 404) {
-          console.warn('⚠️ Endpoint /api/get-user-for-login no encontrado (404), usando fallback directo...');
+        // Si el endpoint no existe (404) o hay error, usar fallback inmediatamente
+        if (!searchResponse.ok) {
+          if (searchResponse.status === 404) {
+            console.warn('⚠️ Endpoint /api/get-user-for-login no encontrado (404), usando fallback directo...');
+          } else {
+            console.warn(`⚠️ Error en /api/get-user-for-login (${searchResponse.status}), usando fallback directo...`);
+          }
           throw new Error('Endpoint no disponible, usando fallback');
         }
 
@@ -258,11 +262,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.log('   Intentando búsqueda directa como fallback...');
         try {
           if (!supabase) {
-            throw new Error('Supabase no está configurado');
+            const errorMsg = 'Supabase no está configurado en el navegador. Verifica VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.';
+            console.error('❌', errorMsg);
+            toast.error(errorMsg);
+            throw new Error(errorMsg);
           }
 
           // Buscar por nombre_usuario primero
           const busquedaLower = busqueda.toLowerCase().trim();
+          console.log('   Buscando usuario por nombre_usuario:', busquedaLower);
           const { data: dataPorUsuario, error: errorPorUsuario } = await supabase
             .from('usuarios')
             .select('*')
@@ -273,8 +281,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           if (dataPorUsuario && !errorPorUsuario) {
             console.log('✅ Usuario encontrado (fallback directo por nombre_usuario)');
             usuarioData = dataPorUsuario;
-          } else {
+          } else if (errorPorUsuario) {
+            console.error('❌ Error buscando por nombre_usuario:', errorPorUsuario);
             // Buscar por correo
+            console.log('   Buscando usuario por correo:', busquedaLower);
             const { data: dataPorCorreo, error: errorPorCorreo } = await supabase
               .from('usuarios')
               .select('*')
@@ -286,12 +296,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               console.log('✅ Usuario encontrado (fallback directo por correo)');
               usuarioData = dataPorCorreo;
             } else {
+              console.error('❌ Error buscando por correo:', errorPorCorreo);
+              usuarioError = errorPorCorreo || { message: 'Usuario no encontrado' };
+            }
+          } else {
+            // No se encontró por nombre_usuario, intentar por correo
+            console.log('   Usuario no encontrado por nombre_usuario, buscando por correo...');
+            const { data: dataPorCorreo, error: errorPorCorreo } = await supabase
+              .from('usuarios')
+              .select('*')
+              .eq('activo', true)
+              .eq('correo', busquedaLower)
+              .maybeSingle();
+            
+            if (dataPorCorreo && !errorPorCorreo) {
+              console.log('✅ Usuario encontrado (fallback directo por correo)');
+              usuarioData = dataPorCorreo;
+            } else {
+              console.error('❌ Usuario no encontrado ni por nombre_usuario ni por correo');
               usuarioError = errorPorCorreo || { message: 'Usuario no encontrado' };
             }
           }
         } catch (fallbackError) {
           console.error('❌ Error en fallback:', fallbackError);
-          usuarioError = { message: 'Error al buscar usuario. Verifica tu conexión y las variables de entorno en Vercel.' };
+          const errorMessage = fallbackError instanceof Error ? fallbackError.message : 'Error desconocido';
+          usuarioError = { message: errorMessage || 'Error al buscar usuario. Verifica tu conexión y las variables de entorno.' };
         }
       }
 
@@ -375,17 +404,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           authError = { message: result.error || 'Error al autenticar' };
         }
       } catch (timeoutError) {
-        console.error('❌ Timeout en autenticación:', timeoutError);
+        console.error('❌ Timeout o error en autenticación serverless:', timeoutError);
         // Fallback: intentar autenticación directa
         console.log('   Intentando autenticación directa como fallback...');
         try {
+          if (!supabase) {
+            throw new Error('Supabase no está configurado en el navegador');
+          }
+
           const directAuth = await Promise.race([
             supabase.auth.signInWithPassword({
               email: usuarioData.correo,
               password: contrasena
             }),
             new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Timeout')), 10000)
+              setTimeout(() => reject(new Error('Timeout en autenticación directa')), 10000)
             )
           ]) as any;
           
@@ -393,10 +426,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             console.log('✅ Autenticación exitosa (fallback directo)');
             authData = directAuth.data;
           } else {
+            console.error('❌ Error en autenticación directa:', directAuth.error);
             authError = directAuth.error || { message: 'Error al autenticar' };
           }
         } catch (fallbackError) {
-          authError = { message: 'Error al autenticar. Verifica tu conexión y que el usuario exista en auth.users.' };
+          console.error('❌ Error en fallback de autenticación:', fallbackError);
+          const errorMsg = fallbackError instanceof Error ? fallbackError.message : 'Error desconocido';
+          authError = { message: errorMsg || 'Error al autenticar. Verifica tu conexión y que el usuario exista en auth.users.' };
         }
       }
 
