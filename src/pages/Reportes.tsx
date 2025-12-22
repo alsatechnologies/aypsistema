@@ -920,7 +920,6 @@ const Reportes = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-        </Tabs>
       </div>
     </Layout>
   );
