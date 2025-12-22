@@ -17,8 +17,6 @@ import {
   Search, 
   Filter, 
   Calendar, 
-  ArrowDown, 
-  ArrowUp, 
   Package, 
   Factory,
   TrendingUp,
@@ -30,7 +28,6 @@ import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { getRecepciones } from '@/services/supabase/recepciones';
 import { getEmbarques } from '@/services/supabase/embarques';
-import { useMovimientos } from '@/services/hooks/useMovimientos';
 import { useAlmacenes } from '@/services/hooks/useAlmacenes';
 import { useProductos } from '@/services/hooks/useProductos';
 import { useProveedores } from '@/services/hooks/useProveedores';
@@ -54,7 +51,6 @@ const Reportes = () => {
   const { proveedores } = useProveedores();
   const { clientes } = useClientes();
   const { almacenes } = useAlmacenes();
-  const { movimientos } = useMovimientos();
   const { reportes: reportesProduccion } = useProduccion();
 
   // State for reports data
@@ -73,12 +69,12 @@ const Reportes = () => {
           producto_id: filtroProducto !== 'todos' ? parseInt(filtroProducto) : undefined,
         };
 
-        if (activeTab === 'entradas' || activeTab === 'movimientos') {
+        if (activeTab === 'entradas') {
           const recepcionesData = await getRecepciones(filters);
           setRecepciones(Array.isArray(recepcionesData) ? recepcionesData : recepcionesData.data || []);
         }
 
-        if (activeTab === 'salidas' || activeTab === 'movimientos') {
+        if (activeTab === 'salidas') {
           const embarquesData = await getEmbarques(filters);
           setEmbarques(Array.isArray(embarquesData) ? embarquesData : embarquesData.data || []);
         }
@@ -122,26 +118,9 @@ const Reportes = () => {
     });
   }, [embarques, search, filtroCliente]);
 
-  const filteredMovimientos = useMemo(() => {
-    return movimientos.filter(m => {
-      const matchSearch = !search || 
-        m.producto?.toLowerCase().includes(search.toLowerCase()) ||
-        (m.clienteProveedor && m.clienteProveedor.toLowerCase().includes(search.toLowerCase())) ||
-        m.boleta.includes(search);
-      
-      const matchFechaDesde = !fechaDesde || new Date(m.fecha) >= fechaDesde;
-      const matchFechaHasta = !fechaHasta || new Date(m.fecha) <= fechaHasta;
-      const matchProducto = filtroProducto === 'todos' || m.producto === productos.find(p => p.id.toString() === filtroProducto)?.nombre;
-      
-      return matchSearch && matchFechaDesde && matchFechaHasta && matchProducto;
-    });
-  }, [movimientos, search, fechaDesde, fechaHasta, filtroProducto, productos]);
-
   // Calculate totals
   const totalEntradas = filteredRecepciones.reduce((acc, r) => acc + (r.peso_neto || 0), 0);
   const totalSalidas = filteredEmbarques.reduce((acc, e) => acc + (e.peso_neto || 0), 0);
-  const totalMovimientosEntradas = filteredMovimientos.filter(m => m.tipo === 'Entrada').reduce((acc, m) => acc + (m.pesoNeto || 0), 0);
-  const totalMovimientosSalidas = filteredMovimientos.filter(m => m.tipo === 'Salida').reduce((acc, m) => acc + (m.pesoNeto || 0), 0);
 
   // Export functions
   const exportToCSV = (data: any[], headers: string[], filename: string) => {
@@ -238,21 +217,6 @@ const Reportes = () => {
     exportToCSV(data, headers, 'reporte_salidas');
   };
 
-  const handleExportMovimientos = () => {
-    const headers = ['Boleta', 'Producto', 'Cliente/Proveedor', 'Tipo', 'Transporte', 'Fecha', 'Ubicación', 'Peso Neto (Kg)'];
-    const data = filteredMovimientos.map(m => ({
-      boleta: m.boleta,
-      producto: m.producto || '',
-      cliente_proveedor: m.clienteProveedor || '',
-      tipo: m.tipo,
-      transporte: m.transporte || '',
-      fecha: m.fecha,
-      ubicacion: m.ubicacion || '',
-      peso_neto: m.pesoNeto || 0
-    }));
-    exportToCSV(data, headers, 'reporte_movimientos');
-  };
-
   const handleExportInventario = () => {
     const headers = ['Almacén', 'Capacidad Total', 'Capacidad Actual', 'Disponible', 'Porcentaje Ocupado', 'Unidad'];
     const data = almacenes.map(a => ({
@@ -296,10 +260,9 @@ const Reportes = () => {
       <Header title="Reportes" subtitle="Generación de reportes del sistema" />
       <div className="p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="entradas">Entradas</TabsTrigger>
             <TabsTrigger value="salidas">Salidas</TabsTrigger>
-            <TabsTrigger value="movimientos">Movimientos</TabsTrigger>
             <TabsTrigger value="inventario">Inventario</TabsTrigger>
             <TabsTrigger value="produccion">Producción</TabsTrigger>
           </TabsList>
@@ -361,7 +324,7 @@ const Reportes = () => {
               </Popover>
             </div>
 
-            {(activeTab === 'entradas' || activeTab === 'salidas' || activeTab === 'movimientos') && (
+            {(activeTab === 'entradas' || activeTab === 'salidas') && (
               <div className="space-y-1">
                 <Label className="text-xs">Producto</Label>
                 <Select value={filtroProducto} onValueChange={setFiltroProducto}>
@@ -563,78 +526,6 @@ const Reportes = () => {
                       </TableBody>
                     </Table>
                   </>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Tab: Movimientos */}
-          <TabsContent value="movimientos" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <CardTitle>Reporte de Movimientos</CardTitle>
-                    <CardDescription>
-                      {filteredMovimientos.length} movimiento(s) encontrado(s)
-                    </CardDescription>
-                  </div>
-                  <Button onClick={handleExportMovimientos} className="flex items-center gap-2">
-                    <Download className="h-4 w-4" />
-                    Exportar CSV
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="mb-4 grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-blue-50 rounded-lg">
-                    <div className="flex items-center gap-2 text-blue-700">
-                      <ArrowDown className="h-5 w-5" />
-                      <span className="font-semibold">Total Entradas: {formatNumber(totalMovimientosEntradas)} Kg</span>
-                    </div>
-                  </div>
-                  <div className="p-4 bg-red-50 rounded-lg">
-                    <div className="flex items-center gap-2 text-red-700">
-                      <ArrowUp className="h-5 w-5" />
-                      <span className="font-semibold">Total Salidas: {formatNumber(totalMovimientosSalidas)} Kg</span>
-                    </div>
-                  </div>
-                </div>
-                {filteredMovimientos.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">No hay movimientos para mostrar</div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Boleta</TableHead>
-                        <TableHead>Producto</TableHead>
-                        <TableHead>Cliente/Proveedor</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Transporte</TableHead>
-                        <TableHead>Fecha</TableHead>
-                        <TableHead>Ubicación</TableHead>
-                        <TableHead className="text-right">Peso Neto</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredMovimientos.map((m) => (
-                        <TableRow key={m.id}>
-                          <TableCell className="font-medium">{m.boleta}</TableCell>
-                          <TableCell>{m.producto || '-'}</TableCell>
-                          <TableCell>{m.clienteProveedor || '-'}</TableCell>
-                          <TableCell>
-                            <Badge variant={m.tipo === 'Entrada' ? 'default' : 'destructive'}>
-                              {m.tipo}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{m.transporte || '-'}</TableCell>
-                          <TableCell>{format(new Date(m.fecha), 'dd/MM/yyyy', { locale: es })}</TableCell>
-                          <TableCell>{m.ubicacion || '-'}</TableCell>
-                          <TableCell className="text-right font-semibold">{formatNumber(m.pesoNeto || 0)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
                 )}
               </CardContent>
             </Card>
