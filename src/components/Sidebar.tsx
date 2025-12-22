@@ -18,7 +18,7 @@ const NavItem = ({
 }) => {
   return (
     <Link to={to} className="w-full">
-      <div className={`flex items-center px-4 py-3 mt-1 rounded-lg ${active ? 'text-primary font-medium bg-primary/10' : 'text-gray-600 hover:bg-gray-100'}`}>
+      <div className={`flex items-center px-4 py-3 mt-1 rounded-lg ${active ? 'text-primary font-medium bg-primary/10' : 'text-muted-foreground hover:bg-accent'}`}>
         <Icon size={20} className={active ? 'text-primary' : ''} />
         <span className="ml-4">{label}</span>
       </div>
