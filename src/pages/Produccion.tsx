@@ -385,13 +385,15 @@ const Produccion = () => {
                 </TableHeader>
                 <TableBody>
                   {filteredReportes.map((reporte) => {
-                    const fecha = new Date(reporte.fecha);
+                    // Parsear fecha desde string YYYY-MM-DD sin problemas de zona horaria
+                    const [año, mes, dia] = reporte.fecha.split('-').map(Number);
+                    const fecha = new Date(año, mes - 1, dia);
                     const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
                     const diaSemana = diasSemana[fecha.getDay()];
-                    const dia = String(fecha.getDate()).padStart(2, '0');
-                    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-                    const año = fecha.getFullYear();
-                    const fechaFormateada = `${diaSemana} ${dia}/${mes}/${año}`;
+                    const diaStr = String(fecha.getDate()).padStart(2, '0');
+                    const mesStr = String(fecha.getMonth() + 1).padStart(2, '0');
+                    const añoStr = fecha.getFullYear();
+                    const fechaFormateada = `${diaSemana} ${diaStr}/${mesStr}/${añoStr}`;
                     
                     return (
                       <TableRow key={reporte.id}>
