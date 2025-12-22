@@ -390,45 +390,6 @@ const Reportes = () => {
                   </CardHeader>
                 </Card>
 
-                {/* Gráfico Donut de Distribución por Producto */}
-                {chartData.length > 0 && (
-                  <Card className="flex flex-col">
-                    <CardHeader className="items-center pb-0">
-                      <CardTitle>Distribución de Aceite por Producto</CardTitle>
-                      <CardDescription>
-                        {format(new Date(reporteMasReciente.fecha), 'dd/MM/yyyy', { locale: es })}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="flex-1 pb-0">
-                      <ChartContainer
-                        config={chartConfig}
-                        className="mx-auto aspect-square max-h-[250px]"
-                      >
-                        <PieChart>
-                          <ChartTooltip
-                            cursor={false}
-                            content={<ChartTooltipContent hideLabel nameKey="productoKey" />}
-                          />
-                          <Pie
-                            data={chartData}
-                            dataKey="volumen"
-                            nameKey="productoKey"
-                            innerRadius={60}
-                          />
-                        </PieChart>
-                      </ChartContainer>
-                    </CardContent>
-                    <CardFooter className="flex-col gap-2 text-sm">
-                      <div className="flex items-center gap-2 leading-none font-medium">
-                        Total de tanques: {nivelesTanques.length} <TrendingUp className="h-4 w-4" />
-                      </div>
-                      <div className="text-muted-foreground leading-none text-xs">
-                        Distribución de aceite por producto según niveles registrados
-                      </div>
-                    </CardFooter>
-                  </Card>
-                )}
-
                 {/* Vista Agrupada por Producto */}
                 <div className="space-y-4">
                   {Array.from(porProducto.entries()).map(([producto, datos]) => {
@@ -446,7 +407,7 @@ const Reportes = () => {
                           </CardTitle>
                         </CardHeader>
                         <CardContent>
-                          <div className="space-y-3">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {tanquesDelProducto.map((tanque, idx) => {
                               const goma = nivelesGomas.find(g => g.goma === tanque.tanque);
                               const nivel = tanque.nivel || 0;
@@ -463,13 +424,13 @@ const Reportes = () => {
                               // Calcular porcentaje de gomas (asumiendo que 5m es el máximo para gomas)
                               const porcentajeGomas = (gomas / 5) * 100;
 
-                              // Obtener colores según porcentajes
+                              // Obtener colores según porcentajes (Azul ≥80%, Verde ≥60%, Amarillo ≥40%, Naranja ≥20%, Rojo <20%)
                               const getNivelColorClass = (porcentaje: number) => {
-                                if (porcentaje >= 80) return 'hsl(var(--chart-1))'; // Azul
-                                if (porcentaje >= 60) return 'hsl(var(--chart-2))'; // Verde
-                                if (porcentaje >= 40) return 'hsl(var(--chart-3))'; // Amarillo
-                                if (porcentaje >= 20) return 'hsl(var(--chart-4))'; // Naranja
-                                return 'hsl(var(--chart-5))'; // Rojo
+                                if (porcentaje >= 80) return '#3b82f6'; // Azul
+                                if (porcentaje >= 60) return '#22c55e'; // Verde
+                                if (porcentaje >= 40) return '#eab308'; // Amarillo
+                                if (porcentaje >= 20) return '#f97316'; // Naranja
+                                return '#ef4444'; // Rojo
                               };
 
                               const nivelColor = getNivelColorClass(porcentajeNivel);
@@ -489,11 +450,14 @@ const Reportes = () => {
                               };
 
                               return (
-                                <div key={idx} className="flex items-center gap-4 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
-                                  <div className="flex-shrink-0">
+                                <Card key={idx} className="p-4">
+                                  <div className="flex flex-col items-center space-y-3">
+                                    <div className="w-full text-center">
+                                      <h4 className="font-semibold text-sm mb-1">{tanque.tanque}</h4>
+                                    </div>
                                     <ChartContainer
                                       config={donutConfig}
-                                      className="w-24 h-24"
+                                      className="w-32 h-32"
                                     >
                                       <PieChart>
                                         <ChartTooltip
@@ -504,36 +468,31 @@ const Reportes = () => {
                                           data={donutData}
                                           dataKey="value"
                                           nameKey="name"
-                                          innerRadius={20}
-                                          outerRadius={40}
+                                          innerRadius={30}
+                                          outerRadius={50}
                                           startAngle={90}
                                           endAngle={-270}
                                         />
                                       </PieChart>
                                     </ChartContainer>
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between mb-2">
-                                      <span className="font-semibold text-sm">{tanque.tanque}</span>
-                                    </div>
-                                    <div className="space-y-1 text-xs">
-                                      <div className="flex items-center justify-between">
+                                    <div className="space-y-1 text-xs text-center w-full">
+                                      <div className="flex items-center justify-center gap-2">
                                         <span className="text-muted-foreground">Nivel:</span>
-                                        <span className="font-medium text-foreground">
+                                        <span className="font-medium">
                                           {nivel.toFixed(2)} m ({porcentajeNivel.toFixed(1)}%)
                                         </span>
                                       </div>
                                       {gomas > 0 && (
-                                        <div className="flex items-center justify-between">
+                                        <div className="flex items-center justify-center gap-2">
                                           <span className="text-muted-foreground">Gomas:</span>
-                                          <span className="font-medium text-foreground">
+                                          <span className="font-medium">
                                             {gomas.toFixed(2)} m ({porcentajeGomas.toFixed(1)}%)
                                           </span>
                                         </div>
                                       )}
                                     </div>
                                   </div>
-                                </div>
+                                </Card>
                               );
                             })}
                           </div>
@@ -1054,13 +1013,13 @@ const Reportes = () => {
                           // Calcular porcentaje de gomas (asumiendo que 5m es el máximo para gomas)
                           const porcentajeGomas = (gomas / 5) * 100;
 
-                          // Obtener colores según porcentajes
+                          // Obtener colores según porcentajes (Azul ≥80%, Verde ≥60%, Amarillo ≥40%, Naranja ≥20%, Rojo <20%)
                           const getNivelColorClass = (porcentaje: number) => {
-                            if (porcentaje >= 80) return 'hsl(var(--chart-1))'; // Azul
-                            if (porcentaje >= 60) return 'hsl(var(--chart-2))'; // Verde
-                            if (porcentaje >= 40) return 'hsl(var(--chart-3))'; // Amarillo
-                            if (porcentaje >= 20) return 'hsl(var(--chart-4))'; // Naranja
-                            return 'hsl(var(--chart-5))'; // Rojo
+                            if (porcentaje >= 80) return '#3b82f6'; // Azul
+                            if (porcentaje >= 60) return '#22c55e'; // Verde
+                            if (porcentaje >= 40) return '#eab308'; // Amarillo
+                            if (porcentaje >= 20) return '#f97316'; // Naranja
+                            return '#ef4444'; // Rojo
                           };
 
                           const nivelColor = getNivelColorClass(porcentajeNivel);
