@@ -422,7 +422,7 @@ const Reportes = () => {
                       <div className="flex items-center gap-2 leading-none font-medium">
                         Total de tanques: {nivelesTanques.length} <TrendingUp className="h-4 w-4" />
                       </div>
-                      <div className="text-muted-foreground leading-none">
+                      <div className="text-muted-foreground leading-none text-xs">
                         Distribución de aceite por producto según niveles registrados
                       </div>
                     </CardFooter>
