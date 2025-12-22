@@ -832,8 +832,8 @@ const Reportes = () => {
                         <TableHead>Tanques con Nivel</TableHead>
                         <TableHead>Tanques con Gomas</TableHead>
                         <TableHead>Expander (L)</TableHead>
-                        <TableHead>Comb. Alterno (%)</TableHead>
-                        <TableHead>Combustóleo (%)</TableHead>
+                        <TableHead>Comb. Alterno (m)</TableHead>
+                        <TableHead>Combustóleo (m)</TableHead>
                         <TableHead>Estatus</TableHead>
                         <TableHead>Acciones</TableHead>
                       </TableRow>
@@ -1098,13 +1098,13 @@ const Reportes = () => {
                       {selectedReporteProduccion.comb_alterno_porcentaje && (
                         <div>
                           <Label className="text-muted-foreground text-sm">Comb. Alterno</Label>
-                          <p className="font-medium">{selectedReporteProduccion.comb_alterno_porcentaje.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %</p>
+                          <p className="font-medium">{selectedReporteProduccion.comb_alterno_porcentaje.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m</p>
                         </div>
                       )}
                       {selectedReporteProduccion.combustoleo_porcentaje && (
                         <div>
                           <Label className="text-muted-foreground text-sm">Combustóleo</Label>
-                          <p className="font-medium">{selectedReporteProduccion.combustoleo_porcentaje.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %</p>
+                          <p className="font-medium">{selectedReporteProduccion.combustoleo_porcentaje.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m</p>
                         </div>
                       )}
                     </div>

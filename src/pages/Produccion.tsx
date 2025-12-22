@@ -601,7 +601,7 @@ const Produccion = () => {
                     />
                   </div>
                   <div>
-                    <Label>Comb. Alterno (%)</Label>
+                    <Label>Comb. Alterno (m)</Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -611,7 +611,7 @@ const Produccion = () => {
                     />
                   </div>
                   <div>
-                    <Label>Combustóleo (%)</Label>
+                    <Label>Combustóleo (m)</Label>
                     <Input
                       type="number"
                       step="0.01"
@@ -756,13 +756,13 @@ const Produccion = () => {
                       {selectedReporte.comb_alterno_porcentaje && (
                         <div>
                           <Label className="text-muted-foreground text-sm">Comb. Alterno</Label>
-                          <p className="font-medium">{selectedReporte.comb_alterno_porcentaje.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %</p>
+                          <p className="font-medium">{selectedReporte.comb_alterno_porcentaje.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m</p>
                         </div>
                       )}
                       {selectedReporte.combustoleo_porcentaje && (
                         <div>
                           <Label className="text-muted-foreground text-sm">Combustóleo</Label>
-                          <p className="font-medium">{selectedReporte.combustoleo_porcentaje.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %</p>
+                          <p className="font-medium">{selectedReporte.combustoleo_porcentaje.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m</p>
                         </div>
                       )}
                     </div>
