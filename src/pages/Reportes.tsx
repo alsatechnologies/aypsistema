@@ -492,6 +492,83 @@ const Reportes = () => {
                       </Card>
                     );
                   })}
+
+                  {/* Tanques de Combustible (Combustóleo y Combustible Alterno) */}
+                  {tanquesCombustible.length > 0 && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Package className="h-4 w-4" />
+                          Tanques de Combustible
+                          <Badge variant="secondary" className="ml-auto">
+                            {tanquesCombustible.length} tanque{tanquesCombustible.length !== 1 ? 's' : ''}
+                          </Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {tanquesCombustible.map((tanqueComb, idx) => {
+                            const porcentajeNivel = tanqueComb.alturaMaxima && tanqueComb.alturaMaxima > 0 
+                              ? (tanqueComb.nivel / tanqueComb.alturaMaxima) * 100 
+                              : 0;
+
+                            // Colores fijos: Nivel siempre azul, Gomas siempre rojo
+                            const nivelColor = '#3b82f6'; // Azul siempre
+                            const gomasColor = 'transparent'; // Sin gomas para tanques de combustible
+
+                            // Preparar datos para el gráfico donut
+                            const donutData = [
+                              { name: 'Nivel', value: Math.min(porcentajeNivel, 100), fill: nivelColor },
+                              { name: 'Vacío', value: Math.max(0, 100 - Math.min(porcentajeNivel, 100)), fill: 'hsl(var(--muted))' },
+                            ].filter(item => item.value > 0);
+
+                            const donutConfig: ChartConfig = {
+                              Nivel: { label: 'Nivel', color: nivelColor },
+                              Vacío: { label: 'Vacío', color: 'hsl(var(--muted))' },
+                            };
+
+                            return (
+                              <Card key={idx} className="p-4">
+                                <div className="flex flex-col items-center space-y-3">
+                                  <div className="w-full text-center">
+                                    <h4 className="font-semibold text-sm mb-1">{tanqueComb.nombre}</h4>
+                                  </div>
+                                  <ChartContainer
+                                    config={donutConfig}
+                                    className="w-32 h-32"
+                                  >
+                                    <PieChart>
+                                      <ChartTooltip
+                                        cursor={false}
+                                        content={<ChartTooltipContent hideLabel />}
+                                      />
+                                      <Pie
+                                        data={donutData}
+                                        dataKey="value"
+                                        nameKey="name"
+                                        innerRadius={30}
+                                        outerRadius={50}
+                                        startAngle={90}
+                                        endAngle={-270}
+                                      />
+                                    </PieChart>
+                                  </ChartContainer>
+                                  <div className="space-y-1 text-xs text-center w-full">
+                                    <div className="flex items-center justify-center gap-2">
+                                      <span className="text-muted-foreground">Nivel:</span>
+                                      <span className="font-medium">
+                                        {tanqueComb.nivel.toFixed(2)} m ({porcentajeNivel.toFixed(1)}%)
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </Card>
+                            );
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
               </div>
             );
