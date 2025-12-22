@@ -33,7 +33,7 @@ const Produccion = () => {
   const { productos: productosDB } = useProductos();
 
   // Filtrar tanques (almacenes que contienen "TQ" en el nombre) y ordenar por nombre
-  // Excluir COMBUSTÓLEO, DIESEL y HEXANO
+  // Excluir COMBUSTÓLEO, DIESEL, HEXANO y COMBUSTIBLE ALTERNO
   const tanques = almacenes
     .filter(a => {
       const nombreUpper = a.nombre.toUpperCase();
@@ -41,7 +41,9 @@ const Produccion = () => {
              !nombreUpper.includes('COMBUSTÓLEO') &&
              !nombreUpper.includes('COMBUSTOLEO') &&
              !nombreUpper.includes('DIESEL') &&
-             !nombreUpper.includes('HEXANO');
+             !nombreUpper.includes('HEXANO') &&
+             !nombreUpper.includes('COMBUSTIBLE ALTERNO') &&
+             !nombreUpper.includes('ALTERNO');
     })
     .sort((a, b) => {
       // Extraer números de los nombres para ordenar correctamente (TQ 201, TQ 202, etc.)
