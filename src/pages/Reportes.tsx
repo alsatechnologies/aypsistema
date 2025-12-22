@@ -994,22 +994,6 @@ const Reportes = () => {
                             ? (nivel / alturaMaxima) * 100 
                             : 0;
                           
-                          // Determinar color según el porcentaje del nivel
-                          const getNivelColor = (porcentaje: number) => {
-                            if (porcentaje >= 80) return 'bg-blue-500';
-                            if (porcentaje >= 60) return 'bg-green-500';
-                            if (porcentaje >= 40) return 'bg-yellow-500';
-                            if (porcentaje >= 20) return 'bg-orange-500';
-                            return 'bg-red-500';
-                          };
-
-                          const getGomasColor = (gomas: number) => {
-                            if (gomas >= 5) return 'bg-red-400';
-                            if (gomas >= 3) return 'bg-orange-400';
-                            if (gomas >= 1) return 'bg-yellow-400';
-                            return 'bg-green-400';
-                          };
-
                           // Calcular porcentaje de gomas (asumiendo que 5m es el máximo para gomas)
                           const porcentajeGomas = (gomas / 5) * 100;
 
