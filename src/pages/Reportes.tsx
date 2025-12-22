@@ -26,6 +26,13 @@ import {
   Droplet,
   AlertCircle
 } from 'lucide-react';
+import { Pie, PieChart } from 'recharts';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from '@/components/ui/chart';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -295,15 +302,54 @@ const Reportes = () => {
             const promedioGomas = nivelesGomas.length > 0 ? totalGomas / nivelesGomas.length : 0;
             
             // Agrupar por producto
-            const porProducto = new Map<string, { tanques: number; nivelPromedio: number; totalNivel: number }>();
+            const porProducto = new Map<string, { tanques: number; nivelPromedio: number; totalNivel: number; volumenTotal: number }>();
             nivelesTanques.forEach(t => {
               const producto = t.producto || 'Sin producto';
-              const actual = porProducto.get(producto) || { tanques: 0, nivelPromedio: 0, totalNivel: 0 };
+              const actual = porProducto.get(producto) || { tanques: 0, nivelPromedio: 0, totalNivel: 0, volumenTotal: 0 };
               actual.tanques += 1;
               actual.totalNivel = (actual.totalNivel || 0) + (t.nivel || 0);
               actual.nivelPromedio = actual.totalNivel / actual.tanques;
+              
+              // Calcular volumen total aproximado (nivel * área promedio del tanque)
+              // Usamos la altura máxima para calcular un volumen aproximado
+              const alturaMaxima = alturasMaximasMap.get(t.tanque) || 1;
+              const volumenAprox = (t.nivel || 0) * (alturaMaxima > 0 ? alturaMaxima : 1);
+              actual.volumenTotal = (actual.volumenTotal || 0) + volumenAprox;
+              
               porProducto.set(producto, actual);
             });
+
+            // Preparar datos para el gráfico donut
+            const chartColors = [
+              'hsl(var(--chart-1))',
+              'hsl(var(--chart-2))',
+              'hsl(var(--chart-3))',
+              'hsl(var(--chart-4))',
+              'hsl(var(--chart-5))',
+            ];
+
+            const chartData = Array.from(porProducto.entries())
+              .map(([producto, datos], index) => ({
+                producto: producto,
+                volumen: datos.volumenTotal,
+                fill: chartColors[index % chartColors.length],
+              }))
+              .filter(item => item.volumen > 0);
+
+            // Crear config dinámico basado en los productos
+            const chartConfig = chartData.reduce((acc, item, index) => {
+              // Usar un identificador único para cada producto
+              const key = `producto_${index}`;
+              acc[key] = {
+                label: item.producto,
+                color: chartColors[index % chartColors.length],
+              };
+              return acc;
+            }, {
+              volumen: {
+                label: "Volumen",
+              },
+            } as ChartConfig);
 
             const getNivelColor = (porcentaje: number) => {
               if (porcentaje >= 80) return 'bg-blue-500';
@@ -338,6 +384,45 @@ const Reportes = () => {
                     </div>
                   </CardHeader>
                 </Card>
+
+                {/* Gráfico Donut de Distribución por Producto */}
+                {chartData.length > 0 && (
+                  <Card className="flex flex-col">
+                    <CardHeader className="items-center pb-0">
+                      <CardTitle>Distribución de Aceite por Producto</CardTitle>
+                      <CardDescription>
+                        {format(new Date(reporteMasReciente.fecha), 'dd/MM/yyyy', { locale: es })}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-1 pb-0">
+                      <ChartContainer
+                        config={chartConfig}
+                        className="mx-auto aspect-square max-h-[250px]"
+                      >
+                        <PieChart>
+                          <ChartTooltip
+                            cursor={false}
+                            content={<ChartTooltipContent hideLabel />}
+                          />
+                          <Pie
+                            data={chartData}
+                            dataKey="volumen"
+                            nameKey="producto"
+                            innerRadius={60}
+                          />
+                        </PieChart>
+                      </ChartContainer>
+                    </CardContent>
+                    <CardFooter className="flex-col gap-2 text-sm">
+                      <div className="flex items-center gap-2 leading-none font-medium">
+                        Total de tanques: {nivelesTanques.length} <TrendingUp className="h-4 w-4" />
+                      </div>
+                      <div className="text-muted-foreground leading-none">
+                        Distribución de aceite por producto según niveles registrados
+                      </div>
+                    </CardFooter>
+                  </Card>
+                )}
 
                 {/* Vista Agrupada por Producto */}
                 <div className="space-y-4">
