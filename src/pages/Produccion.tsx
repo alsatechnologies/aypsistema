@@ -539,6 +539,10 @@ const Produccion = () => {
                                         .normalize('NFD')
                                         .replace(/[\u0300-\u036f]/g, '') // Quitar tildes
                                         .trim();
+                                      // Excluir productos de semilla
+                                      if (nombreNormalizado.includes('SEMILLA')) {
+                                        return false;
+                                      }
                                       return (
                                         (nombreNormalizado.includes('CARTAMO') && nombreNormalizado.includes('PRENSA')) ||
                                         (nombreNormalizado.includes('GIRASOL') && nombreNormalizado.includes('PRENSA')) ||
