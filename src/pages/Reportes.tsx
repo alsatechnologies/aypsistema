@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { 
   FileText, 
   Download, 
@@ -45,6 +46,8 @@ const Reportes = () => {
   const [filtroProveedor, setFiltroProveedor] = useState<string>('todos');
   const [filtroCliente, setFiltroCliente] = useState<string>('todos');
   const [filtroAlmacen, setFiltroAlmacen] = useState<string>('todos');
+  const [selectedReporteProduccion, setSelectedReporteProduccion] = useState<any>(null);
+  const [isDetalleProduccionOpen, setIsDetalleProduccionOpen] = useState(false);
 
   // Data hooks
   const { productos } = useProductos();
@@ -624,6 +627,7 @@ const Reportes = () => {
                         <TableHead>Comb. Alterno (%)</TableHead>
                         <TableHead>Combustóleo (%)</TableHead>
                         <TableHead>Estatus</TableHead>
+                        <TableHead>Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -648,6 +652,18 @@ const Reportes = () => {
                                 {r.estatus}
                               </Badge>
                             </TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedReporteProduccion(r);
+                                  setIsDetalleProduccionOpen(true);
+                                }}
+                              >
+                                Ver Detalle
+                              </Button>
+                            </TableCell>
                           </TableRow>
                         );
                       })}
@@ -657,6 +673,252 @@ const Reportes = () => {
               </CardContent>
             </Card>
           </TabsContent>
+        </Tabs>
+
+        {/* Dialog: Detalle de Producción con Visualización de Tanques */}
+        <Dialog open={isDetalleProduccionOpen} onOpenChange={setIsDetalleProduccionOpen}>
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Factory className="h-5 w-5" />
+                Detalle del Reporte {selectedReporteProduccion?.id}
+              </DialogTitle>
+            </DialogHeader>
+
+            {selectedReporteProduccion && (
+              <div className="space-y-6 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-muted-foreground">Fecha</Label>
+                    <p className="font-medium">{(() => {
+                      const fecha = new Date(selectedReporteProduccion.fecha);
+                      const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                      const diaSemana = diasSemana[fecha.getDay()];
+                      const dia = String(fecha.getDate()).padStart(2, '0');
+                      const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+                      const año = fecha.getFullYear();
+                      return `${diaSemana} ${dia}/${mes}/${año}`;
+                    })()}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Responsable</Label>
+                    <p className="font-medium">{selectedReporteProduccion.responsable}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Estatus</Label>
+                    <div className="mt-1">
+                      <Badge variant={selectedReporteProduccion.estatus === 'Completado' ? 'default' : 'secondary'}>
+                        {selectedReporteProduccion.estatus}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+
+                {((selectedReporteProduccion.niveles_tanques && selectedReporteProduccion.niveles_tanques.length > 0) || 
+                  (selectedReporteProduccion.niveles_gomas && selectedReporteProduccion.niveles_gomas.length > 0)) && (
+                  <div>
+                    <Label className="text-base font-semibold mb-3 block">Niveles de Tanques y Gomas</Label>
+                    
+                    {/* Representación Visual de Tanques */}
+                    <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {(() => {
+                        const tanquesMap = new Map();
+                        selectedReporteProduccion.niveles_tanques?.forEach((t: any) => {
+                          tanquesMap.set(t.tanque, { producto: t.producto, nivel: t.nivel, unidad: t.unidad });
+                        });
+
+                        const gomasMap = new Map();
+                        selectedReporteProduccion.niveles_gomas?.forEach((g: any) => {
+                          gomasMap.set(g.goma, { nivel: g.nivel, unidad: g.unidad });
+                        });
+
+                        const todosTanques = new Set([
+                          ...(selectedReporteProduccion.niveles_tanques?.map((t: any) => t.tanque) || []),
+                          ...(selectedReporteProduccion.niveles_gomas?.map((g: any) => g.goma) || [])
+                        ]);
+
+                        return Array.from(todosTanques).map((tanqueNombre: string, index: number) => {
+                          const tanqueData = tanquesMap.get(tanqueNombre);
+                          const gomaData = gomasMap.get(tanqueNombre);
+                          const nivel = tanqueData?.nivel || 0;
+                          const gomas = gomaData?.nivel || 0;
+                          
+                          // Determinar color según el nivel
+                          const getNivelColor = (nivel: number) => {
+                            if (nivel >= 80) return 'bg-red-500';
+                            if (nivel >= 60) return 'bg-orange-500';
+                            if (nivel >= 40) return 'bg-yellow-500';
+                            if (nivel >= 20) return 'bg-green-500';
+                            return 'bg-blue-500';
+                          };
+
+                          const getGomasColor = (gomas: number) => {
+                            if (gomas >= 5) return 'bg-red-400';
+                            if (gomas >= 3) return 'bg-orange-400';
+                            if (gomas >= 1) return 'bg-yellow-400';
+                            return 'bg-green-400';
+                          };
+
+                          return (
+                            <Card key={index} className="p-4">
+                              <div className="space-y-3">
+                                <div>
+                                  <h4 className="font-semibold text-sm mb-1">{tanqueNombre}</h4>
+                                  {tanqueData?.producto && (
+                                    <p className="text-xs text-muted-foreground">{tanqueData.producto}</p>
+                                  )}
+                                </div>
+                                
+                                {/* Visualización de Nivel */}
+                                {nivel > 0 && (
+                                  <div className="space-y-1">
+                                    <div className="flex justify-between items-center text-xs">
+                                      <span className="text-muted-foreground">Nivel</span>
+                                      <span className="font-medium">{nivel.toFixed(2)}%</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-6 relative overflow-hidden">
+                                      <div
+                                        className={`h-full ${getNivelColor(nivel)} transition-all duration-500 rounded-full flex items-center justify-end pr-2`}
+                                        style={{ width: `${Math.min(nivel, 100)}%` }}
+                                      >
+                                        {nivel > 10 && (
+                                          <span className="text-white text-xs font-medium">
+                                            {nivel.toFixed(1)}%
+                                          </span>
+                                        )}
+                                      </div>
+                                      {nivel <= 10 && (
+                                        <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-700">
+                                          {nivel.toFixed(1)}%
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Visualización de Gomas */}
+                                {gomas > 0 && (
+                                  <div className="space-y-1">
+                                    <div className="flex justify-between items-center text-xs">
+                                      <span className="text-muted-foreground">Gomas</span>
+                                      <span className="font-medium">{gomas.toFixed(2)}%</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-4 relative overflow-hidden">
+                                      <div
+                                        className={`h-full ${getGomasColor(gomas)} transition-all duration-500 rounded-full`}
+                                        style={{ width: `${Math.min(gomas * 10, 100)}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+
+                                {nivel === 0 && gomas === 0 && (
+                                  <p className="text-xs text-muted-foreground text-center py-2">Sin datos</p>
+                                )}
+                              </div>
+                            </Card>
+                          );
+                        });
+                      })()}
+                    </div>
+
+                    {/* Tabla de datos */}
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Tanque</TableHead>
+                          <TableHead className="text-center">Nivel (%)</TableHead>
+                          <TableHead className="text-center">Gomas (%)</TableHead>
+                          <TableHead>Producto</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(() => {
+                          const tanquesMap = new Map();
+                          selectedReporteProduccion.niveles_tanques?.forEach((t: any) => {
+                            tanquesMap.set(t.tanque, { producto: t.producto, nivel: t.nivel, unidad: t.unidad });
+                          });
+
+                          const gomasMap = new Map();
+                          selectedReporteProduccion.niveles_gomas?.forEach((g: any) => {
+                            gomasMap.set(g.goma, { nivel: g.nivel, unidad: g.unidad });
+                          });
+
+                          const todosTanques = new Set([
+                            ...(selectedReporteProduccion.niveles_tanques?.map((t: any) => t.tanque) || []),
+                            ...(selectedReporteProduccion.niveles_gomas?.map((g: any) => g.goma) || [])
+                          ]);
+
+                          return Array.from(todosTanques).map((tanqueNombre: string, index: number) => {
+                            const tanqueData = tanquesMap.get(tanqueNombre);
+                            const gomaData = gomasMap.get(tanqueNombre);
+                            
+                            return (
+                              <TableRow key={index}>
+                                <TableCell className="font-medium">{tanqueNombre}</TableCell>
+                                <TableCell className="text-center">
+                                  {tanqueData 
+                                    ? tanqueData.nivel.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                    : '-'}
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  {gomaData 
+                                    ? gomaData.nivel.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                    : '-'}
+                                </TableCell>
+                                <TableCell>{tanqueData?.producto || '-'}</TableCell>
+                              </TableRow>
+                            );
+                          });
+                        })()}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+
+                {/* Campos adicionales */}
+                {(selectedReporteProduccion.expander_litros || selectedReporteProduccion.comb_alterno_porcentaje || selectedReporteProduccion.combustoleo_porcentaje) && (
+                  <div>
+                    <Label className="text-base font-semibold mb-3 block">Información Adicional</Label>
+                    <div className="grid grid-cols-3 gap-4">
+                      {selectedReporteProduccion.expander_litros && (
+                        <div>
+                          <Label className="text-muted-foreground text-sm">Expander</Label>
+                          <p className="font-medium">{selectedReporteProduccion.expander_litros.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} L</p>
+                        </div>
+                      )}
+                      {selectedReporteProduccion.comb_alterno_porcentaje && (
+                        <div>
+                          <Label className="text-muted-foreground text-sm">Comb. Alterno</Label>
+                          <p className="font-medium">{selectedReporteProduccion.comb_alterno_porcentaje.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %</p>
+                        </div>
+                      )}
+                      {selectedReporteProduccion.combustoleo_porcentaje && (
+                        <div>
+                          <Label className="text-muted-foreground text-sm">Combustóleo</Label>
+                          <p className="font-medium">{selectedReporteProduccion.combustoleo_porcentaje.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {selectedReporteProduccion.observaciones && (
+                  <div>
+                    <Label className="text-base font-semibold mb-2 block">Observaciones</Label>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{selectedReporteProduccion.observaciones}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button>Cerrar</Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         </Tabs>
       </div>
     </Layout>
