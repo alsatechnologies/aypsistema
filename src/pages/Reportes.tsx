@@ -271,6 +271,156 @@ const Reportes = () => {
             <TabsTrigger value="produccion">Producción</TabsTrigger>
           </TabsList>
 
+          {/* Vista General de Producción - Solo visible en tab Producción */}
+          {activeTab === 'produccion' && reportesProduccion.length > 0 && (() => {
+            // Obtener el reporte más reciente para mostrar estado actual
+            const reporteMasReciente = reportesProduccion[0];
+            const nivelesTanques = reporteMasReciente.niveles_tanques || [];
+            const nivelesGomas = reporteMasReciente.niveles_gomas || [];
+            
+            // Calcular totales
+            const totalNivel = nivelesTanques.reduce((acc, t) => acc + (t.nivel || 0), 0);
+            const totalGomas = nivelesGomas.reduce((acc, g) => acc + (g.nivel || 0), 0);
+            const promedioNivel = nivelesTanques.length > 0 ? totalNivel / nivelesTanques.length : 0;
+            const promedioGomas = nivelesGomas.length > 0 ? totalGomas / nivelesGomas.length : 0;
+            
+            // Agrupar por producto
+            const porProducto = new Map<string, { tanques: number; nivelPromedio: number; totalNivel: number }>();
+            nivelesTanques.forEach(t => {
+              const producto = t.producto || 'Sin producto';
+              const actual = porProducto.get(producto) || { tanques: 0, nivelPromedio: 0, totalNivel: 0 };
+              actual.tanques += 1;
+              actual.totalNivel = (actual.totalNivel || 0) + (t.nivel || 0);
+              actual.nivelPromedio = actual.totalNivel / actual.tanques;
+              porProducto.set(producto, actual);
+            });
+
+            const getNivelColor = (nivel: number) => {
+              if (nivel >= 80) return 'bg-red-500';
+              if (nivel >= 60) return 'bg-orange-500';
+              if (nivel >= 40) return 'bg-yellow-500';
+              if (nivel >= 20) return 'bg-green-500';
+              return 'bg-blue-500';
+            };
+
+            const getGomasColor = (gomas: number) => {
+              if (gomas >= 5) return 'bg-red-400';
+              if (gomas >= 3) return 'bg-orange-400';
+              if (gomas >= 1) return 'bg-yellow-400';
+              return 'bg-green-400';
+            };
+
+            return (
+              <Card className="mt-6 mb-4">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Factory className="h-5 w-5" />
+                    Vista General de Producción
+                  </CardTitle>
+                  <CardDescription>
+                    Estado actual basado en el reporte más reciente ({reporteMasReciente.id} - {format(new Date(reporteMasReciente.fecha), 'dd/MM/yyyy', { locale: es })})
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {/* Estadísticas Generales */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-blue-600 font-medium">Total de Tanques</p>
+                          <p className="text-2xl font-bold text-blue-900">{nivelesTanques.length}</p>
+                        </div>
+                        <Package className="h-8 w-8 text-blue-400" />
+                      </div>
+                    </div>
+                    <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-green-600 font-medium">Nivel Promedio</p>
+                          <p className="text-2xl font-bold text-green-900">{promedioNivel.toFixed(2)}%</p>
+                        </div>
+                        <TrendingUp className="h-8 w-8 text-green-400" />
+                      </div>
+                    </div>
+                    <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-orange-600 font-medium">Gomas Promedio</p>
+                          <p className="text-2xl font-bold text-orange-900">{promedioGomas.toFixed(2)}%</p>
+                        </div>
+                        <TrendingDown className="h-8 w-8 text-orange-400" />
+                      </div>
+                    </div>
+                    <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-purple-600 font-medium">Productos Activos</p>
+                          <p className="text-2xl font-bold text-purple-900">{porProducto.size}</p>
+                        </div>
+                        <FileText className="h-8 w-8 text-purple-400" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Visualización de Tanques */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">Estado de Tanques</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      {nivelesTanques.map((tanque, index) => {
+                        const goma = nivelesGomas.find(g => g.goma === tanque.tanque);
+                        const nivel = tanque.nivel || 0;
+                        const gomas = goma?.nivel || 0;
+
+                        return (
+                          <Card key={index} className="p-4 hover:shadow-md transition-shadow">
+                            <div className="space-y-3">
+                              <div>
+                                <h4 className="font-semibold text-sm mb-1">{tanque.tanque}</h4>
+                                {tanque.producto && (
+                                  <p className="text-xs text-muted-foreground truncate">{tanque.producto}</p>
+                                )}
+                              </div>
+
+                              {/* Visualización de Nivel */}
+                              <div className="space-y-1">
+                                <div className="flex justify-between items-center text-xs">
+                                  <span className="text-muted-foreground">Nivel</span>
+                                  <span className="font-medium">{nivel.toFixed(2)}%</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-4 relative overflow-hidden">
+                                  <div
+                                    className={`h-full ${getNivelColor(nivel)} transition-all duration-500 rounded-full`}
+                                    style={{ width: `${Math.min(nivel, 100)}%` }}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Visualización de Gomas */}
+                              {gomas > 0 && (
+                                <div className="space-y-1">
+                                  <div className="flex justify-between items-center text-xs">
+                                    <span className="text-muted-foreground">Gomas</span>
+                                    <span className="font-medium">{gomas.toFixed(2)}%</span>
+                                  </div>
+                                  <div className="w-full bg-gray-200 rounded-full h-2 relative overflow-hidden">
+                                    <div
+                                      className={`h-full ${getGomasColor(gomas)} transition-all duration-500 rounded-full`}
+                                      style={{ width: `${Math.min(gomas * 10, 100)}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
+
           {/* Filtros comunes */}
           <div className="mt-6 mb-4 flex flex-wrap items-end gap-4 p-4 bg-muted/30 rounded-lg">
             <div className="flex items-center gap-2">
