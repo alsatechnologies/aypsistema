@@ -280,6 +280,14 @@ const Reportes = () => {
             const nivelesTanques = reporteMasReciente.niveles_tanques || [];
             const nivelesGomas = reporteMasReciente.niveles_gomas || [];
             
+            // Crear mapa de alturas máximas por nombre de tanque
+            const alturasMaximasMap = new Map<string, number>();
+            almacenes.forEach((almacen) => {
+              if (almacen.altura_maxima) {
+                alturasMaximasMap.set(almacen.nombre, almacen.altura_maxima);
+              }
+            });
+            
             // Calcular totales
             const totalNivel = nivelesTanques.reduce((acc, t) => acc + (t.nivel || 0), 0);
             const totalGomas = nivelesGomas.reduce((acc, g) => acc + (g.nivel || 0), 0);
@@ -297,11 +305,11 @@ const Reportes = () => {
               porProducto.set(producto, actual);
             });
 
-            const getNivelColor = (nivel: number) => {
-              if (nivel >= 80) return 'bg-red-500';
-              if (nivel >= 60) return 'bg-orange-500';
-              if (nivel >= 40) return 'bg-yellow-500';
-              if (nivel >= 20) return 'bg-green-500';
+            const getNivelColor = (porcentaje: number) => {
+              if (porcentaje >= 80) return 'bg-red-500';
+              if (porcentaje >= 60) return 'bg-orange-500';
+              if (porcentaje >= 40) return 'bg-yellow-500';
+              if (porcentaje >= 20) return 'bg-green-500';
               return 'bg-blue-500';
             };
 
@@ -412,6 +420,14 @@ const Reportes = () => {
                               const goma = nivelesGomas.find(g => g.goma === tanque.tanque);
                               const nivel = tanque.nivel || 0;
                               const gomas = goma?.nivel || 0;
+                              
+                              // Obtener altura máxima del tanque
+                              const alturaMaxima = alturasMaximasMap.get(tanque.tanque);
+                              
+                              // Calcular porcentaje basado en altura máxima
+                              const porcentajeNivel = alturaMaxima && alturaMaxima > 0 
+                                ? (nivel / alturaMaxima) * 100 
+                                : 0;
 
                               return (
                                 <div key={idx} className="flex items-center gap-4 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
@@ -421,6 +437,9 @@ const Reportes = () => {
                                       <div className="flex items-center gap-4 text-xs">
                                         <span className="text-muted-foreground">
                                           Nivel: <span className="font-medium text-foreground">{nivel.toFixed(2)} m</span>
+                                          {porcentajeNivel > 0 && (
+                                            <span className="text-muted-foreground ml-1">({porcentajeNivel.toFixed(1)}%)</span>
+                                          )}
                                         </span>
                                         {gomas > 0 && (
                                           <span className="text-muted-foreground">
@@ -435,18 +454,18 @@ const Reportes = () => {
                                       <div className="relative">
                                         <div className="w-full bg-muted rounded-full h-6 overflow-hidden">
                                           <div
-                                            className={`h-full ${getNivelColor(nivel)} transition-all duration-500 rounded-full flex items-center justify-end pr-2`}
-                                            style={{ width: `${Math.min(nivel, 100)}%` }}
+                                            className={`h-full ${getNivelColor(porcentajeNivel)} transition-all duration-500 rounded-full flex items-center justify-end pr-2`}
+                                            style={{ width: `${Math.min(porcentajeNivel, 100)}%` }}
                                           >
-                                            {nivel > 8 && (
+                                            {porcentajeNivel > 8 && (
                                               <span className="text-white text-xs font-medium">
-                                                {nivel.toFixed(2)} m
+                                                {nivel.toFixed(2)} m ({porcentajeNivel.toFixed(1)}%)
                                               </span>
                                             )}
                                           </div>
-                                          {nivel <= 8 && (
+                                          {porcentajeNivel <= 8 && porcentajeNivel > 0 && (
                                             <span className="absolute inset-0 flex items-center justify-start pl-2 text-xs font-medium text-foreground">
-                                              {nivel.toFixed(2)} m
+                                              {nivel.toFixed(2)} m ({porcentajeNivel.toFixed(1)}%)
                                             </span>
                                           )}
                                         </div>
@@ -945,18 +964,34 @@ const Reportes = () => {
                           ...(selectedReporteProduccion.niveles_gomas?.map((g: any) => g.goma) || [])
                         ]);
 
+                        // Crear mapa de alturas máximas por nombre de tanque
+                        const alturasMaximasMap = new Map<string, number>();
+                        almacenes.forEach((almacen) => {
+                          if (almacen.altura_maxima) {
+                            alturasMaximasMap.set(almacen.nombre, almacen.altura_maxima);
+                          }
+                        });
+
                         return Array.from(todosTanques).map((tanqueNombre: string, index: number) => {
                           const tanqueData = tanquesMap.get(tanqueNombre);
                           const gomaData = gomasMap.get(tanqueNombre);
                           const nivel = tanqueData?.nivel || 0;
                           const gomas = gomaData?.nivel || 0;
                           
-                          // Determinar color según el nivel
-                          const getNivelColor = (nivel: number) => {
-                            if (nivel >= 80) return 'bg-red-500';
-                            if (nivel >= 60) return 'bg-orange-500';
-                            if (nivel >= 40) return 'bg-yellow-500';
-                            if (nivel >= 20) return 'bg-green-500';
+                          // Obtener altura máxima del tanque
+                          const alturaMaxima = alturasMaximasMap.get(tanqueNombre);
+                          
+                          // Calcular porcentaje basado en altura máxima
+                          const porcentajeNivel = alturaMaxima && alturaMaxima > 0 
+                            ? (nivel / alturaMaxima) * 100 
+                            : 0;
+                          
+                          // Determinar color según el porcentaje del nivel
+                          const getNivelColor = (porcentaje: number) => {
+                            if (porcentaje >= 80) return 'bg-red-500';
+                            if (porcentaje >= 60) return 'bg-orange-500';
+                            if (porcentaje >= 40) return 'bg-yellow-500';
+                            if (porcentaje >= 20) return 'bg-green-500';
                             return 'bg-blue-500';
                           };
 
@@ -986,18 +1021,18 @@ const Reportes = () => {
                                     </div>
                                     <div className="w-full bg-gray-200 rounded-full h-6 relative overflow-hidden">
                                       <div
-                                        className={`h-full ${getNivelColor(nivel)} transition-all duration-500 rounded-full flex items-center justify-end pr-2`}
-                                        style={{ width: `${Math.min(nivel, 100)}%` }}
+                                        className={`h-full ${getNivelColor(porcentajeNivel)} transition-all duration-500 rounded-full flex items-center justify-end pr-2`}
+                                        style={{ width: `${Math.min(porcentajeNivel, 100)}%` }}
                                       >
-                                        {nivel > 10 && (
+                                        {porcentajeNivel > 8 && (
                                           <span className="text-white text-xs font-medium">
-                                            {nivel.toFixed(2)} m
+                                            {nivel.toFixed(2)} m ({porcentajeNivel.toFixed(1)}%)
                                           </span>
                                         )}
                                       </div>
-                                      {nivel <= 10 && (
-                                        <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-700">
-                                          {nivel.toFixed(2)} m
+                                      {porcentajeNivel <= 8 && (
+                                        <span className="absolute inset-0 flex items-center justify-start pl-2 text-xs font-medium text-gray-700">
+                                          {nivel.toFixed(2)} m ({porcentajeNivel.toFixed(1)}%)
                                         </span>
                                       )}
                                     </div>

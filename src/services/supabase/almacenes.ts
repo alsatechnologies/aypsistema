@@ -7,6 +7,7 @@ export interface Almacen {
   capacidad_total: number;
   capacidad_actual: number;
   unidad: string;
+  altura_maxima?: number | null;
   created_at?: string;
   updated_at?: string;
 }
