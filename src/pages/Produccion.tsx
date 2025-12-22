@@ -683,6 +683,110 @@ const Produccion = () => {
                   (selectedReporte.niveles_gomas && selectedReporte.niveles_gomas.length > 0)) && (
                   <div>
                     <Label className="text-base font-semibold mb-3 block">Niveles de Tanques y Gomas</Label>
+                    
+                    {/* Representación Visual de Tanques */}
+                    <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {(() => {
+                        const tanquesMap = new Map();
+                        selectedReporte.niveles_tanques?.forEach(t => {
+                          tanquesMap.set(t.tanque, { producto: t.producto, nivel: t.nivel, unidad: t.unidad });
+                        });
+
+                        const gomasMap = new Map();
+                        selectedReporte.niveles_gomas?.forEach(g => {
+                          gomasMap.set(g.goma, { nivel: g.nivel, unidad: g.unidad });
+                        });
+
+                        const todosTanques = new Set([
+                          ...(selectedReporte.niveles_tanques?.map(t => t.tanque) || []),
+                          ...(selectedReporte.niveles_gomas?.map(g => g.goma) || [])
+                        ]);
+
+                        return Array.from(todosTanques).map((tanqueNombre, index) => {
+                          const tanqueData = tanquesMap.get(tanqueNombre);
+                          const gomaData = gomasMap.get(tanqueNombre);
+                          const nivel = tanqueData?.nivel || 0;
+                          const gomas = gomaData?.nivel || 0;
+                          
+                          // Determinar color según el nivel
+                          const getNivelColor = (nivel: number) => {
+                            if (nivel >= 80) return 'bg-red-500';
+                            if (nivel >= 60) return 'bg-orange-500';
+                            if (nivel >= 40) return 'bg-yellow-500';
+                            if (nivel >= 20) return 'bg-green-500';
+                            return 'bg-blue-500';
+                          };
+
+                          const getGomasColor = (gomas: number) => {
+                            if (gomas >= 5) return 'bg-red-400';
+                            if (gomas >= 3) return 'bg-orange-400';
+                            if (gomas >= 1) return 'bg-yellow-400';
+                            return 'bg-green-400';
+                          };
+
+                          return (
+                            <Card key={index} className="p-4">
+                              <div className="space-y-3">
+                                <div>
+                                  <h4 className="font-semibold text-sm mb-1">{tanqueNombre}</h4>
+                                  {tanqueData?.producto && (
+                                    <p className="text-xs text-muted-foreground">{tanqueData.producto}</p>
+                                  )}
+                                </div>
+                                
+                                {/* Visualización de Nivel */}
+                                {nivel > 0 && (
+                                  <div className="space-y-1">
+                                    <div className="flex justify-between items-center text-xs">
+                                      <span className="text-muted-foreground">Nivel</span>
+                                      <span className="font-medium">{nivel.toFixed(2)}%</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-6 relative overflow-hidden">
+                                      <div
+                                        className={`h-full ${getNivelColor(nivel)} transition-all duration-500 rounded-full flex items-center justify-end pr-2`}
+                                        style={{ width: `${Math.min(nivel, 100)}%` }}
+                                      >
+                                        {nivel > 10 && (
+                                          <span className="text-white text-xs font-medium">
+                                            {nivel.toFixed(1)}%
+                                          </span>
+                                        )}
+                                      </div>
+                                      {nivel <= 10 && (
+                                        <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-700">
+                                          {nivel.toFixed(1)}%
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Visualización de Gomas */}
+                                {gomas > 0 && (
+                                  <div className="space-y-1">
+                                    <div className="flex justify-between items-center text-xs">
+                                      <span className="text-muted-foreground">Gomas</span>
+                                      <span className="font-medium">{gomas.toFixed(2)}%</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-4 relative overflow-hidden">
+                                      <div
+                                        className={`h-full ${getGomasColor(gomas)} transition-all duration-500 rounded-full`}
+                                        style={{ width: `${Math.min(gomas * 10, 100)}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+
+                                {nivel === 0 && gomas === 0 && (
+                                  <p className="text-xs text-muted-foreground text-center py-2">Sin datos</p>
+                                )}
+                              </div>
+                            </Card>
+                          );
+                        });
+                      })()}
+                    </div>
+
                     <Table>
                       <TableHeader>
                         <TableRow>
