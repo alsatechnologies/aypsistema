@@ -352,7 +352,7 @@ const Reportes = () => {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-xs font-medium text-muted-foreground mb-1">Nivel Promedio</p>
-                          <p className="text-2xl font-bold text-green-600 dark:text-green-400">{promedioNivel.toFixed(1)}%</p>
+                          <p className="text-2xl font-bold text-green-600 dark:text-green-400">{promedioNivel.toFixed(2)} m</p>
                         </div>
                         <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
                           <Droplet className="h-5 w-5 text-green-600 dark:text-green-400" />
@@ -366,7 +366,7 @@ const Reportes = () => {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-xs font-medium text-muted-foreground mb-1">Gomas Promedio</p>
-                          <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{promedioGomas.toFixed(2)}%</p>
+                          <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{promedioGomas.toFixed(2)} m</p>
                         </div>
                         <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
                           <AlertCircle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
@@ -420,11 +420,11 @@ const Reportes = () => {
                                       <span className="font-semibold text-sm">{tanque.tanque}</span>
                                       <div className="flex items-center gap-4 text-xs">
                                         <span className="text-muted-foreground">
-                                          Nivel: <span className="font-medium text-foreground">{nivel.toFixed(2)}%</span>
+                                          Nivel: <span className="font-medium text-foreground">{nivel.toFixed(2)} m</span>
                                         </span>
                                         {gomas > 0 && (
                                           <span className="text-muted-foreground">
-                                            Gomas: <span className="font-medium text-foreground">{gomas.toFixed(2)}%</span>
+                                            Gomas: <span className="font-medium text-foreground">{gomas.toFixed(2)} m</span>
                                           </span>
                                         )}
                                       </div>
@@ -440,13 +440,13 @@ const Reportes = () => {
                                           >
                                             {nivel > 8 && (
                                               <span className="text-white text-xs font-medium">
-                                                {nivel.toFixed(1)}%
+                                                {nivel.toFixed(2)} m
                                               </span>
                                             )}
                                           </div>
                                           {nivel <= 8 && (
                                             <span className="absolute inset-0 flex items-center justify-start pl-2 text-xs font-medium text-foreground">
-                                              {nivel.toFixed(1)}%
+                                              {nivel.toFixed(2)} m
                                             </span>
                                           )}
                                         </div>
@@ -982,7 +982,7 @@ const Reportes = () => {
                                   <div className="space-y-1">
                                     <div className="flex justify-between items-center text-xs">
                                       <span className="text-muted-foreground">Nivel</span>
-                                      <span className="font-medium">{nivel.toFixed(2)}%</span>
+                                      <span className="font-medium">{nivel.toFixed(2)} m</span>
                                     </div>
                                     <div className="w-full bg-gray-200 rounded-full h-6 relative overflow-hidden">
                                       <div
@@ -991,13 +991,13 @@ const Reportes = () => {
                                       >
                                         {nivel > 10 && (
                                           <span className="text-white text-xs font-medium">
-                                            {nivel.toFixed(1)}%
+                                            {nivel.toFixed(2)} m
                                           </span>
                                         )}
                                       </div>
                                       {nivel <= 10 && (
                                         <span className="absolute inset-0 flex items-center justify-center text-xs font-medium text-gray-700">
-                                          {nivel.toFixed(1)}%
+                                          {nivel.toFixed(2)} m
                                         </span>
                                       )}
                                     </div>
@@ -1009,7 +1009,7 @@ const Reportes = () => {
                                   <div className="space-y-1">
                                     <div className="flex justify-between items-center text-xs">
                                       <span className="text-muted-foreground">Gomas</span>
-                                      <span className="font-medium">{gomas.toFixed(2)}%</span>
+                                      <span className="font-medium">{gomas.toFixed(2)} m</span>
                                     </div>
                                     <div className="w-full bg-gray-200 rounded-full h-4 relative overflow-hidden">
                                       <div
@@ -1035,8 +1035,8 @@ const Reportes = () => {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Tanque</TableHead>
-                          <TableHead className="text-center">Nivel (%)</TableHead>
-                          <TableHead className="text-center">Gomas (%)</TableHead>
+                          <TableHead className="text-center">Nivel (m)</TableHead>
+                          <TableHead className="text-center">Gomas (m)</TableHead>
                           <TableHead>Producto</TableHead>
                         </TableRow>
                       </TableHeader>

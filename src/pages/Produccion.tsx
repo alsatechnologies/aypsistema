@@ -129,7 +129,7 @@ const Produccion = () => {
             tanque: almacen.nombre,
             producto: producto?.nombre || null,
             nivel: nivel,
-            unidad: '%' // Nivel se mide en porcentaje
+            unidad: 'm' // Nivel se mide en metros
           };
         });
 
@@ -139,7 +139,7 @@ const Produccion = () => {
         .map(({ almacen, gomas }) => ({
           goma: almacen.nombre,
           nivel: gomas,
-          unidad: '%' // Gomas se miden en porcentaje
+          unidad: 'm' // Gomas se miden en metros
         }));
 
       // Función helper para parsear números con comas
@@ -480,8 +480,8 @@ const Produccion = () => {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Tanque</TableHead>
-                          <TableHead className="text-center">Nivel (%)</TableHead>
-                          <TableHead className="text-center">Gomas (%)</TableHead>
+                          <TableHead className="text-center">Nivel (m)</TableHead>
+                          <TableHead className="text-center">Gomas (m)</TableHead>
                           <TableHead>Producto</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -689,8 +689,8 @@ const Produccion = () => {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Tanque</TableHead>
-                          <TableHead className="text-center">Nivel (%)</TableHead>
-                          <TableHead className="text-center">Gomas (%)</TableHead>
+                          <TableHead className="text-center">Nivel (m)</TableHead>
+                          <TableHead className="text-center">Gomas (m)</TableHead>
                           <TableHead>Producto</TableHead>
                         </TableRow>
                       </TableHeader>
