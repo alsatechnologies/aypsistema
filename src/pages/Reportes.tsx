@@ -37,8 +37,8 @@ import { useProduccion } from '@/services/hooks/useProduccion';
 import type { Recepcion } from '@/services/supabase/recepciones';
 import type { Embarque } from '@/services/supabase/embarques';
 
+// Módulo de Reportes - Las gráficas visuales de tanques están AQUÍ en la pestaña Producción
 const Reportes = () => {
-  // Componente de reportes con visualización de tanques en pestaña Producción
   const [activeTab, setActiveTab] = useState('entradas');
   const [search, setSearch] = useState('');
   const [fechaDesde, setFechaDesde] = useState<Date | undefined>();

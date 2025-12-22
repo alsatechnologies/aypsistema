@@ -18,6 +18,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAlmacenes } from '@/services/hooks/useAlmacenes';
 import { useProductos } from '@/services/hooks/useProductos';
 
+// Módulo de Producción - Solo muestra tabla, NO gráficas visuales
+// Las gráficas visuales están en el módulo de Reportes
 const Produccion = () => {
   const [search, setSearch] = useState('');
   const [isNuevoReporteOpen, setIsNuevoReporteOpen] = useState(false);
