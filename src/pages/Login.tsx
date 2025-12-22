@@ -1,10 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Logo from '@/components/Logo';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const Login = () => {
   const [usuarioOCorreo, setUsuarioOCorreo] = useState('');
@@ -13,6 +14,27 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
+  const { theme, setTheme } = useTheme();
+
+  // Forzar modo claro en la página de login
+  useEffect(() => {
+    const originalTheme = theme;
+    // Guardar el tema original si no está guardado
+    if (!localStorage.getItem('originalTheme')) {
+      localStorage.setItem('originalTheme', originalTheme);
+    }
+    // Forzar modo claro
+    setTheme('light');
+    
+    // Restaurar el tema original cuando se desmonte el componente
+    return () => {
+      const savedOriginalTheme = localStorage.getItem('originalTheme') as 'light' | 'dark' | null;
+      if (savedOriginalTheme) {
+        setTheme(savedOriginalTheme);
+        localStorage.removeItem('originalTheme');
+      }
+    };
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
