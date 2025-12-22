@@ -197,7 +197,7 @@ const BoletaPreviewDialog: React.FC<BoletaPreviewDialogProps> = ({ open, onOpenC
           </Button>
           <Button 
             onClick={handlePrint} 
-            className="bg-white text-gray-900 hover:bg-gray-100 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100"
             disabled={isPrinting}
           >
             <Printer className="h-4 w-4 mr-2" />
