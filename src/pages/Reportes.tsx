@@ -313,113 +313,168 @@ const Reportes = () => {
             };
 
             return (
-              <Card className="mt-6 mb-4">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Factory className="h-5 w-5" />
-                    Vista General de Producción
-                  </CardTitle>
-                  <CardDescription>
-                    Estado actual basado en el reporte más reciente ({reporteMasReciente.id} - {format(new Date(reporteMasReciente.fecha), 'dd/MM/yyyy', { locale: es })})
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {/* Estadísticas Generales */}
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-blue-600 font-medium">Total de Tanques</p>
-                          <p className="text-2xl font-bold text-blue-900">{nivelesTanques.length}</p>
-                        </div>
-                        <Package className="h-8 w-8 text-blue-400" />
+              <div className="mt-6 mb-4 space-y-4">
+                {/* Header con información del reporte */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <Factory className="h-5 w-5" />
+                          Vista General de Producción
+                        </CardTitle>
+                        <CardDescription className="mt-1">
+                          Reporte: {reporteMasReciente.id} • {format(new Date(reporteMasReciente.fecha), 'dd/MM/yyyy', { locale: es })}
+                        </CardDescription>
                       </div>
                     </div>
-                    <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+                  </CardHeader>
+                </Card>
+
+                {/* Estadísticas Generales - Diseño Compacto */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <Card className="border-l-4 border-l-blue-500">
+                    <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm text-green-600 font-medium">Nivel Promedio</p>
-                          <p className="text-2xl font-bold text-green-900">{promedioNivel.toFixed(2)}%</p>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Tanques</p>
+                          <p className="text-2xl font-bold">{nivelesTanques.length}</p>
                         </div>
-                        <TrendingUp className="h-8 w-8 text-green-400" />
+                        <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                          <Package className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        </div>
                       </div>
-                    </div>
-                    <div className="p-4 bg-orange-50 rounded-lg border border-orange-200">
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-l-4 border-l-green-500">
+                    <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm text-orange-600 font-medium">Gomas Promedio</p>
-                          <p className="text-2xl font-bold text-orange-900">{promedioGomas.toFixed(2)}%</p>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Nivel Promedio</p>
+                          <p className="text-2xl font-bold text-green-600 dark:text-green-400">{promedioNivel.toFixed(1)}%</p>
                         </div>
-                        <TrendingDown className="h-8 w-8 text-orange-400" />
+                        <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                          <Droplet className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        </div>
                       </div>
-                    </div>
-                    <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-l-4 border-l-orange-500">
+                    <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm text-purple-600 font-medium">Productos Activos</p>
-                          <p className="text-2xl font-bold text-purple-900">{porProducto.size}</p>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Gomas Promedio</p>
+                          <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{promedioGomas.toFixed(2)}%</p>
                         </div>
-                        <FileText className="h-8 w-8 text-purple-400" />
+                        <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+                          <AlertCircle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                        </div>
                       </div>
-                    </div>
-                  </div>
+                    </CardContent>
+                  </Card>
 
-                  {/* Visualización de Tanques */}
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">Estado de Tanques</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {nivelesTanques.map((tanque, index) => {
-                        const goma = nivelesGomas.find(g => g.goma === tanque.tanque);
-                        const nivel = tanque.nivel || 0;
-                        const gomas = goma?.nivel || 0;
+                  <Card className="border-l-4 border-l-purple-500">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Productos</p>
+                          <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{porProducto.size}</p>
+                        </div>
+                        <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+                          <FileText className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
 
-                        return (
-                          <Card key={index} className="p-4 hover:shadow-md transition-shadow">
-                            <div className="space-y-3">
-                              <div>
-                                <h4 className="font-semibold text-sm mb-1">{tanque.tanque}</h4>
-                                {tanque.producto && (
-                                  <p className="text-xs text-muted-foreground truncate">{tanque.producto}</p>
-                                )}
-                              </div>
+                {/* Vista Agrupada por Producto */}
+                <div className="space-y-4">
+                  {Array.from(porProducto.entries()).map(([producto, datos]) => {
+                    const tanquesDelProducto = nivelesTanques.filter(t => (t.producto || 'Sin producto') === producto);
+                    
+                    return (
+                      <Card key={producto}>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <Package className="h-4 w-4" />
+                            {producto}
+                            <Badge variant="secondary" className="ml-auto">
+                              {datos.tanques} tanque{datos.tanques !== 1 ? 's' : ''}
+                            </Badge>
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            {tanquesDelProducto.map((tanque, idx) => {
+                              const goma = nivelesGomas.find(g => g.goma === tanque.tanque);
+                              const nivel = tanque.nivel || 0;
+                              const gomas = goma?.nivel || 0;
 
-                              {/* Visualización de Nivel */}
-                              <div className="space-y-1">
-                                <div className="flex justify-between items-center text-xs">
-                                  <span className="text-muted-foreground">Nivel</span>
-                                  <span className="font-medium">{nivel.toFixed(2)}%</span>
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-4 relative overflow-hidden">
-                                  <div
-                                    className={`h-full ${getNivelColor(nivel)} transition-all duration-500 rounded-full`}
-                                    style={{ width: `${Math.min(nivel, 100)}%` }}
-                                  />
-                                </div>
-                              </div>
+                              return (
+                                <div key={idx} className="flex items-center gap-4 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <span className="font-semibold text-sm">{tanque.tanque}</span>
+                                      <div className="flex items-center gap-4 text-xs">
+                                        <span className="text-muted-foreground">
+                                          Nivel: <span className="font-medium text-foreground">{nivel.toFixed(2)}%</span>
+                                        </span>
+                                        {gomas > 0 && (
+                                          <span className="text-muted-foreground">
+                                            Gomas: <span className="font-medium text-foreground">{gomas.toFixed(2)}%</span>
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Barra de nivel horizontal más grande */}
+                                    <div className="space-y-2">
+                                      <div className="relative">
+                                        <div className="w-full bg-muted rounded-full h-6 overflow-hidden">
+                                          <div
+                                            className={`h-full ${getNivelColor(nivel)} transition-all duration-500 rounded-full flex items-center justify-end pr-2`}
+                                            style={{ width: `${Math.min(nivel, 100)}%` }}
+                                          >
+                                            {nivel > 8 && (
+                                              <span className="text-white text-xs font-medium">
+                                                {nivel.toFixed(1)}%
+                                              </span>
+                                            )}
+                                          </div>
+                                          {nivel <= 8 && (
+                                            <span className="absolute inset-0 flex items-center justify-start pl-2 text-xs font-medium text-foreground">
+                                              {nivel.toFixed(1)}%
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
 
-                              {/* Visualización de Gomas */}
-                              {gomas > 0 && (
-                                <div className="space-y-1">
-                                  <div className="flex justify-between items-center text-xs">
-                                    <span className="text-muted-foreground">Gomas</span>
-                                    <span className="font-medium">{gomas.toFixed(2)}%</span>
+                                      {/* Barra de gomas */}
+                                      {gomas > 0 && (
+                                        <div className="relative">
+                                          <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
+                                            <div
+                                              className={`h-full ${getGomasColor(gomas)} transition-all duration-500 rounded-full`}
+                                              style={{ width: `${Math.min(gomas * 10, 100)}%` }}
+                                            />
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
-                                  <div className="w-full bg-gray-200 rounded-full h-2 relative overflow-hidden">
-                                    <div
-                                      className={`h-full ${getGomasColor(gomas)} transition-all duration-500 rounded-full`}
-                                      style={{ width: `${Math.min(gomas * 10, 100)}%` }}
-                                    />
-                                  </div>
                                 </div>
-                              )}
-                            </div>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                              );
+                            })}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })()}
 
