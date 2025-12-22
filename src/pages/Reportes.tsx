@@ -319,6 +319,27 @@ const Reportes = () => {
               porProducto.set(producto, actual);
             });
 
+            // Agregar tanques de combustóleo y combustible alterno si tienen datos
+            const tanquesCombustible: Array<{ nombre: string; nivel: number; alturaMaxima: number }> = [];
+            
+            if (reporteMasReciente.combustoleo_porcentaje) {
+              const alturaCombustoleo = alturasMaximasMap.get('TANQUE COMBUSTÓLEO') || alturasMaximasMap.get('TANQUE COMBUSTÓLEO ') || 6.80;
+              tanquesCombustible.push({
+                nombre: 'TANQUE COMBUSTÓLEO',
+                nivel: reporteMasReciente.combustoleo_porcentaje,
+                alturaMaxima: alturaCombustoleo
+              });
+            }
+            
+            if (reporteMasReciente.comb_alterno_porcentaje) {
+              const alturaCombAlterno = alturasMaximasMap.get('TANQUE COMBUSTIBLE ALTERNO') || 6.80;
+              tanquesCombustible.push({
+                nombre: 'TANQUE COMBUSTIBLE ALTERNO',
+                nivel: reporteMasReciente.comb_alterno_porcentaje,
+                alturaMaxima: alturaCombAlterno
+              });
+            }
+
             // Preparar datos para el gráfico donut
             const chartColors = [
               'hsl(var(--chart-1))',
