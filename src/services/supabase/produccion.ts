@@ -44,8 +44,8 @@ export async function getReportesProduccion(filters?: {
     .from('reportes_produccion')
     .select('*')
     .eq('activo', true)
-    .order('fecha', { ascending: false })
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .order('fecha', { ascending: false });
   
   if (filters?.fechaDesde) {
     query = query.gte('fecha', filters.fechaDesde);

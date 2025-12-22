@@ -282,8 +282,12 @@ const Reportes = () => {
 
           {/* Vista General de Producción - Solo visible en tab Producción */}
           {activeTab === 'produccion' && reportesProduccion.length > 0 && (() => {
-            // Obtener el reporte más reciente para mostrar estado actual
-            const reporteMasReciente = reportesProduccion[0];
+            // Obtener el reporte más reciente basado en created_at (último guardado)
+            const reporteMasReciente = [...reportesProduccion].sort((a, b) => {
+              const fechaA = a.created_at ? new Date(a.created_at).getTime() : 0;
+              const fechaB = b.created_at ? new Date(b.created_at).getTime() : 0;
+              return fechaB - fechaA; // Orden descendente (más reciente primero)
+            })[0];
             const nivelesTanques = reporteMasReciente.niveles_tanques || [];
             const nivelesGomas = reporteMasReciente.niveles_gomas || [];
             
