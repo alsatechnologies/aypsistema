@@ -533,15 +533,20 @@ const Produccion = () => {
                                 <SelectContent>
                                   {productosDB
                                     .filter(producto => {
-                                      const nombreUpper = producto.nombre.toUpperCase().trim();
+                                      // Normalizar el nombre: convertir a mayúsculas, quitar tildes y espacios
+                                      const nombreNormalizado = producto.nombre
+                                        .toUpperCase()
+                                        .normalize('NFD')
+                                        .replace(/[\u0300-\u036f]/g, '') // Quitar tildes
+                                        .trim();
                                       return (
-                                        (nombreUpper.includes('CARTAMO') && nombreUpper.includes('PRENSA')) ||
-                                        (nombreUpper.includes('GIRASOL') && nombreUpper.includes('PRENSA')) ||
-                                        (nombreUpper.includes('CARTAMO') && nombreUpper.includes('SOLVENTE')) ||
-                                        (nombreUpper.includes('GIRASOL') && nombreUpper.includes('SOLVENTE')) ||
-                                        (nombreUpper.includes('CARTAMO') && nombreUpper.includes('ORGANICO')) ||
-                                        (nombreUpper.includes('GIRASOL') && nombreUpper.includes('ORGANICO')) ||
-                                        nombreUpper === 'MEZCLAS'
+                                        (nombreNormalizado.includes('CARTAMO') && nombreNormalizado.includes('PRENSA')) ||
+                                        (nombreNormalizado.includes('GIRASOL') && nombreNormalizado.includes('PRENSA')) ||
+                                        (nombreNormalizado.includes('CARTAMO') && nombreNormalizado.includes('SOLVENTE')) ||
+                                        (nombreNormalizado.includes('GIRASOL') && nombreNormalizado.includes('SOLVENTE')) ||
+                                        (nombreNormalizado.includes('CARTAMO') && nombreNormalizado.includes('ORGANICO')) ||
+                                        (nombreNormalizado.includes('GIRASOL') && nombreNormalizado.includes('ORGANICO')) ||
+                                        nombreNormalizado === 'MEZCLAS'
                                       );
                                     })
                                     .map((producto) => (
