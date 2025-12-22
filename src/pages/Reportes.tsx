@@ -459,58 +459,76 @@ const Reportes = () => {
                               const porcentajeNivel = alturaMaxima && alturaMaxima > 0 
                                 ? (nivel / alturaMaxima) * 100 
                                 : 0;
+                              
+                              // Calcular porcentaje de gomas (asumiendo que 5m es el máximo para gomas)
+                              const porcentajeGomas = (gomas / 5) * 100;
+
+                              // Obtener colores según porcentajes
+                              const getNivelColorClass = (porcentaje: number) => {
+                                if (porcentaje >= 80) return 'hsl(var(--chart-1))'; // Azul
+                                if (porcentaje >= 60) return 'hsl(var(--chart-2))'; // Verde
+                                if (porcentaje >= 40) return 'hsl(var(--chart-3))'; // Amarillo
+                                if (porcentaje >= 20) return 'hsl(var(--chart-4))'; // Naranja
+                                return 'hsl(var(--chart-5))'; // Rojo
+                              };
+
+                              const nivelColor = getNivelColorClass(porcentajeNivel);
+                              const gomasColor = gomas > 0 ? 'hsl(0, 0%, 60%)' : 'transparent'; // Gris para gomas
+
+                              // Preparar datos para el gráfico donut
+                              const donutData = [
+                                { name: 'Nivel', value: Math.min(porcentajeNivel, 100), fill: nivelColor },
+                                { name: 'Gomas', value: Math.min(porcentajeGomas, 100), fill: gomasColor },
+                                { name: 'Vacío', value: Math.max(0, 100 - Math.min(porcentajeNivel, 100) - Math.min(porcentajeGomas, 100)), fill: 'hsl(var(--muted))' },
+                              ].filter(item => item.value > 0);
+
+                              const donutConfig: ChartConfig = {
+                                Nivel: { label: 'Nivel', color: nivelColor },
+                                Gomas: { label: 'Gomas', color: gomasColor },
+                                Vacío: { label: 'Vacío', color: 'hsl(var(--muted))' },
+                              };
 
                               return (
                                 <div key={idx} className="flex items-center gap-4 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                                  <div className="flex-shrink-0">
+                                    <ChartContainer
+                                      config={donutConfig}
+                                      className="w-24 h-24"
+                                    >
+                                      <PieChart>
+                                        <ChartTooltip
+                                          cursor={false}
+                                          content={<ChartTooltipContent hideLabel />}
+                                        />
+                                        <Pie
+                                          data={donutData}
+                                          dataKey="value"
+                                          nameKey="name"
+                                          innerRadius={20}
+                                          outerRadius={40}
+                                          startAngle={90}
+                                          endAngle={-270}
+                                        />
+                                      </PieChart>
+                                    </ChartContainer>
+                                  </div>
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center justify-between mb-2">
                                       <span className="font-semibold text-sm">{tanque.tanque}</span>
-                                      <div className="flex items-center gap-4 text-xs">
-                                        <span className="text-muted-foreground">
-                                          Nivel: <span className="font-medium text-foreground">{nivel.toFixed(2)} m</span>
-                                          {porcentajeNivel > 0 && (
-                                            <span className="text-muted-foreground ml-1">({porcentajeNivel.toFixed(1)}%)</span>
-                                          )}
-                                        </span>
-                                        {gomas > 0 && (
-                                          <span className="text-muted-foreground">
-                                            Gomas: <span className="font-medium text-foreground">{gomas.toFixed(2)} m</span>
-                                          </span>
-                                        )}
-                                      </div>
                                     </div>
-                                    
-                                    {/* Barra de nivel horizontal más grande */}
-                                    <div className="space-y-2">
-                                      <div className="relative">
-                                        <div className="w-full bg-muted rounded-full h-6 overflow-hidden">
-                                          <div
-                                            className={`h-full ${getNivelColor(porcentajeNivel)} transition-all duration-500 rounded-full flex items-center justify-end pr-2`}
-                                            style={{ width: `${Math.min(porcentajeNivel, 100)}%` }}
-                                          >
-                                            {porcentajeNivel > 8 && (
-                                              <span className="text-white text-xs font-medium">
-                                                {nivel.toFixed(2)} m ({porcentajeNivel.toFixed(1)}%)
-                                              </span>
-                                            )}
-                                          </div>
-                                          {porcentajeNivel <= 8 && porcentajeNivel > 0 && (
-                                            <span className="absolute inset-0 flex items-center justify-start pl-2 text-xs font-medium text-foreground">
-                                              {nivel.toFixed(2)} m ({porcentajeNivel.toFixed(1)}%)
-                                            </span>
-                                          )}
-                                        </div>
+                                    <div className="space-y-1 text-xs">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-muted-foreground">Nivel:</span>
+                                        <span className="font-medium text-foreground">
+                                          {nivel.toFixed(2)} m ({porcentajeNivel.toFixed(1)}%)
+                                        </span>
                                       </div>
-
-                                      {/* Barra de gomas */}
                                       {gomas > 0 && (
-                                        <div className="relative">
-                                          <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
-                                            <div
-                                              className={`h-full ${getGomasColor(gomas)} transition-all duration-500 rounded-full`}
-                                              style={{ width: `${Math.min(gomas * 10, 100)}%` }}
-                                            />
-                                          </div>
+                                        <div className="flex items-center justify-between">
+                                          <span className="text-muted-foreground">Gomas:</span>
+                                          <span className="font-medium text-foreground">
+                                            {gomas.toFixed(2)} m ({porcentajeGomas.toFixed(1)}%)
+                                          </span>
                                         </div>
                                       )}
                                     </div>
@@ -1033,6 +1051,34 @@ const Reportes = () => {
                             return 'bg-green-400';
                           };
 
+                          // Calcular porcentaje de gomas (asumiendo que 5m es el máximo para gomas)
+                          const porcentajeGomas = (gomas / 5) * 100;
+
+                          // Obtener colores según porcentajes
+                          const getNivelColorClass = (porcentaje: number) => {
+                            if (porcentaje >= 80) return 'hsl(var(--chart-1))'; // Azul
+                            if (porcentaje >= 60) return 'hsl(var(--chart-2))'; // Verde
+                            if (porcentaje >= 40) return 'hsl(var(--chart-3))'; // Amarillo
+                            if (porcentaje >= 20) return 'hsl(var(--chart-4))'; // Naranja
+                            return 'hsl(var(--chart-5))'; // Rojo
+                          };
+
+                          const nivelColor = getNivelColorClass(porcentajeNivel);
+                          const gomasColor = gomas > 0 ? 'hsl(0, 0%, 60%)' : 'transparent'; // Gris para gomas
+
+                          // Preparar datos para el gráfico donut
+                          const donutData = [
+                            { name: 'Nivel', value: Math.min(porcentajeNivel, 100), fill: nivelColor },
+                            { name: 'Gomas', value: Math.min(porcentajeGomas, 100), fill: gomasColor },
+                            { name: 'Vacío', value: Math.max(0, 100 - Math.min(porcentajeNivel, 100) - Math.min(porcentajeGomas, 100)), fill: 'hsl(var(--muted))' },
+                          ].filter(item => item.value > 0);
+
+                          const donutConfig: ChartConfig = {
+                            Nivel: { label: 'Nivel', color: nivelColor },
+                            Gomas: { label: 'Gomas', color: gomasColor },
+                            Vacío: { label: 'Vacío', color: 'hsl(var(--muted))' },
+                          };
+
                           return (
                             <Card key={index} className="p-4">
                               <div className="space-y-3">
@@ -1043,52 +1089,45 @@ const Reportes = () => {
                                   )}
                                 </div>
                                 
-                                {/* Visualización de Nivel */}
-                                {nivel > 0 && (
-                                  <div className="space-y-1">
-                                    <div className="flex justify-between items-center text-xs">
-                                      <span className="text-muted-foreground">Nivel</span>
-                                      <span className="font-medium">{nivel.toFixed(2)} m</span>
-                                    </div>
-                                    <div className="w-full bg-gray-200 rounded-full h-6 relative overflow-hidden">
-                                      <div
-                                        className={`h-full ${getNivelColor(porcentajeNivel)} transition-all duration-500 rounded-full flex items-center justify-end pr-2`}
-                                        style={{ width: `${Math.min(porcentajeNivel, 100)}%` }}
-                                      >
-                                        {porcentajeNivel > 8 && (
-                                          <span className="text-white text-xs font-medium">
-                                            {nivel.toFixed(2)} m ({porcentajeNivel.toFixed(1)}%)
-                                          </span>
-                                        )}
-                                      </div>
-                                      {porcentajeNivel <= 8 && (
-                                        <span className="absolute inset-0 flex items-center justify-start pl-2 text-xs font-medium text-gray-700">
-                                          {nivel.toFixed(2)} m ({porcentajeNivel.toFixed(1)}%)
-                                        </span>
-                                      )}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Visualización de Gomas */}
-                                {gomas > 0 && (
-                                  <div className="space-y-1">
-                                    <div className="flex justify-between items-center text-xs">
-                                      <span className="text-muted-foreground">Gomas</span>
-                                      <span className="font-medium">{gomas.toFixed(2)} m</span>
-                                    </div>
-                                    <div className="w-full bg-gray-200 rounded-full h-4 relative overflow-hidden">
-                                      <div
-                                        className={`h-full ${getGomasColor(gomas)} transition-all duration-500 rounded-full`}
-                                        style={{ width: `${Math.min(gomas * 10, 100)}%` }}
+                                {/* Gráfico Donut */}
+                                <div className="flex flex-col items-center">
+                                  <ChartContainer
+                                    config={donutConfig}
+                                    className="w-32 h-32"
+                                  >
+                                    <PieChart>
+                                      <ChartTooltip
+                                        cursor={false}
+                                        content={<ChartTooltipContent hideLabel />}
                                       />
+                                      <Pie
+                                        data={donutData}
+                                        dataKey="value"
+                                        nameKey="name"
+                                        innerRadius={30}
+                                        outerRadius={50}
+                                        startAngle={90}
+                                        endAngle={-270}
+                                      />
+                                    </PieChart>
+                                  </ChartContainer>
+                                  <div className="mt-2 space-y-1 text-xs text-center">
+                                    <div className="flex items-center justify-center gap-2">
+                                      <span className="text-muted-foreground">Nivel:</span>
+                                      <span className="font-medium">
+                                        {nivel.toFixed(2)} m ({porcentajeNivel.toFixed(1)}%)
+                                      </span>
                                     </div>
+                                    {gomas > 0 && (
+                                      <div className="flex items-center justify-center gap-2">
+                                        <span className="text-muted-foreground">Gomas:</span>
+                                        <span className="font-medium">
+                                          {gomas.toFixed(2)} m ({porcentajeGomas.toFixed(1)}%)
+                                        </span>
+                                      </div>
+                                    )}
                                   </div>
-                                )}
-
-                                {nivel === 0 && gomas === 0 && (
-                                  <p className="text-xs text-muted-foreground text-center py-2">Sin datos</p>
-                                )}
+                                </div>
                               </div>
                             </Card>
                           );
