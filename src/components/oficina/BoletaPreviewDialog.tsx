@@ -123,65 +123,65 @@ const BoletaPreviewDialog: React.FC<BoletaPreviewDialogProps> = ({ open, onOpenC
           </DialogTitle>
         </DialogHeader>
 
-        <div ref={printRef} className="bg-white p-6 rounded-lg border">
+        <div ref={printRef} className="bg-card p-6 rounded-lg border border-border">
           <div className="boleta">
             {/* Header */}
-            <div className="header text-center border-b-2 border-foreground/20 pb-4 mb-6">
+            <div className="header text-center border-b-2 border-border pb-4 mb-6">
               <div className="header-info flex justify-start text-sm text-muted-foreground">
                 <span>Fecha: {format(new Date(), "dd/MM/yyyy HH:mm", { locale: es })}</span>
               </div>
             </div>
 
             {/* Boleta Box */}
-            <div className="boleta-box bg-muted/50 p-4 rounded-lg text-center mb-6">
+            <div className="boleta-box bg-muted/50 p-4 rounded-lg text-center mb-6 border border-border">
               <p className="text-sm text-muted-foreground mb-1">Número de Boleta</p>
-              <p className="boleta text-3xl font-bold font-mono tracking-wider">{orden.boleta}</p>
+              <p className="boleta text-3xl font-bold font-mono tracking-wider text-foreground">{orden.boleta}</p>
             </div>
 
             {/* Info Grid */}
             <div className="info-grid grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Información del Producto */}
               <div className="section">
-                <h3 className="section-title font-bold text-base border-b pb-2 mb-3">INFORMACIÓN DEL PRODUCTO</h3>
+                <h3 className="section-title font-bold text-base border-b border-border pb-2 mb-3 text-foreground">INFORMACIÓN DEL PRODUCTO</h3>
                 <div className="space-y-2">
                   <div className="info-row flex">
-                    <span className="info-label font-semibold w-28">Producto:</span>
-                    <span className="info-value">{orden.producto}</span>
+                    <span className="info-label font-semibold w-28 text-foreground">Producto:</span>
+                    <span className="info-value text-foreground">{orden.producto}</span>
                   </div>
                   <div className="info-row flex">
-                    <span className="info-label font-semibold w-28">Cliente:</span>
-                    <span className="info-value">{orden.cliente}</span>
+                    <span className="info-label font-semibold w-28 text-foreground">Cliente:</span>
+                    <span className="info-value text-foreground">{orden.cliente}</span>
                   </div>
                   <div className="info-row flex">
-                    <span className="info-label font-semibold w-28">Destino:</span>
-                    <span className="info-value">{orden.destino}</span>
+                    <span className="info-label font-semibold w-28 text-foreground">Destino:</span>
+                    <span className="info-value text-foreground">{orden.destino}</span>
                   </div>
                   <div className="info-row flex">
-                    <span className="info-label font-semibold w-28">Operación:</span>
-                    <span className="info-value">{orden.tipoOperacion}</span>
+                    <span className="info-label font-semibold w-28 text-foreground">Operación:</span>
+                    <span className="info-value text-foreground">{orden.tipoOperacion}</span>
                   </div>
                 </div>
               </div>
 
               {/* Información del Transporte */}
               <div className="section">
-                <h3 className="section-title font-bold text-base border-b pb-2 mb-3">INFORMACIÓN DEL TRANSPORTE</h3>
+                <h3 className="section-title font-bold text-base border-b border-border pb-2 mb-3 text-foreground">INFORMACIÓN DEL TRANSPORTE</h3>
                 <div className="space-y-2">
                   <div className="info-row flex">
-                    <span className="info-label font-semibold w-28">Conductor:</span>
-                    <span className="info-value">{orden.nombreChofer}</span>
+                    <span className="info-label font-semibold w-28 text-foreground">Conductor:</span>
+                    <span className="info-value text-foreground">{orden.nombreChofer}</span>
                   </div>
                   <div className="info-row flex">
-                    <span className="info-label font-semibold w-28">Vehículo:</span>
-                    <span className="info-value">{orden.vehiculo}</span>
+                    <span className="info-label font-semibold w-28 text-foreground">Vehículo:</span>
+                    <span className="info-value text-foreground">{orden.vehiculo}</span>
                   </div>
                   <div className="info-row flex">
-                    <span className="info-label font-semibold w-28">Placas:</span>
-                    <span className="info-value font-mono">{orden.placas}</span>
+                    <span className="info-label font-semibold w-28 text-foreground">Placas:</span>
+                    <span className="info-value font-mono text-foreground">{orden.placas}</span>
                   </div>
                   <div className="info-row flex">
-                    <span className="info-label font-semibold w-28">Ingreso:</span>
-                    <span className="info-value">{formatDateTimeMST(orden.fechaHoraIngreso)}</span>
+                    <span className="info-label font-semibold w-28 text-foreground">Ingreso:</span>
+                    <span className="info-value text-foreground">{formatDateTimeMST(orden.fechaHoraIngreso)}</span>
                   </div>
                 </div>
               </div>
