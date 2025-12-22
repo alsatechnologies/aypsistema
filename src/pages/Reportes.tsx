@@ -424,17 +424,9 @@ const Reportes = () => {
                               // Calcular porcentaje de gomas (asumiendo que 5m es el máximo para gomas)
                               const porcentajeGomas = (gomas / 5) * 100;
 
-                              // Obtener colores según porcentajes (Azul ≥80%, Verde ≥60%, Amarillo ≥40%, Naranja ≥20%, Rojo <20%)
-                              const getNivelColorClass = (porcentaje: number) => {
-                                if (porcentaje >= 80) return '#3b82f6'; // Azul
-                                if (porcentaje >= 60) return '#22c55e'; // Verde
-                                if (porcentaje >= 40) return '#eab308'; // Amarillo
-                                if (porcentaje >= 20) return '#f97316'; // Naranja
-                                return '#ef4444'; // Rojo
-                              };
-
-                              const nivelColor = getNivelColorClass(porcentajeNivel);
-                              const gomasColor = gomas > 0 ? 'hsl(0, 0%, 60%)' : 'transparent'; // Gris para gomas
+                              // Colores fijos: Nivel siempre azul, Gomas siempre rojo
+                              const nivelColor = '#3b82f6'; // Azul siempre
+                              const gomasColor = gomas > 0 ? '#ef4444' : 'transparent'; // Rojo para gomas
 
                               // Preparar datos para el gráfico donut
                               const donutData = [
@@ -997,17 +989,9 @@ const Reportes = () => {
                           // Calcular porcentaje de gomas (asumiendo que 5m es el máximo para gomas)
                           const porcentajeGomas = (gomas / 5) * 100;
 
-                          // Obtener colores según porcentajes (Azul ≥80%, Verde ≥60%, Amarillo ≥40%, Naranja ≥20%, Rojo <20%)
-                          const getNivelColorClass = (porcentaje: number) => {
-                            if (porcentaje >= 80) return '#3b82f6'; // Azul
-                            if (porcentaje >= 60) return '#22c55e'; // Verde
-                            if (porcentaje >= 40) return '#eab308'; // Amarillo
-                            if (porcentaje >= 20) return '#f97316'; // Naranja
-                            return '#ef4444'; // Rojo
-                          };
-
-                          const nivelColor = getNivelColorClass(porcentajeNivel);
-                          const gomasColor = gomas > 0 ? 'hsl(0, 0%, 60%)' : 'transparent'; // Gris para gomas
+                          // Colores fijos: Nivel siempre azul, Gomas siempre rojo
+                          const nivelColor = '#3b82f6'; // Azul siempre
+                          const gomasColor = gomas > 0 ? '#ef4444' : 'transparent'; // Rojo para gomas
 
                           // Preparar datos para el gráfico donut
                           const donutData = [
