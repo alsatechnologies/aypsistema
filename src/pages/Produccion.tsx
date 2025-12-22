@@ -542,8 +542,10 @@ const Produccion = () => {
                                       return (
                                         (nombreNormalizado.includes('CARTAMO') && nombreNormalizado.includes('PRENSA')) ||
                                         (nombreNormalizado.includes('GIRASOL') && nombreNormalizado.includes('PRENSA')) ||
+                                        (nombreNormalizado.includes('SOYA') && nombreNormalizado.includes('PRENSA')) ||
                                         (nombreNormalizado.includes('CARTAMO') && nombreNormalizado.includes('SOLVENTE')) ||
                                         (nombreNormalizado.includes('GIRASOL') && nombreNormalizado.includes('SOLVENTE')) ||
+                                        (nombreNormalizado.includes('SOYA') && nombreNormalizado.includes('SOLVENTE')) ||
                                         (nombreNormalizado.includes('CARTAMO') && nombreNormalizado.includes('ORGANICO')) ||
                                         (nombreNormalizado.includes('GIRASOL') && nombreNormalizado.includes('ORGANICO')) ||
                                         nombreNormalizado === 'MEZCLAS'
