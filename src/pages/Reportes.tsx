@@ -329,27 +329,32 @@ const Reportes = () => {
             ];
 
             const chartData = Array.from(porProducto.entries())
-              .map(([producto, datos], index) => ({
-                producto: producto,
-                volumen: datos.volumenTotal,
-                fill: chartColors[index % chartColors.length],
-              }))
+              .map(([producto, datos], index) => {
+                const color = chartColors[index % chartColors.length];
+                const productoKey = producto.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+                return {
+                  producto: producto,
+                  volumen: datos.volumenTotal || 0,
+                  fill: color,
+                  productoKey: productoKey,
+                };
+              })
               .filter(item => item.volumen > 0);
 
             // Crear config dinámico basado en los productos
-            const chartConfig = chartData.reduce((acc, item, index) => {
-              // Usar un identificador único para cada producto
-              const key = `producto_${index}`;
-              acc[key] = {
-                label: item.producto,
-                color: chartColors[index % chartColors.length],
-              };
-              return acc;
-            }, {
+            // Usar el nombre del producto como clave para que el tooltip funcione
+            const chartConfig: ChartConfig = {
               volumen: {
                 label: "Volumen",
               },
-            } as ChartConfig);
+            };
+
+            chartData.forEach((item, index) => {
+              chartConfig[item.productoKey] = {
+                label: item.producto,
+                color: chartColors[index % chartColors.length],
+              };
+            });
 
             const getNivelColor = (porcentaje: number) => {
               if (porcentaje >= 80) return 'bg-blue-500';
@@ -402,12 +407,12 @@ const Reportes = () => {
                         <PieChart>
                           <ChartTooltip
                             cursor={false}
-                            content={<ChartTooltipContent hideLabel />}
+                            content={<ChartTooltipContent hideLabel nameKey="productoKey" />}
                           />
                           <Pie
                             data={chartData}
                             dataKey="volumen"
-                            nameKey="producto"
+                            nameKey="productoKey"
                             innerRadius={60}
                           />
                         </PieChart>
