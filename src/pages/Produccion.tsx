@@ -687,9 +687,9 @@ const Produccion = () => {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Tanque</TableHead>
-                          <TableHead>Producto</TableHead>
                           <TableHead className="text-center">Nivel (%)</TableHead>
                           <TableHead className="text-center">Gomas (%)</TableHead>
+                          <TableHead>Producto</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
