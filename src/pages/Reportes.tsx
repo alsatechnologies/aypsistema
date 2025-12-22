@@ -339,65 +339,6 @@ const Reportes = () => {
                   </CardHeader>
                 </Card>
 
-                {/* Estadísticas Generales - Diseño Compacto */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <Card className="border-l-4 border-l-blue-500">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-1">Tanques</p>
-                          <p className="text-2xl font-bold">{nivelesTanques.length}</p>
-                        </div>
-                        <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-                          <Package className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-l-4 border-l-green-500">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-1">Nivel Promedio</p>
-                          <p className="text-2xl font-bold text-green-600 dark:text-green-400">{promedioNivel.toFixed(2)} m</p>
-                        </div>
-                        <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
-                          <Droplet className="h-5 w-5 text-green-600 dark:text-green-400" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-l-4 border-l-orange-500">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-1">Gomas Promedio</p>
-                          <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">{promedioGomas.toFixed(2)} m</p>
-                        </div>
-                        <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
-                          <AlertCircle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-l-4 border-l-purple-500">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-xs font-medium text-muted-foreground mb-1">Productos</p>
-                          <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{porProducto.size}</p>
-                        </div>
-                        <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
-                          <FileText className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
                 {/* Vista Agrupada por Producto */}
                 <div className="space-y-4">
                   {Array.from(porProducto.entries()).map(([producto, datos]) => {
