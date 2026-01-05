@@ -142,6 +142,7 @@ const Configuracion = () => {
   const [productoDialogOpen, setProductoDialogOpen] = useState(false);
   const [almacenDialogOpen, setAlmacenDialogOpen] = useState(false);
   const [usuarioDialogOpen, setUsuarioDialogOpen] = useState(false);
+  const [inventarioDialogOpen, setInventarioDialogOpen] = useState(false);
   const [editingProducto, setEditingProducto] = useState<Producto | null>(null);
   const [editingAlmacen, setEditingAlmacen] = useState<{ id: number; nombre: string; capacidadTotal: number; capacidadActual: number; unidad: string } | null>(null);
   const [editingUsuario, setEditingUsuario] = useState<{ id: number; nombreCompleto: string; nombreUsuario?: string; correo: string; contrasena: string; rol: string } | null>(null);
