@@ -17,6 +17,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useProductos } from '@/services/hooks/useProductos';
 import { useAlmacenes } from '@/services/hooks/useAlmacenes';
 import { useUsuarios } from '@/services/hooks/useUsuarios';
+import InventarioAlmacenDialog from '@/components/configuracion/InventarioAlmacenDialog';
+import { useInventarioAlmacenes } from '@/services/hooks/useInventarioAlmacenes';
 import { useAuth } from '@/contexts/AuthContext';
 import * as productosService from '@/services/supabase/productos';
 import type { Producto as ProductoDB } from '@/services/supabase/productos';
@@ -141,13 +143,14 @@ const Configuracion = () => {
   const [almacenDialogOpen, setAlmacenDialogOpen] = useState(false);
   const [usuarioDialogOpen, setUsuarioDialogOpen] = useState(false);
   const [editingProducto, setEditingProducto] = useState<Producto | null>(null);
-  const [editingAlmacen, setEditingAlmacen] = useState<{ id: number; nombre: string; capacidadTotal: number; capacidadActual: number; unidad: string; productoId?: number | null } | null>(null);
+  const [editingAlmacen, setEditingAlmacen] = useState<{ id: number; nombre: string; capacidadTotal: number; capacidadActual: number; unidad: string } | null>(null);
   const [editingUsuario, setEditingUsuario] = useState<{ id: number; nombreCompleto: string; nombreUsuario?: string; correo: string; contrasena: string; rol: string } | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{ type: 'producto' | 'almacen' | 'usuario'; id: number; nombre: string } | null>(null);
 
   // Estados para formularios
   const [nuevoProducto, setNuevoProducto] = useState({ nombre: '', codigoBoleta: '', analisis: [] as Analisis[] });
-  const [nuevoAlmacen, setNuevoAlmacen] = useState({ nombre: '', capacidadTotal: '', capacidadActual: '', unidad: '', productoId: '' });
+  const [nuevoAlmacen, setNuevoAlmacen] = useState({ nombre: '', capacidadTotal: '', unidad: '' });
+  const [nuevoProductoInventario, setNuevoProductoInventario] = useState({ productoId: '', cantidad: '' });
   const [nuevoUsuario, setNuevoUsuario] = useState({ nombreCompleto: '', nombreUsuario: '', correo: '', contrasena: '', rol: '' });
 
   // Estado para edición de análisis con descuentos
@@ -241,39 +244,43 @@ const Configuracion = () => {
       return;
     }
 
-    // Validar que capacidad actual no sea mayor que capacidad total
     const capacidadTotal = Number(nuevoAlmacen.capacidadTotal);
-    const capacidadActual = Number(nuevoAlmacen.capacidadActual) || 0;
     
-    if (capacidadActual > capacidadTotal) {
-      toast.error('La capacidad actual no puede ser mayor que la capacidad total');
-      return;
-    }
-
     try {
       if (editingAlmacen) {
         await updateAlmacenDB(editingAlmacen.id, {
           nombre: nuevoAlmacen.nombre,
           capacidad_total: capacidadTotal,
-          capacidad_actual: capacidadActual,
-          unidad: nuevoAlmacen.unidad,
-          producto_id: nuevoAlmacen.productoId ? Number(nuevoAlmacen.productoId) : null
+          unidad: nuevoAlmacen.unidad
+          // capacidad_actual se calculará automáticamente desde inventario_almacenes
         });
         toast.success('Almacén actualizado correctamente');
       } else {
-        await addAlmacenDB({
+        const nuevoAlmacenCreado = await addAlmacenDB({
           nombre: nuevoAlmacen.nombre,
           capacidad_total: capacidadTotal,
-          capacidad_actual: capacidadActual,
-          unidad: nuevoAlmacen.unidad,
-          producto_id: nuevoAlmacen.productoId ? Number(nuevoAlmacen.productoId) : null
+          capacidad_actual: 0, // Se calculará automáticamente cuando se agreguen productos
+          unidad: nuevoAlmacen.unidad
         });
         toast.success('Almacén creado correctamente');
+        // Abrir diálogo de inventario para el nuevo almacén
+        setEditingAlmacen({ 
+          id: nuevoAlmacenCreado.id, 
+          nombre: nuevoAlmacenCreado.nombre, 
+          capacidadTotal: nuevoAlmacenCreado.capacidad_total, 
+          capacidadActual: 0, 
+          unidad: nuevoAlmacenCreado.unidad 
+        });
+        setInventarioDialogOpen(true);
       }
 
-      setNuevoAlmacen({ nombre: '', capacidadTotal: '', capacidadActual: '', unidad: '', productoId: '' });
-      setEditingAlmacen(null);
-      setAlmacenDialogOpen(false);
+      setNuevoAlmacen({ nombre: '', capacidadTotal: '', unidad: '' });
+      if (!editingAlmacen) {
+        // No cerrar el diálogo si es nuevo, para que puedan agregar inventario
+      } else {
+        setEditingAlmacen(null);
+        setAlmacenDialogOpen(false);
+      }
     } catch (error) {
       console.error('Error saving almacen:', error);
       toast.error('Error al guardar almacén');
@@ -286,15 +293,12 @@ const Configuracion = () => {
       nombre: almacen.nombre, 
       capacidadTotal: almacen.capacidad_total, 
       capacidadActual: almacen.capacidad_actual, 
-      unidad: almacen.unidad,
-      productoId: almacen.producto_id || null
+      unidad: almacen.unidad
     });
     setNuevoAlmacen({ 
       nombre: almacen.nombre, 
       capacidadTotal: almacen.capacidad_total.toString(), 
-      capacidadActual: almacen.capacidad_actual?.toString() || '0',
-      unidad: almacen.unidad,
-      productoId: almacen.producto_id?.toString() || ''
+      unidad: almacen.unidad
     });
     setAlmacenDialogOpen(true);
   };
@@ -1017,7 +1021,7 @@ const Configuracion = () => {
               </div>
               <Button className="bg-primary hover:bg-primary/90" onClick={() => {
                 setEditingAlmacen(null);
-                setNuevoAlmacen({ nombre: '', capacidadTotal: '', capacidadActual: '', unidad: '', productoId: '' });
+                setNuevoAlmacen({ nombre: '', capacidadTotal: '', unidad: '' });
                 setAlmacenDialogOpen(true);
               }}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -1231,16 +1235,6 @@ const Configuracion = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label>Capacidad Actual</Label>
-              <Input 
-                type="number" 
-                placeholder="Ej: 250000"
-                value={nuevoAlmacen.capacidadActual}
-                onChange={(e) => setNuevoAlmacen(prev => ({ ...prev, capacidadActual: e.target.value }))}
-                min="0"
-              />
-            </div>
-            <div className="space-y-2">
               <Label>Unidad de Medida</Label>
               <Select value={nuevoAlmacen.unidad} onValueChange={(value) => setNuevoAlmacen(prev => ({ ...prev, unidad: value }))}>
                 <SelectTrigger>
@@ -1253,32 +1247,58 @@ const Configuracion = () => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Producto (Opcional)</Label>
-              <Select 
-                value={nuevoAlmacen.productoId} 
-                onValueChange={(value) => setNuevoAlmacen(prev => ({ ...prev, productoId: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar producto" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Sin producto asignado</SelectItem>
-                  {productosDB.map((producto) => (
-                    <SelectItem key={producto.id} value={producto.id.toString()}>
-                      {producto.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {editingAlmacen && (
+              <div className="space-y-2 pt-2 border-t">
+                <Label>Capacidad Actual</Label>
+                <div className="flex items-center gap-2">
+                  <Input 
+                    type="text" 
+                    value={`${editingAlmacen.capacidadActual.toLocaleString('es-MX')} ${nuevoAlmacen.unidad}`}
+                    disabled
+                    className="bg-muted"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setInventarioDialogOpen(true)}
+                  >
+                    <Package className="h-4 w-4 mr-2" />
+                    Gestionar Inventario
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  La capacidad actual se calcula automáticamente desde el inventario de productos
+                </p>
+              </div>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAlmacenDialogOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => {
+              setAlmacenDialogOpen(false);
+              setEditingAlmacen(null);
+            }}>Cancelar</Button>
             <Button className="bg-primary hover:bg-primary/90" onClick={handleSaveAlmacen}>Guardar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog Inventario Almacén */}
+      <InventarioAlmacenDialog
+        almacenId={editingAlmacen?.id || null}
+        open={inventarioDialogOpen}
+        onOpenChange={(open) => {
+          setInventarioDialogOpen(open);
+          if (!open && editingAlmacen) {
+            // Recargar almacenes para actualizar capacidad_actual
+            loadAlmacenes();
+          }
+        }}
+        onInventarioUpdated={() => {
+          // Recargar almacenes cuando se actualice el inventario
+          loadAlmacenes();
+        }}
+        unidad={nuevoAlmacen.unidad || editingAlmacen?.unidad || ''}
+      />
 
       {/* Dialog Usuario */}
       <Dialog open={usuarioDialogOpen} onOpenChange={setUsuarioDialogOpen}>

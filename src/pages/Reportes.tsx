@@ -43,6 +43,7 @@ import { useProductos } from '@/services/hooks/useProductos';
 import { useProveedores } from '@/services/hooks/useProveedores';
 import { useClientes } from '@/services/hooks/useClientes';
 import { useProduccion } from '@/services/hooks/useProduccion';
+import { getTotalInventarioPorProducto } from '@/services/supabase/inventarioAlmacenes';
 import type { Recepcion } from '@/services/supabase/recepciones';
 import type { Embarque } from '@/services/supabase/embarques';
 
@@ -69,7 +70,9 @@ const Reportes = () => {
   // State for reports data
   const [recepciones, setRecepciones] = useState<Recepcion[]>([]);
   const [embarques, setEmbarques] = useState<Embarque[]>([]);
+  const [inventarioPorProducto, setInventarioPorProducto] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingInventario, setLoadingInventario] = useState(false);
 
   // Load data
   useEffect(() => {
@@ -90,6 +93,19 @@ const Reportes = () => {
         if (activeTab === 'salidas') {
           const embarquesData = await getEmbarques(filters);
           setEmbarques(Array.isArray(embarquesData) ? embarquesData : embarquesData.data || []);
+        }
+
+        if (activeTab === 'inventario') {
+          setLoadingInventario(true);
+          try {
+            const inventarioData = await getTotalInventarioPorProducto();
+            setInventarioPorProducto(inventarioData);
+          } catch (error) {
+            console.error('Error loading inventario:', error);
+            toast.error('Error al cargar inventario por producto');
+          } finally {
+            setLoadingInventario(false);
+          }
         }
       } catch (error) {
         console.error('Error loading report data:', error);
@@ -865,11 +881,73 @@ const Reportes = () => {
 
           {/* Tab: Inventario */}
           <TabsContent value="inventario" className="space-y-4">
+            {/* Inventario por Producto */}
             <Card>
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <div>
-                    <CardTitle>Reporte de Inventario</CardTitle>
+                    <CardTitle>Inventario por Producto</CardTitle>
+                    <CardDescription>
+                      Total de inventario agrupado por producto (suma de todos los almacenes)
+                    </CardDescription>
+                  </div>
+                  <Button 
+                    onClick={() => {
+                      const headers = ['Producto', 'Cantidad Total'];
+                      const data = inventarioPorProducto.map(item => ({
+                        producto: item.producto?.nombre || `Producto #${item.producto_id}`,
+                        cantidad: item.total
+                      }));
+                      exportToCSV(data, headers, 'inventario_por_producto');
+                    }} 
+                    className="flex items-center gap-2"
+                    disabled={loadingInventario || inventarioPorProducto.length === 0}
+                  >
+                    <Download className="h-4 w-4" />
+                    Exportar CSV
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loadingInventario ? (
+                  <div className="text-center py-8 text-muted-foreground">Cargando inventario...</div>
+                ) : inventarioPorProducto.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No hay productos en inventario. Agrega productos a los almacenes desde Configuración.
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Producto</TableHead>
+                        <TableHead className="text-right">Cantidad Total</TableHead>
+                        <TableHead>Unidad</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {inventarioPorProducto.map((item) => (
+                        <TableRow key={item.producto_id}>
+                          <TableCell className="font-medium">
+                            {item.producto?.nombre || `Producto #${item.producto_id}`}
+                          </TableCell>
+                          <TableCell className="text-right font-semibold">
+                            {formatNumber(item.total)}
+                          </TableCell>
+                          <TableCell>{item.unidad || '-'}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Estado de Almacenes */}
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Estado de Almacenes</CardTitle>
                     <CardDescription>
                       Estado actual de almacenes y capacidad
                     </CardDescription>
