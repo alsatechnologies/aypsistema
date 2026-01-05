@@ -487,6 +487,11 @@ const Reportes = () => {
                                   <div className="flex flex-col items-center space-y-3">
                                     <div className="w-full text-center">
                                       <h4 className="font-semibold text-sm mb-1">{tanque.tanque}</h4>
+                                      {alturaMaxima && (
+                                        <p className="text-xs text-muted-foreground">
+                                          Altura máxima: {alturaMaxima.toFixed(2)} m
+                                        </p>
+                                      )}
                                     </div>
                                     <ChartContainer
                                       config={donutConfig}
@@ -573,6 +578,11 @@ const Reportes = () => {
                                 <div className="flex flex-col items-center space-y-3">
                                   <div className="w-full text-center">
                                     <h4 className="font-semibold text-sm mb-1">{tanqueComb.nombre}</h4>
+                                    {tanqueComb.alturaMaxima && (
+                                      <p className="text-xs text-muted-foreground">
+                                        Altura máxima: {tanqueComb.alturaMaxima.toFixed(2)} m
+                                      </p>
+                                    )}
                                   </div>
                                   <ChartContainer
                                     config={donutConfig}
@@ -1193,6 +1203,11 @@ const Reportes = () => {
                                   <h4 className="font-semibold text-sm mb-1">{tanqueNombre}</h4>
                                   {tanqueData?.producto && (
                                     <p className="text-xs text-muted-foreground">{tanqueData.producto}</p>
+                                  )}
+                                  {alturaMaxima && (
+                                    <p className="text-xs text-muted-foreground">
+                                      Altura máxima: {alturaMaxima.toFixed(2)} m
+                                    </p>
                                   )}
                                 </div>
                                 
