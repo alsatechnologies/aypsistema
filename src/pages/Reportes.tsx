@@ -517,14 +517,14 @@ const Reportes = () => {
                                       <div className="flex items-center justify-center gap-2">
                                         <span className="text-muted-foreground">Nivel:</span>
                                         <span className="font-medium">
-                                          {nivel.toFixed(2)} m ({porcentajeNivel.toFixed(1)}%)
+                                          {nivel.toFixed(2)} m ({porcentajeNivel.toFixed(2)}%)
                                         </span>
                                       </div>
                                       {gomas > 0 && (
                                         <div className="flex items-center justify-center gap-2">
                                           <span className="text-muted-foreground">Gomas:</span>
                                           <span className="font-medium">
-                                            {gomas.toFixed(2)} m ({porcentajeGomas.toFixed(1)}%)
+                                            {gomas.toFixed(2)} m ({porcentajeGomas.toFixed(2)}%)
                                           </span>
                                         </div>
                                       )}
@@ -608,7 +608,7 @@ const Reportes = () => {
                                     <div className="flex items-center justify-center gap-2">
                                       <span className="text-muted-foreground">Nivel:</span>
                                       <span className="font-medium">
-                                        {tanqueComb.nivel.toFixed(2)} m ({porcentajeNivel.toFixed(1)}%)
+                                        {tanqueComb.nivel.toFixed(2)} m ({porcentajeNivel.toFixed(2)}%)
                                       </span>
                                     </div>
                                   </div>
@@ -1237,14 +1237,14 @@ const Reportes = () => {
                                     <div className="flex items-center justify-center gap-2">
                                       <span className="text-muted-foreground">Nivel:</span>
                                       <span className="font-medium">
-                                        {nivel.toFixed(2)} m ({porcentajeNivel.toFixed(1)}%)
+                                        {nivel.toFixed(2)} m ({porcentajeNivel.toFixed(2)}%)
                                       </span>
                                     </div>
                                     {gomas > 0 && (
                                       <div className="flex items-center justify-center gap-2">
                                         <span className="text-muted-foreground">Gomas:</span>
                                         <span className="font-medium">
-                                          {gomas.toFixed(2)} m ({porcentajeGomas.toFixed(1)}%)
+                                          {gomas.toFixed(2)} m ({porcentajeGomas.toFixed(2)}%)
                                         </span>
                                       </div>
                                     )}
