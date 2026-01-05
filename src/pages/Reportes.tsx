@@ -462,8 +462,10 @@ const Reportes = () => {
                                 ? (nivel / alturaMaxima) * 100 
                                 : 0;
                               
-                              // Calcular porcentaje de gomas (asumiendo que 5m es el máximo para gomas)
-                              const porcentajeGomas = (gomas / 5) * 100;
+                              // Calcular porcentaje de gomas basado en altura máxima del tanque
+                              const porcentajeGomas = alturaMaxima && alturaMaxima > 0 
+                                ? (gomas / alturaMaxima) * 100 
+                                : 0;
 
                               // Colores fijos: Nivel siempre azul, Gomas siempre rojo
                               const nivelColor = '#3b82f6'; // Azul siempre
@@ -1176,8 +1178,10 @@ const Reportes = () => {
                             ? (nivel / alturaMaxima) * 100 
                             : 0;
                           
-                          // Calcular porcentaje de gomas (asumiendo que 5m es el máximo para gomas)
-                          const porcentajeGomas = (gomas / 5) * 100;
+                          // Calcular porcentaje de gomas basado en altura máxima del tanque
+                          const porcentajeGomas = alturaMaxima && alturaMaxima > 0 
+                            ? (gomas / alturaMaxima) * 100 
+                            : 0;
 
                           // Colores fijos: Nivel siempre azul, Gomas siempre rojo
                           const nivelColor = '#3b82f6'; // Azul siempre
