@@ -147,7 +147,7 @@ const Configuracion = () => {
 
   // Estados para formularios
   const [nuevoProducto, setNuevoProducto] = useState({ nombre: '', codigoBoleta: '', analisis: [] as Analisis[] });
-  const [nuevoAlmacen, setNuevoAlmacen] = useState({ nombre: '', capacidadTotal: '', unidad: '' });
+  const [nuevoAlmacen, setNuevoAlmacen] = useState({ nombre: '', capacidadTotal: '', capacidadActual: '', unidad: '' });
   const [nuevoUsuario, setNuevoUsuario] = useState({ nombreCompleto: '', nombreUsuario: '', correo: '', contrasena: '', rol: '' });
 
   // Estado para edición de análisis con descuentos
@@ -241,25 +241,35 @@ const Configuracion = () => {
       return;
     }
 
+    // Validar que capacidad actual no sea mayor que capacidad total
+    const capacidadTotal = Number(nuevoAlmacen.capacidadTotal);
+    const capacidadActual = Number(nuevoAlmacen.capacidadActual) || 0;
+    
+    if (capacidadActual > capacidadTotal) {
+      toast.error('La capacidad actual no puede ser mayor que la capacidad total');
+      return;
+    }
+
     try {
       if (editingAlmacen) {
         await updateAlmacenDB(editingAlmacen.id, {
           nombre: nuevoAlmacen.nombre,
-          capacidad_total: Number(nuevoAlmacen.capacidadTotal),
+          capacidad_total: capacidadTotal,
+          capacidad_actual: capacidadActual,
           unidad: nuevoAlmacen.unidad
         });
         toast.success('Almacén actualizado correctamente');
       } else {
         await addAlmacenDB({
           nombre: nuevoAlmacen.nombre,
-          capacidad_total: Number(nuevoAlmacen.capacidadTotal),
-          capacidad_actual: 0,
+          capacidad_total: capacidadTotal,
+          capacidad_actual: capacidadActual,
           unidad: nuevoAlmacen.unidad
         });
         toast.success('Almacén creado correctamente');
       }
 
-      setNuevoAlmacen({ nombre: '', capacidadTotal: '', unidad: '' });
+      setNuevoAlmacen({ nombre: '', capacidadTotal: '', capacidadActual: '', unidad: '' });
       setEditingAlmacen(null);
       setAlmacenDialogOpen(false);
     } catch (error) {
@@ -270,7 +280,12 @@ const Configuracion = () => {
 
   const handleEditAlmacen = (almacen: AlmacenDB) => {
     setEditingAlmacen({ id: almacen.id, nombre: almacen.nombre, capacidadTotal: almacen.capacidad_total, capacidadActual: almacen.capacidad_actual, unidad: almacen.unidad });
-    setNuevoAlmacen({ nombre: almacen.nombre, capacidadTotal: almacen.capacidad_total.toString(), unidad: almacen.unidad });
+    setNuevoAlmacen({ 
+      nombre: almacen.nombre, 
+      capacidadTotal: almacen.capacidad_total.toString(), 
+      capacidadActual: almacen.capacidad_actual?.toString() || '0',
+      unidad: almacen.unidad 
+    });
     setAlmacenDialogOpen(true);
   };
 
@@ -992,7 +1007,7 @@ const Configuracion = () => {
               </div>
               <Button className="bg-primary hover:bg-primary/90" onClick={() => {
                 setEditingAlmacen(null);
-                setNuevoAlmacen({ nombre: '', capacidadTotal: '', unidad: '' });
+                setNuevoAlmacen({ nombre: '', capacidadTotal: '', capacidadActual: '', unidad: '' });
                 setAlmacenDialogOpen(true);
               }}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -1203,6 +1218,16 @@ const Configuracion = () => {
                 placeholder="Ej: 500000"
                 value={nuevoAlmacen.capacidadTotal}
                 onChange={(e) => setNuevoAlmacen(prev => ({ ...prev, capacidadTotal: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Capacidad Actual</Label>
+              <Input 
+                type="number" 
+                placeholder="Ej: 250000"
+                value={nuevoAlmacen.capacidadActual}
+                onChange={(e) => setNuevoAlmacen(prev => ({ ...prev, capacidadActual: e.target.value }))}
+                min="0"
               />
             </div>
             <div className="space-y-2">
