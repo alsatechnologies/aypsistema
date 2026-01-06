@@ -39,14 +39,8 @@ export default async function handler(
     // Obtener rol del usuario del body (se enviará desde el frontend)
     const { rol_usuario, ...printData } = req.body;
     
-    // Seleccionar API según el rol del usuario
-    let apiUrl = PRINTER_API_URL;
-    if (rol_usuario === 'Oficina') {
-      apiUrl = PRINTER_API_URL_2;
-      console.log('🔧 [PRINT-TICKET] Usando API 2 (ticket_prod) para usuario Oficina');
-    } else {
-      console.log('🔧 [PRINT-TICKET] Usando API 1 (apiticket) para otros usuarios');
-    }
+    // Seleccionar API según el rol del usuario (solo cambia la URL, el resto es idéntico)
+    const apiUrl = rol_usuario === 'Oficina' ? PRINTER_API_URL_2 : PRINTER_API_URL;
 
     // Timeout de 15 segundos para impresión
     const controller = new AbortController();

@@ -24,14 +24,8 @@ export default async function handler(
     // Obtener rol del usuario del query string (opcional)
     const { rol_usuario } = req.query;
     
-    // Seleccionar API según el rol del usuario
-    let apiUrl = PRINTER_API_URL;
-    if (rol_usuario === 'Oficina') {
-      apiUrl = PRINTER_API_URL_2;
-      console.log('🔧 [LIST-PRINTERS] Usando API 2 (ticket_prod) para usuario Oficina');
-    } else {
-      console.log('🔧 [LIST-PRINTERS] Usando API 1 (apiticket) para otros usuarios');
-    }
+    // Seleccionar API según el rol del usuario (solo cambia la URL, el resto es idéntico)
+    const apiUrl = rol_usuario === 'Oficina' ? PRINTER_API_URL_2 : PRINTER_API_URL;
 
     // Timeout de 10 segundos para listar impresoras
     const controller = new AbortController();
