@@ -25,13 +25,29 @@ export function getCurrentDateTimeMST(): string {
 
 /**
  * Formatea una fecha ISO a formato legible en zona horaria MST
- * @param isoString - String en formato ISO (sin timezone, asume MST)
- * @returns String formateado como "DD/MM/YYYY HH:mm"
+ * @param isoString - String en formato ISO (puede venir con UTC de Supabase)
+ * @returns String formateado como "DD/MM/YYYY HH:mm" en MST
  */
 export function formatDateTimeMST(isoString: string | null | undefined): string {
   if (!isoString) return '-';
   
   try {
+    // Si viene con timezone (Z o +HH:mm), convertir de UTC a MST (UTC-7)
+    if (isoString.includes('Z') || isoString.match(/[+-]\d{2}:\d{2}$/)) {
+      const date = new Date(isoString);
+      if (isNaN(date.getTime())) {
+        return isoString;
+      }
+      // Convertir de UTC a MST (restar 7 horas)
+      const mstDate = new Date(date.getTime() - (7 * 60 * 60 * 1000));
+      const day = String(mstDate.getUTCDate()).padStart(2, '0');
+      const month = String(mstDate.getUTCMonth() + 1).padStart(2, '0');
+      const year = mstDate.getUTCFullYear();
+      const hours = String(mstDate.getUTCHours()).padStart(2, '0');
+      const minutes = String(mstDate.getUTCMinutes()).padStart(2, '0');
+      return `${day}/${month}/${year} ${hours}:${minutes}`;
+    }
+    
     // Si el string ya está en formato local (sin timezone), parsearlo directamente
     // Formato esperado: YYYY-MM-DDTHH:mm:ss.mmm o YYYY-MM-DD
     const parts = isoString.split('T');
@@ -50,18 +66,8 @@ export function formatDateTimeMST(isoString: string | null | undefined): string 
       return `${day}/${month}/${year}`;
     }
     
-    // Si viene con timezone o formato desconocido, usar Date para parsearlo
-    const date = new Date(isoString);
-    if (isNaN(date.getTime())) {
-      return isoString; // Si no se puede parsear, devolver original
-    }
-    const d = String(date.getDate()).padStart(2, '0');
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const y = date.getFullYear();
-    const h = String(date.getHours()).padStart(2, '0');
-    const min = String(date.getMinutes()).padStart(2, '0');
-    
-    return `${d}/${m}/${y} ${h}:${min}`;
+    // Si no se puede parsear, devolver original
+    return isoString;
   } catch (error) {
     console.error('Error formatting date:', error);
     return isoString;
@@ -70,13 +76,30 @@ export function formatDateTimeMST(isoString: string | null | undefined): string 
 
 /**
  * Formatea una fecha ISO a formato completo con segundos en zona horaria MST
- * @param isoString - String en formato ISO (sin timezone, asume MST)
- * @returns String formateado como "DD/MM/YYYY HH:mm:ss"
+ * @param isoString - String en formato ISO (puede venir con UTC de Supabase)
+ * @returns String formateado como "DD/MM/YYYY HH:mm:ss" en MST
  */
 export function formatDateTimeFullMST(isoString: string | null | undefined): string {
   if (!isoString) return '-';
   
   try {
+    // Si viene con timezone (Z o +HH:mm), convertir de UTC a MST (UTC-7)
+    if (isoString.includes('Z') || isoString.match(/[+-]\d{2}:\d{2}$/)) {
+      const date = new Date(isoString);
+      if (isNaN(date.getTime())) {
+        return isoString;
+      }
+      // Convertir de UTC a MST (restar 7 horas)
+      const mstDate = new Date(date.getTime() - (7 * 60 * 60 * 1000));
+      const day = String(mstDate.getUTCDate()).padStart(2, '0');
+      const month = String(mstDate.getUTCMonth() + 1).padStart(2, '0');
+      const year = mstDate.getUTCFullYear();
+      const hours = String(mstDate.getUTCHours()).padStart(2, '0');
+      const minutes = String(mstDate.getUTCMinutes()).padStart(2, '0');
+      const seconds = String(mstDate.getUTCSeconds()).padStart(2, '0');
+      return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+    }
+    
     // Si el string ya está en formato local (sin timezone), parsearlo directamente
     const parts = isoString.split('T');
     if (parts.length === 2) {
@@ -88,16 +111,8 @@ export function formatDateTimeFullMST(isoString: string | null | undefined): str
       return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
     }
     
-    // Si viene con timezone, usar Date para parsearlo
-    const date = new Date(isoString);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-    
-    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+    // Si no se puede parsear, devolver original
+    return isoString;
   } catch (error) {
     console.error('Error formatting date:', error);
     return isoString;

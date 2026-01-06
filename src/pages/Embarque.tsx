@@ -510,14 +510,35 @@ const EmbarquePage = () => {
     }
   };
 
-  // Función helper para formatear fecha y hora
+  // Función helper para formatear fecha y hora en MST
   const formatearFechaHora = (isoString: string | null) => {
     if (!isoString) return { fecha: '', hora: '' };
     try {
-      const date = new Date(isoString);
+      // Si viene con timezone (Z o +HH:mm), convertir de UTC a MST (UTC-7)
+      let date: Date;
+      if (isoString.includes('Z') || isoString.match(/[+-]\d{2}:\d{2}$/)) {
+        const utcDate = new Date(isoString);
+        // Convertir de UTC a MST (restar 7 horas)
+        date = new Date(utcDate.getTime() - (7 * 60 * 60 * 1000));
+      } else {
+        // Si no tiene timezone, asumir que ya está en MST
+        date = new Date(isoString);
+      }
+      
+      if (isNaN(date.getTime())) {
+        return { fecha: '', hora: '' };
+      }
+      
+      // Usar UTC methods para evitar conversión adicional
+      const day = String(date.getUTCDate()).padStart(2, '0');
+      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const year = date.getUTCFullYear();
+      const hours = String(date.getUTCHours()).padStart(2, '0');
+      const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+      
       return {
-        fecha: format(date, 'dd/MM/yyyy', { locale: es }),
-        hora: format(date, 'HH:mm', { locale: es })
+        fecha: `${day}/${month}/${year}`,
+        hora: `${hours}:${minutes}`
       };
     } catch {
       return { fecha: '', hora: '' };
