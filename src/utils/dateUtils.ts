@@ -308,7 +308,64 @@ export function formatDateTimeFullMST(isoString: string | null | undefined): str
   if (!isoString) return '-';
   
   try {
-    // Si viene con timezone UTC (Z), convertir explícitamente de UTC a MST (UTC-7)
+    // Detectar formato ISO con fecha y hora (YYYY-MM-DDTHH:mm:ss)
+    // Supabase siempre devuelve UTC, incluso sin 'Z' explícito
+    const isoPattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|[\+\-]\d{2}:\d{2})?$/;
+    const match = isoString.match(isoPattern);
+    
+    if (match) {
+      // Es una fecha ISO - Supabase SIEMPRE devuelve UTC, incluso sin 'Z'
+      const [, year, month, day, hours, minutes, seconds, timezone] = match;
+      const yearNum = Number(year);
+      const monthNum = Number(month);
+      const dayNum = Number(day);
+      const utcHours = Number(hours);
+      const minutesNum = Number(minutes);
+      const utcSeconds = Number(seconds);
+      
+      // Convertir de UTC a MST (restar 7 horas) - SIEMPRE porque viene de Supabase
+      let mstHours = utcHours - 7;
+      let mstDay = dayNum;
+      let mstMonth = monthNum;
+      let mstYear = yearNum;
+      
+      // Manejar desbordamiento de horas
+      if (mstHours < 0) {
+        mstHours += 24;
+        mstDay--;
+        if (mstDay < 1) {
+          mstMonth--;
+          if (mstMonth < 1) {
+            mstMonth = 12;
+            mstYear--;
+          }
+          const daysInPrevMonth = new Date(mstYear, mstMonth, 0).getDate();
+          mstDay = daysInPrevMonth;
+        }
+      } else if (mstHours >= 24) {
+        mstHours -= 24;
+        mstDay++;
+        const daysInMonth = new Date(mstYear, mstMonth, 0).getDate();
+        if (mstDay > daysInMonth) {
+          mstDay = 1;
+          mstMonth++;
+          if (mstMonth > 12) {
+            mstMonth = 1;
+            mstYear++;
+          }
+        }
+      }
+      
+      const d = String(mstDay).padStart(2, '0');
+      const m = String(mstMonth).padStart(2, '0');
+      const y = mstYear;
+      const h = String(mstHours).padStart(2, '0');
+      const min = String(minutesNum).padStart(2, '0');
+      const sec = String(utcSeconds).padStart(2, '0');
+      return `${d}/${m}/${y} ${h}:${min}:${sec}`;
+    }
+    
+    // Si tiene 'Z' explícito, también tratarlo como UTC
     if (isoString.includes('Z')) {
       const cleanString = isoString.replace('Z', '');
       const parts = cleanString.split('T');
@@ -318,13 +375,11 @@ export function formatDateTimeFullMST(isoString: string | null | undefined): str
         const [time] = timePart.split('.');
         const [utcHours, minutes, seconds = 0] = time.split(':').map(Number);
         
-        // Convertir de UTC a MST (restar 7 horas)
         let mstHours = utcHours - 7;
         let mstDay = day;
         let mstMonth = month;
         let mstYear = year;
         
-        // Manejar desbordamiento de horas
         if (mstHours < 0) {
           mstHours += 24;
           mstDay--;
@@ -448,15 +503,58 @@ export function formatDateTimeFullMST(isoString: string | null | undefined): str
       return `${d}/${m}/${y} ${h}:${min}:${sec}`;
     }
     
-    // Si el string ya está en formato local (sin timezone), parsearlo directamente
-    const parts = isoString.split('T');
-    if (parts.length === 2) {
-      const [datePart, timePart] = parts;
-      const [year, month, day] = datePart.split('-');
-      const [time] = timePart.split('.');
-      const [hours, minutes, seconds] = time.split(':');
+    // Si el string está en formato ISO pero sin timezone explícito (YYYY-MM-DDTHH:mm:ss)
+    // Supabase SIEMPRE devuelve UTC, así que tratarlo como UTC
+    const isoPatternNoTz = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?$/;
+    const matchNoTz = isoString.match(isoPatternNoTz);
+    
+    if (matchNoTz) {
+      // Es formato ISO sin timezone - Supabase siempre devuelve UTC
+      const [, year, month, day, hours, minutes, seconds] = matchNoTz;
+      const yearNum = Number(year);
+      const monthNum = Number(month);
+      const dayNum = Number(day);
+      const utcHours = Number(hours);
+      const minutesNum = Number(minutes);
+      const secondsNum = Number(seconds);
       
-      return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+      // Convertir de UTC a MST (restar 7 horas)
+      let mstHours = utcHours - 7;
+      let mstDay = dayNum;
+      let mstMonth = monthNum;
+      let mstYear = yearNum;
+      
+      // Manejar desbordamiento de horas
+      if (mstHours < 0) {
+        mstHours += 24;
+        mstDay--;
+        if (mstDay < 1) {
+          mstMonth--;
+          if (mstMonth < 1) {
+            mstMonth = 12;
+            mstYear--;
+          }
+          const daysInPrevMonth = new Date(mstYear, mstMonth, 0).getDate();
+          mstDay = daysInPrevMonth;
+        }
+      }
+      
+      const d = String(mstDay).padStart(2, '0');
+      const m = String(mstMonth).padStart(2, '0');
+      const y = mstYear;
+      const h = String(mstHours).padStart(2, '0');
+      const min = String(minutesNum).padStart(2, '0');
+      const sec = String(secondsNum).padStart(2, '0');
+      
+      return `${d}/${m}/${y} ${h}:${min}:${sec}`;
+    }
+    
+    // Si solo es fecha (YYYY-MM-DD), mostrar sin hora
+    const dateOnlyPattern = /^(\d{4})-(\d{2})-(\d{2})$/;
+    const dateOnlyMatch = isoString.match(dateOnlyPattern);
+    if (dateOnlyMatch) {
+      const [, year, month, day] = dateOnlyMatch;
+      return `${day}/${month}/${year}`;
     }
     
     // Si no se puede parsear, devolver original
@@ -467,3 +565,29 @@ export function formatDateTimeFullMST(isoString: string | null | undefined): str
   }
 }
 
+/**
+ * Formatea una fecha ISO a objeto con fecha y hora separadas en zona horaria MST
+ * @param isoString - String en formato ISO (puede venir con UTC de Supabase)
+ * @returns Objeto con { fecha: "DD/MM/YYYY", hora: "HH:mm" } en MST
+ */
+export function formatDateTimeSplitMST(isoString: string | null | undefined): { fecha: string; hora: string } {
+  if (!isoString) return { fecha: '', hora: '' };
+  
+  const formatted = formatDateTimeMST(isoString);
+  if (formatted === '-' || !formatted) {
+    return { fecha: '', hora: '' };
+  }
+  
+  // El formato es "DD/MM/YYYY HH:mm"
+  const parts = formatted.split(' ');
+  if (parts.length === 2) {
+    return { fecha: parts[0], hora: parts[1] };
+  }
+  
+  // Si solo tiene fecha (sin hora)
+  if (parts.length === 1 && formatted.includes('/')) {
+    return { fecha: parts[0], hora: '' };
+  }
+  
+  return { fecha: formatted, hora: '' };
+}
