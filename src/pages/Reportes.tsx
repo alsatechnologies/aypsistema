@@ -790,7 +790,7 @@ const Reportes = () => {
                 <div className="flex justify-between items-center">
                   <div>
                     <CardTitle>Reporte de Entradas (Reciba)</CardTitle>
-                    <CardDescription>
+                    <CardDescription className="mt-1">
                       {filteredRecepciones.length} registro(s) encontrado(s)
                     </CardDescription>
                   </div>
@@ -864,7 +864,7 @@ const Reportes = () => {
                 <div className="flex justify-between items-center">
                   <div>
                     <CardTitle>Reporte de Salidas (Embarque)</CardTitle>
-                    <CardDescription>
+                    <CardDescription className="mt-1">
                       {filteredEmbarques.length} registro(s) encontrado(s)
                     </CardDescription>
                   </div>
@@ -941,7 +941,7 @@ const Reportes = () => {
                 <div className="flex justify-between items-center">
                   <div>
                     <CardTitle>Inventario por Producto</CardTitle>
-                    <CardDescription>
+                    <CardDescription className="mt-1">
                       Total de inventario agrupado por producto (suma de todos los almacenes)
                     </CardDescription>
                   </div>
@@ -1002,7 +1002,7 @@ const Reportes = () => {
                 <div className="flex justify-between items-center">
                   <div>
                     <CardTitle>Estado de Almacenes</CardTitle>
-                    <CardDescription>
+                    <CardDescription className="mt-1">
                       Estado actual de almacenes y capacidad
                     </CardDescription>
                   </div>
@@ -1061,7 +1061,7 @@ const Reportes = () => {
                 <div className="flex justify-between items-center">
                   <div>
                     <CardTitle>Reporte de Producción</CardTitle>
-                    <CardDescription>
+                    <CardDescription className="mt-1">
                       {reportesProduccion.length} reporte(s) de producción
                     </CardDescription>
                   </div>
