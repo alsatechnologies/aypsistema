@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const PRINTER_API_URL = process.env.PRINTER_API_URL || 'https://apiticket.alsatechnologies.com';
-const PRINTER_API_URL_2 = process.env.PRINTER_API_URL_2 || 'https://apiticket2.alsatechnologies.com';
+const PRINTER_API_URL_2 = process.env.PRINTER_API_URL_2 || 'https://ticket_prod.alsatechnologies.com';
 
 export default async function handler(
   req: VercelRequest,
@@ -28,7 +28,7 @@ export default async function handler(
     let apiUrl = PRINTER_API_URL;
     if (rol_usuario === 'Oficina') {
       apiUrl = PRINTER_API_URL_2;
-      console.log('🔧 [LIST-PRINTERS] Usando API 2 (apiticket2) para usuario Oficina');
+      console.log('🔧 [LIST-PRINTERS] Usando API 2 (ticket_prod) para usuario Oficina');
     } else {
       console.log('🔧 [LIST-PRINTERS] Usando API 1 (apiticket) para otros usuarios');
     }
