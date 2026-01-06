@@ -66,6 +66,17 @@ export async function printTicket(data: PrintTicketRequest): Promise<PrintTicket
 
     clearTimeout(timeoutId);
 
+    // Verificar Content-Type antes de parsear JSON
+    const contentType = response.headers.get('content-type') || '';
+    
+    if (!contentType.includes('application/json')) {
+      const textResponse = await response.text();
+      console.error('❌ [PRINT-TICKET] La API devolvió HTML en lugar de JSON');
+      console.error('❌ [PRINT-TICKET] Status:', response.status);
+      console.error('❌ [PRINT-TICKET] Respuesta:', textResponse.substring(0, 500));
+      throw new Error(`Error de conexión: La API devolvió una respuesta HTML (posible 404). Verifica que la función serverless esté desplegada correctamente.`);
+    }
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }));
       throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
