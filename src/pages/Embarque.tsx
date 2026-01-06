@@ -514,32 +514,70 @@ const EmbarquePage = () => {
   const formatearFechaHora = (isoString: string | null) => {
     if (!isoString) return { fecha: '', hora: '' };
     try {
-      // Si viene con timezone (Z o +HH:mm), convertir de UTC a MST (UTC-7)
-      let date: Date;
-      if (isoString.includes('Z') || isoString.match(/[+-]\d{2}:\d{2}$/)) {
+      // Si viene con timezone UTC (Z), convertir explícitamente de UTC a MST (UTC-7)
+      if (isoString.includes('Z')) {
+        const cleanString = isoString.replace('Z', '');
+        const parts = cleanString.split('T');
+        if (parts.length === 2) {
+          const [datePart, timePart] = parts;
+          const [year, month, day] = datePart.split('-').map(Number);
+          const [time] = timePart.split('.');
+          const [hours, minutes, seconds = 0] = time.split(':').map(Number);
+          
+          // Crear fecha UTC
+          const utcDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds));
+          
+          // Convertir de UTC a MST (restar 7 horas)
+          const mstTimestamp = utcDate.getTime() - (7 * 60 * 60 * 1000);
+          const mstDate = new Date(mstTimestamp);
+          
+          const d = String(mstDate.getUTCDate()).padStart(2, '0');
+          const m = String(mstDate.getUTCMonth() + 1).padStart(2, '0');
+          const y = mstDate.getUTCFullYear();
+          const h = String(mstDate.getUTCHours()).padStart(2, '0');
+          const min = String(mstDate.getUTCMinutes()).padStart(2, '0');
+          
+          return {
+            fecha: `${d}/${m}/${y}`,
+            hora: `${h}:${min}`
+          };
+        }
+      }
+      
+      // Si viene con timezone explícito (+HH:mm o -HH:mm)
+      if (isoString.match(/[+-]\d{2}:\d{2}$/)) {
         const utcDate = new Date(isoString);
+        if (isNaN(utcDate.getTime())) {
+          return { fecha: '', hora: '' };
+        }
         // Convertir de UTC a MST (restar 7 horas)
-        date = new Date(utcDate.getTime() - (7 * 60 * 60 * 1000));
-      } else {
-        // Si no tiene timezone, asumir que ya está en MST
-        date = new Date(isoString);
+        const mstTimestamp = utcDate.getTime() - (7 * 60 * 60 * 1000);
+        const mstDate = new Date(mstTimestamp);
+        const d = String(mstDate.getUTCDate()).padStart(2, '0');
+        const m = String(mstDate.getUTCMonth() + 1).padStart(2, '0');
+        const y = mstDate.getUTCFullYear();
+        const h = String(mstDate.getUTCHours()).padStart(2, '0');
+        const min = String(mstDate.getUTCMinutes()).padStart(2, '0');
+        return {
+          fecha: `${d}/${m}/${y}`,
+          hora: `${h}:${min}`
+        };
       }
       
-      if (isNaN(date.getTime())) {
-        return { fecha: '', hora: '' };
+      // Si no tiene timezone, asumir que ya está en MST y parsear directamente
+      const parts = isoString.split('T');
+      if (parts.length === 2) {
+        const [datePart, timePart] = parts;
+        const [year, month, day] = datePart.split('-');
+        const [time] = timePart.split('.');
+        const [hours, minutes] = time.split(':');
+        return {
+          fecha: `${day}/${month}/${year}`,
+          hora: `${hours}:${minutes}`
+        };
       }
       
-      // Usar UTC methods para evitar conversión adicional
-      const day = String(date.getUTCDate()).padStart(2, '0');
-      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-      const year = date.getUTCFullYear();
-      const hours = String(date.getUTCHours()).padStart(2, '0');
-      const minutes = String(date.getUTCMinutes()).padStart(2, '0');
-      
-      return {
-        fecha: `${day}/${month}/${year}`,
-        hora: `${hours}:${minutes}`
-      };
+      return { fecha: '', hora: '' };
     } catch {
       return { fecha: '', hora: '' };
     }
