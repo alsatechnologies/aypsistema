@@ -1,7 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const PRINTER_API_URL = process.env.PRINTER_API_URL || 'https://apiticket.alsatechnologies.com';
-// Forzar ticket_prod para Oficina, ignorar variable de entorno si está configurada con apiticket2
 const PRINTER_API_URL_2 = 'https://ticket_prod.alsatechnologies.com';
 
 export default async function handler(
@@ -25,21 +24,8 @@ export default async function handler(
     // Obtener rol del usuario del query string (opcional)
     const { rol_usuario } = req.query;
     
-    // Log para debugging
-    console.log('🔧 [LIST-PRINTERS] Rol recibido:', rol_usuario);
-    console.log('🔧 [LIST-PRINTERS] PRINTER_API_URL_2 configurado:', PRINTER_API_URL_2);
-    console.log('🔧 [LIST-PRINTERS] Variable de entorno PRINTER_API_URL_2:', process.env.PRINTER_API_URL_2);
-    
     // Seleccionar API según el rol del usuario
-    let apiUrl = PRINTER_API_URL;
-    if (rol_usuario === 'Oficina') {
-      apiUrl = PRINTER_API_URL_2;
-      console.log('🔧 [LIST-PRINTERS] Usando API 2 (ticket_prod) para usuario Oficina');
-      console.log('🔧 [LIST-PRINTERS] URL final seleccionada:', apiUrl);
-    } else {
-      console.log('🔧 [LIST-PRINTERS] Usando API 1 (apiticket) para otros usuarios');
-      console.log('🔧 [LIST-PRINTERS] URL final seleccionada:', apiUrl);
-    }
+    const apiUrl = rol_usuario === 'Oficina' ? PRINTER_API_URL_2 : PRINTER_API_URL;
 
     // Timeout de 10 segundos para listar impresoras
     const controller = new AbortController();
@@ -70,9 +56,7 @@ export default async function handler(
       try {
         data = await response.json();
       } catch (jsonError) {
-        console.error('🔧 [LIST-PRINTERS] Error al parsear JSON:', jsonError);
         const textResponse = await response.text();
-        console.error('🔧 [LIST-PRINTERS] Respuesta recibida (texto):', textResponse.substring(0, 500));
         res.setHeader('Access-Control-Allow-Origin', '*');
         return res.status(500).json({
           success: false,
@@ -82,10 +66,6 @@ export default async function handler(
     } else {
       // Si no es JSON, probablemente es HTML (página de error)
       const textResponse = await response.text();
-      console.error('🔧 [LIST-PRINTERS] La API devolvió HTML en lugar de JSON');
-      console.error('🔧 [LIST-PRINTERS] Content-Type:', contentType);
-      console.error('🔧 [LIST-PRINTERS] Respuesta (primeros 500 caracteres):', textResponse.substring(0, 500));
-      
       res.setHeader('Access-Control-Allow-Origin', '*');
       return res.status(500).json({
         success: false,

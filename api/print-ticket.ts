@@ -2,7 +2,6 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { checkRateLimit, getClientIP } from './utils/rateLimit.js';
 
 const PRINTER_API_URL = process.env.PRINTER_API_URL || 'https://apiticket.alsatechnologies.com';
-// Forzar ticket_prod para Oficina, ignorar variable de entorno si está configurada con apiticket2
 const PRINTER_API_URL_2 = 'https://ticket_prod.alsatechnologies.com';
 
 export default async function handler(
@@ -40,33 +39,12 @@ export default async function handler(
     // Obtener rol del usuario del body (se enviará desde el frontend)
     const { rol_usuario, ...printData } = req.body;
     
-    // Log para debugging
-    console.log('🔧 [PRINT-TICKET] Rol recibido:', rol_usuario);
-    console.log('🔧 [PRINT-TICKET] PRINTER_API_URL_2 configurado:', PRINTER_API_URL_2);
-    console.log('🔧 [PRINT-TICKET] Variable de entorno PRINTER_API_URL_2:', process.env.PRINTER_API_URL_2);
-    
     // Seleccionar API según el rol del usuario
-    let apiUrl = PRINTER_API_URL;
-    if (rol_usuario === 'Oficina') {
-      apiUrl = PRINTER_API_URL_2;
-      console.log('🔧 [PRINT-TICKET] Usando API 2 (ticket_prod) para usuario Oficina');
-      console.log('🔧 [PRINT-TICKET] URL final seleccionada:', apiUrl);
-    } else {
-      console.log('🔧 [PRINT-TICKET] Usando API 1 (apiticket) para otros usuarios');
-      console.log('🔧 [PRINT-TICKET] URL final seleccionada:', apiUrl);
-    }
+    const apiUrl = rol_usuario === 'Oficina' ? PRINTER_API_URL_2 : PRINTER_API_URL;
 
     // Timeout de 15 segundos para impresión
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-    // Log para debugging
-    console.log('🔧 [PRINT-TICKET] Enviando a:', apiUrl);
-    console.log('🔧 [PRINT-TICKET] Configuración impresora:', {
-      connection_type: printData.printer_config?.connection_type,
-      printer_name: printData.printer_config?.printer_name,
-      ip: printData.printer_config?.ip
-    });
 
     // Hacer la solicitud al servidor de impresión (sin incluir rol_usuario en el body)
     const response = await fetch(`${apiUrl}/api/printer/print-ticket`, {
@@ -94,9 +72,7 @@ export default async function handler(
       try {
         data = await response.json();
       } catch (jsonError) {
-        console.error('🔧 [PRINT-TICKET] Error al parsear JSON:', jsonError);
         const textResponse = await response.text();
-        console.error('🔧 [PRINT-TICKET] Respuesta recibida (texto):', textResponse.substring(0, 500));
         res.setHeader('Access-Control-Allow-Origin', '*');
         return res.status(500).json({
           success: false,
@@ -106,24 +82,12 @@ export default async function handler(
     } else {
       // Si no es JSON, probablemente es HTML (página de error)
       const textResponse = await response.text();
-      console.error('🔧 [PRINT-TICKET] La API devolvió HTML en lugar de JSON');
-      console.error('🔧 [PRINT-TICKET] Content-Type:', contentType);
-      console.error('🔧 [PRINT-TICKET] Respuesta (primeros 500 caracteres):', textResponse.substring(0, 500));
-      
       res.setHeader('Access-Control-Allow-Origin', '*');
       return res.status(500).json({
         success: false,
         error: `Error de conexión con la API de impresión (${apiUrl}). La API devolvió una respuesta HTML en lugar de JSON. Verifica que la URL esté correcta y que el servidor esté funcionando.`,
       });
     }
-    
-    // Log de respuesta
-    console.log('🔧 [PRINT-TICKET] Respuesta de API:', {
-      status: response.status,
-      success: data.success,
-      message: data.message,
-      error: data.error
-    });
 
     // Retornar la respuesta con los headers CORS necesarios
     res.setHeader('Access-Control-Allow-Origin', '*');
