@@ -94,7 +94,6 @@ const EmbarquePage = () => {
   const [fechaHasta, setFechaHasta] = useState('');
   const [embarqueAEliminar, setEmbarqueAEliminar] = useState<Embarque | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [fechaHoraDisplay, setFechaHoraDisplay] = useState<string>('');
 
   // Verificar si el usuario puede editar/eliminar
   const puedeEditarEliminar = usuario?.rol === 'Administrador' || usuario?.rol === 'Oficina';
@@ -241,29 +240,6 @@ const EmbarquePage = () => {
       }
     }
   }, [formData.pesoBruto, formData.pesoTara, horaPesoNeto]);
-
-  // Actualizar fecha/hora actual cada minuto cuando el diálogo está abierto
-  useEffect(() => {
-    if (!isDialogOpen) return;
-    
-    const updateFechaHora = () => {
-      const now = new Date();
-      const day = String(now.getDate()).padStart(2, '0');
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const year = now.getFullYear();
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      setFechaHoraDisplay(`${day}/${month}/${year} ${hours}:${minutes}`);
-    };
-    
-    // Actualizar inmediatamente
-    updateFechaHora();
-    
-    // Actualizar cada minuto
-    const interval = setInterval(updateFechaHora, 60000);
-    
-    return () => clearInterval(interval);
-  }, [isDialogOpen]);
 
   const handleCapturarPesoTara = async () => {
     // Leer desde la API según el tipo de transporte
@@ -855,15 +831,9 @@ const EmbarquePage = () => {
                     <div>
                       <Label className="text-xs text-muted-foreground">Fecha/Hora</Label>
                       <p className="font-medium">
-                        {fechaHoraDisplay || (() => {
-                          const now = new Date();
-                          const day = String(now.getDate()).padStart(2, '0');
-                          const month = String(now.getMonth() + 1).padStart(2, '0');
-                          const year = now.getFullYear();
-                          const hours = String(now.getHours()).padStart(2, '0');
-                          const minutes = String(now.getMinutes()).padStart(2, '0');
-                          return `${day}/${month}/${year} ${hours}:${minutes}`;
-                        })()}
+                        {selectedEmbarque.created_at 
+                          ? formatDateTimeMST(selectedEmbarque.created_at)
+                          : formatDateTimeMST(getCurrentDateTimeMST())}
                       </p>
                     </div>
                     <div>
