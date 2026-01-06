@@ -146,19 +146,31 @@ const Ingreso = () => {
       } else if (data.motivo === 'Reciba') {
         // Reciba va directamente al módulo de Reciba - crear recepción automáticamente
         try {
-          // Obtener fecha actual en formato YYYY-MM-DD
+          // Generar ticket temporal con el mismo formato que Embarque
+          // Formato: TEMP-YYYYMMDDHHMMSS para identificar fácilmente
+          const fecha = new Date();
+          const year = fecha.getFullYear();
+          const month = String(fecha.getMonth() + 1).padStart(2, '0');
+          const day = String(fecha.getDate()).padStart(2, '0');
+          const hours = String(fecha.getHours()).padStart(2, '0');
+          const minutes = String(fecha.getMinutes()).padStart(2, '0');
+          const seconds = String(fecha.getSeconds()).padStart(2, '0');
+          const fechaStr = `${year}${month}${day}${hours}${minutes}${seconds}`;
+          const ticketTemporal = `TEMP-${fechaStr}`;
+          
+          // Obtener fecha actual en formato YYYY-MM-DD para el campo fecha
           const fechaActual = new Date();
-          const fechaStr = `${fechaActual.getFullYear()}-${String(fechaActual.getMonth() + 1).padStart(2, '0')}-${String(fechaActual.getDate()).padStart(2, '0')}`;
+          const fechaFormato = `${fechaActual.getFullYear()}-${String(fechaActual.getMonth() + 1).padStart(2, '0')}-${String(fechaActual.getDate()).padStart(2, '0')}`;
           
           // Crear recepción con datos básicos del ingreso
           // El producto y proveedor se completarán en el módulo de Reciba
           await createRecepcion({
-            boleta: `TEMP-RECIBA-${nuevoIngreso.id}`, // Boleta temporal, se actualizará cuando se complete
+            boleta: ticketTemporal, // Boleta temporal con formato TEMP-YYYYMMDDHHMMSS
             producto_id: null, // Se completará en Reciba
             proveedor_id: null, // Se completará en Reciba
             chofer: data.nombreChofer,
             placas: data.placas || null,
-            fecha: fechaStr,
+            fecha: fechaFormato,
             estatus: 'Pendiente',
             tipo_transporte: data.vehiculo ? (data.vehiculo === 'Ferrocarril' ? 'Ferroviaria' : 'Camión') : 'Camión',
             peso_bruto: null,
