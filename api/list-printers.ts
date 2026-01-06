@@ -48,7 +48,36 @@ export default async function handler(
 
     clearTimeout(timeoutId);
 
-    const data = await response.json();
+    // Verificar el Content-Type antes de intentar parsear JSON
+    const contentType = response.headers.get('content-type') || '';
+    let data: any;
+    
+    if (contentType.includes('application/json')) {
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        const textResponse = await response.text();
+        console.error('🔧 [LIST-PRINTERS] Error al parsear JSON:', textResponse.substring(0, 500));
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        return res.status(500).json({
+          success: false,
+          error: `La API devolvió una respuesta inválida. Verifica que la URL ${apiUrl} esté correcta y funcionando.`,
+        });
+      }
+    } else {
+      // Si no es JSON, probablemente es HTML (página de error 404)
+      const textResponse = await response.text();
+      console.error('🔧 [LIST-PRINTERS] La API devolvió HTML en lugar de JSON');
+      console.error('🔧 [LIST-PRINTERS] Status:', response.status);
+      console.error('🔧 [LIST-PRINTERS] Content-Type:', contentType);
+      console.error('🔧 [LIST-PRINTERS] Respuesta (primeros 500 caracteres):', textResponse.substring(0, 500));
+      
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      return res.status(500).json({
+        success: false,
+        error: `Error de conexión con la API de impresión (${apiUrl}). La API devolvió una respuesta HTML (posible 404). Verifica que la URL esté correcta y que el servidor esté funcionando.`,
+      });
+    }
 
     // Retornar la respuesta con los headers CORS necesarios
     res.setHeader('Access-Control-Allow-Origin', '*');
