@@ -10,8 +10,8 @@ import { checkRateLimit, getClientIP } from './utils/rateLimit.js';
 const CERTIFICATE_ENTRADA_API_URL = process.env.CERTIFICATE_ENTRADA_API_URL || 'https://pdf-entrada.alsatechnologies.com';
 const CERTIFICATE_SALIDA_API_URL = process.env.CERTIFICATE_SALIDA_API_URL || 'https://pdf-salida.alsatechnologies.com';
 // URLs para usuarios de Oficina
-const CERTIFICATE_ENTRADA_API_URL_OFICINA = 'https://pdf_entrada-pro.alsatechnologies.com';
-const CERTIFICATE_SALIDA_API_URL_OFICINA = 'https://pdf_salida-pro.alsatechnologies.com';
+const CERTIFICATE_ENTRADA_API_URL_OFICINA = 'https://pdf_entrada-prod.alsatechnologies.com';
+const CERTIFICATE_SALIDA_API_URL_OFICINA = 'https://pdf_salida-prod.alsatechnologies.com';
 
 export default async function handler(
   req: VercelRequest,
