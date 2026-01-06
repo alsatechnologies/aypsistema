@@ -12,6 +12,7 @@ import NuevoIngresoDialog, { NuevoIngresoData, MotivoVisita } from '@/components
 import { useIngresos } from '@/services/hooks/useIngresos';
 import { useOrdenes } from '@/services/hooks/useOrdenes';
 import { useRecepciones } from '@/services/hooks/useRecepciones';
+import { createRecepcion } from '@/services/supabase/recepciones';
 import type { Ingreso as IngresoDB } from '@/services/supabase/ingresos';
 import { getCurrentDateTimeMST, formatDateTimeMST } from '@/utils/dateUtils';
 
@@ -143,8 +144,44 @@ const Ingreso = () => {
           toast.error('Ingreso registrado, pero hubo un error al crear el ticket en Oficina');
         }
       } else if (data.motivo === 'Reciba') {
-        // Reciba va directamente al módulo de Reciba, no a Oficina
-        toast.success('Ingreso registrado. Vehículo listo para báscula de Reciba');
+        // Reciba va directamente al módulo de Reciba - crear recepción automáticamente
+        try {
+          // Obtener fecha actual en formato YYYY-MM-DD
+          const fechaActual = new Date();
+          const fechaStr = `${fechaActual.getFullYear()}-${String(fechaActual.getMonth() + 1).padStart(2, '0')}-${String(fechaActual.getDate()).padStart(2, '0')}`;
+          
+          // Crear recepción con datos básicos del ingreso
+          // El producto y proveedor se completarán en el módulo de Reciba
+          await createRecepcion({
+            boleta: `TEMP-RECIBA-${nuevoIngreso.id}`, // Boleta temporal, se actualizará cuando se complete
+            producto_id: null, // Se completará en Reciba
+            proveedor_id: null, // Se completará en Reciba
+            chofer: data.nombreChofer,
+            placas: data.placas || null,
+            fecha: fechaStr,
+            estatus: 'Pendiente',
+            tipo_transporte: data.vehiculo ? (data.vehiculo === 'Ferrocarril' ? 'Ferroviaria' : 'Camión') : 'Camión',
+            peso_bruto: null,
+            peso_tara: null,
+            peso_neto: null,
+            tipo_bascula: null,
+            sello_entrada_1: null,
+            sello_entrada_2: null,
+            sello_salida_1: null,
+            sello_salida_2: null,
+            analisis: null,
+            hora_peso_bruto: null,
+            hora_peso_tara: null,
+            hora_peso_neto: null,
+            observaciones: null,
+            almacen_id: null
+          });
+          
+          toast.success('Ingreso registrado. Vehículo listo para báscula de Reciba');
+        } catch (error) {
+          console.error('Error creating recepcion:', error);
+          toast.error('Ingreso registrado, pero hubo un error al crear la recepción en Reciba');
+        }
       } else {
         toast.success('Ingreso registrado correctamente');
       }
