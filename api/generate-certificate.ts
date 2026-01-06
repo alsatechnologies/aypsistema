@@ -47,6 +47,10 @@ export default async function handler(
   try {
     const { tipo, rol_usuario, ...data } = req.body;
 
+    console.log(`🔧 [CERTIFICATE] Tipo recibido: ${tipo}`);
+    console.log(`🔧 [CERTIFICATE] Rol usuario recibido: ${rol_usuario}`);
+    console.log(`🔧 [CERTIFICATE] Rol es 'Oficina'?: ${rol_usuario === 'Oficina'}`);
+
     if (!tipo || (tipo !== 'entrada' && tipo !== 'salida')) {
       return res.status(400).json({
         error: 'Tipo de certificado requerido',
@@ -64,6 +68,7 @@ export default async function handler(
       // Otros usuarios usan las URLs estándar
       apiUrl = tipo === 'entrada' ? CERTIFICATE_ENTRADA_API_URL : CERTIFICATE_SALIDA_API_URL;
       console.log(`🔧 [CERTIFICATE] Usando API estándar (${tipo}): ${apiUrl}`);
+      console.log(`🔧 [CERTIFICATE] Rol recibido fue: "${rol_usuario}" (tipo: ${typeof rol_usuario})`);
     }
     const endpoint = `${apiUrl}/generate-certificate`;
 
