@@ -454,6 +454,9 @@ const Reportes = () => {
                               const nivel = tanque.nivel || 0;
                               const gomas = goma?.nivel || 0;
                               
+                              // Calcular nivel de aceite: Nivel - Gomas
+                              const aceite = Math.max(0, nivel - gomas);
+                              
                               // Obtener altura máxima del tanque
                               const alturaMaxima = alturasMaximasMap.get(tanque.tanque);
                               
@@ -462,24 +465,29 @@ const Reportes = () => {
                                 ? (nivel / alturaMaxima) * 100 
                                 : 0;
                               
+                              // Calcular porcentaje de aceite basado en altura máxima
+                              const porcentajeAceite = alturaMaxima && alturaMaxima > 0 
+                                ? (aceite / alturaMaxima) * 100 
+                                : 0;
+                              
                               // Calcular porcentaje de gomas basado en altura máxima del tanque
                               const porcentajeGomas = alturaMaxima && alturaMaxima > 0 
                                 ? (gomas / alturaMaxima) * 100 
                                 : 0;
 
-                              // Colores fijos: Nivel siempre azul, Gomas siempre rojo
-                              const nivelColor = '#3b82f6'; // Azul siempre
+                              // Colores fijos: Aceite siempre azul, Gomas siempre rojo
+                              const aceiteColor = '#3b82f6'; // Azul siempre
                               const gomasColor = gomas > 0 ? '#ef4444' : 'transparent'; // Rojo para gomas
 
-                              // Preparar datos para el gráfico donut
+                              // Preparar datos para el gráfico donut: Aceite, Gomas, Vacío
                               const donutData = [
-                                { name: 'Nivel', value: Math.min(porcentajeNivel, 100), fill: nivelColor },
+                                { name: 'Aceite', value: Math.min(porcentajeAceite, 100), fill: aceiteColor },
                                 { name: 'Gomas', value: Math.min(porcentajeGomas, 100), fill: gomasColor },
-                                { name: 'Vacío', value: Math.max(0, 100 - Math.min(porcentajeNivel, 100) - Math.min(porcentajeGomas, 100)), fill: 'hsl(var(--muted))' },
+                                { name: 'Vacío', value: Math.max(0, 100 - Math.min(porcentajeAceite, 100) - Math.min(porcentajeGomas, 100)), fill: 'hsl(var(--muted))' },
                               ].filter(item => item.value > 0);
 
                               const donutConfig: ChartConfig = {
-                                Nivel: { label: 'Nivel', color: nivelColor },
+                                Aceite: { label: 'Aceite', color: aceiteColor },
                                 Gomas: { label: 'Gomas', color: gomasColor },
                                 Vacío: { label: 'Vacío', color: 'hsl(var(--muted))' },
                               };
@@ -520,6 +528,12 @@ const Reportes = () => {
                                         <span className="text-muted-foreground">Nivel:</span>
                                         <span className="font-medium">
                                           {nivel.toFixed(2)} m ({porcentajeNivel.toFixed(2)}%)
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center justify-center gap-2">
+                                        <span className="text-muted-foreground">Aceite:</span>
+                                        <span className="font-medium">
+                                          {aceite.toFixed(2)} m ({porcentajeAceite.toFixed(2)}%)
                                         </span>
                                       </div>
                                       {gomas > 0 && (
@@ -1169,6 +1183,9 @@ const Reportes = () => {
                           const nivel = tanqueData?.nivel || 0;
                           const gomas = gomaData?.nivel || 0;
                           
+                          // Calcular nivel de aceite: Nivel - Gomas
+                          const aceite = Math.max(0, nivel - gomas);
+                          
                           // Obtener altura máxima del tanque
                           const alturaMaxima = alturasMaximasMap.get(tanqueNombre);
                           
@@ -1177,24 +1194,29 @@ const Reportes = () => {
                             ? (nivel / alturaMaxima) * 100 
                             : 0;
                           
+                          // Calcular porcentaje de aceite basado en altura máxima
+                          const porcentajeAceite = alturaMaxima && alturaMaxima > 0 
+                            ? (aceite / alturaMaxima) * 100 
+                            : 0;
+                          
                           // Calcular porcentaje de gomas basado en altura máxima del tanque
                           const porcentajeGomas = alturaMaxima && alturaMaxima > 0 
                             ? (gomas / alturaMaxima) * 100 
                             : 0;
 
-                          // Colores fijos: Nivel siempre azul, Gomas siempre rojo
-                          const nivelColor = '#3b82f6'; // Azul siempre
+                          // Colores fijos: Aceite siempre azul, Gomas siempre rojo
+                          const aceiteColor = '#3b82f6'; // Azul siempre
                           const gomasColor = gomas > 0 ? '#ef4444' : 'transparent'; // Rojo para gomas
 
-                          // Preparar datos para el gráfico donut
+                          // Preparar datos para el gráfico donut: Aceite, Gomas, Vacío
                           const donutData = [
-                            { name: 'Nivel', value: Math.min(porcentajeNivel, 100), fill: nivelColor },
+                            { name: 'Aceite', value: Math.min(porcentajeAceite, 100), fill: aceiteColor },
                             { name: 'Gomas', value: Math.min(porcentajeGomas, 100), fill: gomasColor },
-                            { name: 'Vacío', value: Math.max(0, 100 - Math.min(porcentajeNivel, 100) - Math.min(porcentajeGomas, 100)), fill: 'hsl(var(--muted))' },
+                            { name: 'Vacío', value: Math.max(0, 100 - Math.min(porcentajeAceite, 100) - Math.min(porcentajeGomas, 100)), fill: 'hsl(var(--muted))' },
                           ].filter(item => item.value > 0);
 
                           const donutConfig: ChartConfig = {
-                            Nivel: { label: 'Nivel', color: nivelColor },
+                            Aceite: { label: 'Aceite', color: aceiteColor },
                             Gomas: { label: 'Gomas', color: gomasColor },
                             Vacío: { label: 'Vacío', color: 'hsl(var(--muted))' },
                           };
@@ -1241,6 +1263,12 @@ const Reportes = () => {
                                       <span className="text-muted-foreground">Nivel:</span>
                                       <span className="font-medium">
                                         {nivel.toFixed(2)} m ({porcentajeNivel.toFixed(2)}%)
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-center gap-2">
+                                      <span className="text-muted-foreground">Aceite:</span>
+                                      <span className="font-medium">
+                                        {aceite.toFixed(2)} m ({porcentajeAceite.toFixed(2)}%)
                                       </span>
                                     </div>
                                     {gomas > 0 && (
