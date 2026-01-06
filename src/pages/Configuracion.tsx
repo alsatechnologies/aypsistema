@@ -1099,19 +1099,8 @@ const Configuracion = () => {
                     try {
                       toast.loading('Verificando/creando usuario Oficina en auth.users...', { id: 'fix-oficina' });
                       
-                      const response = await fetch('/api/fix-oficina-user', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' }
-                      });
-                      
-                      const result = await response.json();
-                      
-                      if (response.ok && result.success) {
-                        toast.success(result.message, { id: 'fix-oficina', duration: 8000 });
-                        await loadUsuarios();
-                      } else {
-                        throw new Error(result.error || 'Error al verificar/crear usuario');
-                      }
+                      // Función movida a Supabase directamente - usar SQL Editor para ejecutar
+                      toast.error('Esta función ha sido deshabilitada. Por favor, usa el SQL Editor de Supabase para crear/actualizar usuarios de auth.', { id: 'fix-oficina', duration: 8000 });
                     } catch (error) {
                       console.error('Error en fix usuario oficina:', error);
                       toast.error(
