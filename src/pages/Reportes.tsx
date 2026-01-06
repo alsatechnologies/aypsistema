@@ -428,7 +428,15 @@ const Reportes = () => {
                           Vista General de Producción
                         </CardTitle>
                         <CardDescription className="mt-1">
-                          Reporte: {reporteMasReciente.id} • {format(new Date(reporteMasReciente.fecha), 'dd/MM/yyyy', { locale: es })}
+                          {(() => {
+                            // Parsear fecha desde string YYYY-MM-DD sin problemas de zona horaria
+                            const [año, mes, dia] = reporteMasReciente.fecha.split('-').map(Number);
+                            const fecha = new Date(año, mes - 1, dia);
+                            const diaStr = String(fecha.getDate()).padStart(2, '0');
+                            const mesStr = String(fecha.getMonth() + 1).padStart(2, '0');
+                            const añoStr = fecha.getFullYear();
+                            return `Reporte: ${reporteMasReciente.id} • ${diaStr}/${mesStr}/${añoStr}`;
+                          })()}
                         </CardDescription>
                       </div>
                     </div>
