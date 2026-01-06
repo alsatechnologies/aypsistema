@@ -522,20 +522,34 @@ const EmbarquePage = () => {
           const [datePart, timePart] = parts;
           const [year, month, day] = datePart.split('-').map(Number);
           const [time] = timePart.split('.');
-          const [hours, minutes, seconds = 0] = time.split(':').map(Number);
-          
-          // Crear fecha UTC
-          const utcDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds));
+          const [utcHours, minutes, seconds = 0] = time.split(':').map(Number);
           
           // Convertir de UTC a MST (restar 7 horas)
-          const mstTimestamp = utcDate.getTime() - (7 * 60 * 60 * 1000);
-          const mstDate = new Date(mstTimestamp);
+          let mstHours = utcHours - 7;
+          let mstDay = day;
+          let mstMonth = month;
+          let mstYear = year;
           
-          const d = String(mstDate.getUTCDate()).padStart(2, '0');
-          const m = String(mstDate.getUTCMonth() + 1).padStart(2, '0');
-          const y = mstDate.getUTCFullYear();
-          const h = String(mstDate.getUTCHours()).padStart(2, '0');
-          const min = String(mstDate.getUTCMinutes()).padStart(2, '0');
+          // Manejar desbordamiento de horas
+          if (mstHours < 0) {
+            mstHours += 24;
+            mstDay--;
+            if (mstDay < 1) {
+              mstMonth--;
+              if (mstMonth < 1) {
+                mstMonth = 12;
+                mstYear--;
+              }
+              const daysInPrevMonth = new Date(mstYear, mstMonth, 0).getDate();
+              mstDay = daysInPrevMonth;
+            }
+          }
+          
+          const d = String(mstDay).padStart(2, '0');
+          const m = String(mstMonth).padStart(2, '0');
+          const y = mstYear;
+          const h = String(mstHours).padStart(2, '0');
+          const min = String(minutes).padStart(2, '0');
           
           return {
             fecha: `${d}/${m}/${y}`,

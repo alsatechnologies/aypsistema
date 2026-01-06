@@ -41,20 +41,35 @@ export function formatDateTimeMST(isoString: string | null | undefined): string 
         const [datePart, timePart] = parts;
         const [year, month, day] = datePart.split('-').map(Number);
         const [time] = timePart.split('.');
-        const [hours, minutes, seconds = '0'] = time.split(':').map(Number);
+        const [utcHours, minutes, seconds = 0] = time.split(':').map(Number);
         
-        // Crear fecha UTC
-        const utcDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds));
+        // Convertir de UTC a MST (restar 7 horas)
+        let mstHours = utcHours - 7;
+        let mstDay = day;
+        let mstMonth = month;
+        let mstYear = year;
         
-        // Convertir de UTC a MST (restar 7 horas = 7 * 60 * 60 * 1000 ms)
-        const mstTimestamp = utcDate.getTime() - (7 * 60 * 60 * 1000);
-        const mstDate = new Date(mstTimestamp);
+        // Manejar desbordamiento de horas (si mstHours < 0, retroceder un día)
+        if (mstHours < 0) {
+          mstHours += 24;
+          mstDay--;
+          if (mstDay < 1) {
+            mstMonth--;
+            if (mstMonth < 1) {
+              mstMonth = 12;
+              mstYear--;
+            }
+            // Obtener días del mes anterior
+            const daysInPrevMonth = new Date(mstYear, mstMonth, 0).getDate();
+            mstDay = daysInPrevMonth;
+          }
+        }
         
-        const d = String(mstDate.getUTCDate()).padStart(2, '0');
-        const m = String(mstDate.getUTCMonth() + 1).padStart(2, '0');
-        const y = mstDate.getUTCFullYear();
-        const h = String(mstDate.getUTCHours()).padStart(2, '0');
-        const min = String(mstDate.getUTCMinutes()).padStart(2, '0');
+        const d = String(mstDay).padStart(2, '0');
+        const m = String(mstMonth).padStart(2, '0');
+        const y = mstYear;
+        const h = String(mstHours).padStart(2, '0');
+        const min = String(minutes).padStart(2, '0');
         
         return `${d}/${m}/${y} ${h}:${min}`;
       }
@@ -62,19 +77,95 @@ export function formatDateTimeMST(isoString: string | null | undefined): string 
     
     // Si viene con timezone explícito (+HH:mm o -HH:mm)
     if (isoString.match(/[+-]\d{2}:\d{2}$/)) {
-      // Parsear y convertir a MST
+      // Parsear manualmente para convertir a UTC primero, luego a MST
+      const match = isoString.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?([+-]\d{2}):(\d{2})$/);
+      if (match) {
+        const [, year, month, day, hours, minutes, seconds, tzSign, tzHours, tzMinutes] = match;
+        const yearNum = Number(year);
+        const monthNum = Number(month);
+        const dayNum = Number(day);
+        const hoursNum = Number(hours);
+        const minutesNum = Number(minutes);
+        
+        // Convertir timezone a offset en horas
+        const tzOffsetHours = (tzSign === '+' ? 1 : -1) * (Number(tzHours) + Number(tzMinutes) / 60);
+        
+        // Convertir a UTC (sumar el offset del timezone)
+        const utcHours = hoursNum - tzOffsetHours;
+        
+        // Convertir de UTC a MST (restar 7 horas)
+        let mstHours = utcHours - 7;
+        let mstDay = dayNum;
+        let mstMonth = monthNum;
+        let mstYear = yearNum;
+        
+        // Manejar desbordamiento de horas
+        if (mstHours < 0) {
+          mstHours += 24;
+          mstDay--;
+          if (mstDay < 1) {
+            mstMonth--;
+            if (mstMonth < 1) {
+              mstMonth = 12;
+              mstYear--;
+            }
+            const daysInPrevMonth = new Date(mstYear, mstMonth, 0).getDate();
+            mstDay = daysInPrevMonth;
+          }
+        } else if (mstHours >= 24) {
+          mstHours -= 24;
+          mstDay++;
+          const daysInMonth = new Date(mstYear, mstMonth, 0).getDate();
+          if (mstDay > daysInMonth) {
+            mstDay = 1;
+            mstMonth++;
+            if (mstMonth > 12) {
+              mstMonth = 1;
+              mstYear++;
+            }
+          }
+        }
+        
+        const d = String(mstDay).padStart(2, '0');
+        const m = String(mstMonth).padStart(2, '0');
+        const y = mstYear;
+        const h = String(Math.floor(mstHours)).padStart(2, '0');
+        const min = String(minutesNum).padStart(2, '0');
+        return `${d}/${m}/${y} ${h}:${min}`;
+      }
+      
+      // Fallback: usar Date si el regex no funciona
       const date = new Date(isoString);
       if (isNaN(date.getTime())) {
         return isoString;
       }
-      // Convertir de UTC a MST (restar 7 horas)
-      const mstTimestamp = date.getTime() - (7 * 60 * 60 * 1000);
-      const mstDate = new Date(mstTimestamp);
-      const d = String(mstDate.getUTCDate()).padStart(2, '0');
-      const m = String(mstDate.getUTCMonth() + 1).padStart(2, '0');
-      const y = mstDate.getUTCFullYear();
-      const h = String(mstDate.getUTCHours()).padStart(2, '0');
-      const min = String(mstDate.getUTCMinutes()).padStart(2, '0');
+      // Obtener componentes UTC y convertir a MST
+      const utcHours = date.getUTCHours();
+      const utcMinutes = date.getUTCMinutes();
+      let mstHours = utcHours - 7;
+      let mstDay = date.getUTCDate();
+      let mstMonth = date.getUTCMonth() + 1;
+      let mstYear = date.getUTCFullYear();
+      
+      if (mstHours < 0) {
+        mstHours += 24;
+        mstDay--;
+        if (mstDay < 1) {
+          mstMonth--;
+          if (mstMonth < 1) {
+            mstMonth = 12;
+            mstYear--;
+          }
+          const daysInPrevMonth = new Date(mstYear, mstMonth, 0).getDate();
+          mstDay = daysInPrevMonth;
+        }
+      }
+      
+      const d = String(mstDay).padStart(2, '0');
+      const m = String(mstMonth).padStart(2, '0');
+      const y = mstYear;
+      const h = String(mstHours).padStart(2, '0');
+      const min = String(utcMinutes).padStart(2, '0');
       return `${d}/${m}/${y} ${h}:${min}`;
     }
     
@@ -121,21 +212,35 @@ export function formatDateTimeFullMST(isoString: string | null | undefined): str
         const [datePart, timePart] = parts;
         const [year, month, day] = datePart.split('-').map(Number);
         const [time] = timePart.split('.');
-        const [hours, minutes, seconds = 0] = time.split(':').map(Number);
-        
-        // Crear fecha UTC
-        const utcDate = new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds));
+        const [utcHours, minutes, seconds = 0] = time.split(':').map(Number);
         
         // Convertir de UTC a MST (restar 7 horas)
-        const mstTimestamp = utcDate.getTime() - (7 * 60 * 60 * 1000);
-        const mstDate = new Date(mstTimestamp);
+        let mstHours = utcHours - 7;
+        let mstDay = day;
+        let mstMonth = month;
+        let mstYear = year;
         
-        const d = String(mstDate.getUTCDate()).padStart(2, '0');
-        const m = String(mstDate.getUTCMonth() + 1).padStart(2, '0');
-        const y = mstDate.getUTCFullYear();
-        const h = String(mstDate.getUTCHours()).padStart(2, '0');
-        const min = String(mstDate.getUTCMinutes()).padStart(2, '0');
-        const sec = String(mstDate.getUTCSeconds()).padStart(2, '0');
+        // Manejar desbordamiento de horas
+        if (mstHours < 0) {
+          mstHours += 24;
+          mstDay--;
+          if (mstDay < 1) {
+            mstMonth--;
+            if (mstMonth < 1) {
+              mstMonth = 12;
+              mstYear--;
+            }
+            const daysInPrevMonth = new Date(mstYear, mstMonth, 0).getDate();
+            mstDay = daysInPrevMonth;
+          }
+        }
+        
+        const d = String(mstDay).padStart(2, '0');
+        const m = String(mstMonth).padStart(2, '0');
+        const y = mstYear;
+        const h = String(mstHours).padStart(2, '0');
+        const min = String(minutes).padStart(2, '0');
+        const sec = String(seconds).padStart(2, '0');
         
         return `${d}/${m}/${y} ${h}:${min}:${sec}`;
       }
@@ -143,19 +248,99 @@ export function formatDateTimeFullMST(isoString: string | null | undefined): str
     
     // Si viene con timezone explícito (+HH:mm o -HH:mm)
     if (isoString.match(/[+-]\d{2}:\d{2}$/)) {
+      // Parsear manualmente para convertir a UTC primero, luego a MST
+      const match = isoString.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?([+-]\d{2}):(\d{2})$/);
+      if (match) {
+        const [, year, month, day, hours, minutes, seconds, tzSign, tzHours, tzMinutes] = match;
+        const yearNum = Number(year);
+        const monthNum = Number(month);
+        const dayNum = Number(day);
+        const hoursNum = Number(hours);
+        const minutesNum = Number(minutes);
+        const secondsNum = Number(seconds);
+        
+        // Convertir timezone a offset en horas
+        const tzOffsetHours = (tzSign === '+' ? 1 : -1) * (Number(tzHours) + Number(tzMinutes) / 60);
+        
+        // Convertir a UTC (sumar el offset del timezone)
+        const utcHours = hoursNum - tzOffsetHours;
+        
+        // Convertir de UTC a MST (restar 7 horas)
+        let mstHours = utcHours - 7;
+        let mstDay = dayNum;
+        let mstMonth = monthNum;
+        let mstYear = yearNum;
+        
+        // Manejar desbordamiento de horas
+        if (mstHours < 0) {
+          mstHours += 24;
+          mstDay--;
+          if (mstDay < 1) {
+            mstMonth--;
+            if (mstMonth < 1) {
+              mstMonth = 12;
+              mstYear--;
+            }
+            const daysInPrevMonth = new Date(mstYear, mstMonth, 0).getDate();
+            mstDay = daysInPrevMonth;
+          }
+        } else if (mstHours >= 24) {
+          mstHours -= 24;
+          mstDay++;
+          const daysInMonth = new Date(mstYear, mstMonth, 0).getDate();
+          if (mstDay > daysInMonth) {
+            mstDay = 1;
+            mstMonth++;
+            if (mstMonth > 12) {
+              mstMonth = 1;
+              mstYear++;
+            }
+          }
+        }
+        
+        const d = String(mstDay).padStart(2, '0');
+        const m = String(mstMonth).padStart(2, '0');
+        const y = mstYear;
+        const h = String(Math.floor(mstHours)).padStart(2, '0');
+        const min = String(minutesNum).padStart(2, '0');
+        const sec = String(secondsNum).padStart(2, '0');
+        return `${d}/${m}/${y} ${h}:${min}:${sec}`;
+      }
+      
+      // Fallback: usar Date si el regex no funciona
       const date = new Date(isoString);
       if (isNaN(date.getTime())) {
         return isoString;
       }
-      // Convertir de UTC a MST (restar 7 horas)
-      const mstTimestamp = date.getTime() - (7 * 60 * 60 * 1000);
-      const mstDate = new Date(mstTimestamp);
-      const d = String(mstDate.getUTCDate()).padStart(2, '0');
-      const m = String(mstDate.getUTCMonth() + 1).padStart(2, '0');
-      const y = mstDate.getUTCFullYear();
-      const h = String(mstDate.getUTCHours()).padStart(2, '0');
-      const min = String(mstDate.getUTCMinutes()).padStart(2, '0');
-      const sec = String(mstDate.getUTCSeconds()).padStart(2, '0');
+      // Obtener componentes UTC y convertir a MST
+      const utcHours = date.getUTCHours();
+      const utcMinutes = date.getUTCMinutes();
+      const utcSeconds = date.getUTCSeconds();
+      let mstHours = utcHours - 7;
+      let mstDay = date.getUTCDate();
+      let mstMonth = date.getUTCMonth() + 1;
+      let mstYear = date.getUTCFullYear();
+      
+      if (mstHours < 0) {
+        mstHours += 24;
+        mstDay--;
+        if (mstDay < 1) {
+          mstMonth--;
+          if (mstMonth < 1) {
+            mstMonth = 12;
+            mstYear--;
+          }
+          const daysInPrevMonth = new Date(mstYear, mstMonth, 0).getDate();
+          mstDay = daysInPrevMonth;
+        }
+      }
+      
+      const d = String(mstDay).padStart(2, '0');
+      const m = String(mstMonth).padStart(2, '0');
+      const y = mstYear;
+      const h = String(mstHours).padStart(2, '0');
+      const min = String(utcMinutes).padStart(2, '0');
+      const sec = String(utcSeconds).padStart(2, '0');
       return `${d}/${m}/${y} ${h}:${min}:${sec}`;
     }
     
