@@ -271,9 +271,26 @@ export async function generateBoletaEmbarquePDF(data: BoletaEmbarqueRequest): Pr
 
     clearTimeout(timeoutId);
 
+    // Verificar Content-Type antes de parsear JSON
+    const contentType = response.headers.get('content-type') || '';
+    
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }));
-      throw new Error(errorData.error || `Error ${response.status}: ${response.statusText}`);
+      let errorMessage = `Error ${response.status}: ${response.statusText}`;
+      if (contentType.includes('application/json')) {
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorData.message || errorMessage;
+        } catch (e) {
+          // Si no se puede parsear JSON, usar el texto de respuesta
+          const textResponse = await response.text();
+          errorMessage = textResponse || errorMessage;
+        }
+      } else {
+        // Si no es JSON, leer como texto
+        const textResponse = await response.text();
+        errorMessage = textResponse || errorMessage;
+      }
+      throw new Error(errorMessage);
     }
 
     // El nuevo endpoint devuelve PDF directamente, no JSON

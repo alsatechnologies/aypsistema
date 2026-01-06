@@ -125,6 +125,9 @@ export default async function handler(
       clearTimeout(timeoutId);
       
       console.error(`[CERTIFICATE] Error en fetch (${tipo}):`, fetchError);
+      console.error(`[CERTIFICATE] Error name:`, fetchError.name);
+      console.error(`[CERTIFICATE] Error message:`, fetchError.message);
+      console.error(`[CERTIFICATE] Error stack:`, fetchError.stack);
       
       if (fetchError.name === 'AbortError') {
         console.error(`[CERTIFICATE] Timeout generando certificado ${tipo}`);
@@ -138,17 +141,14 @@ export default async function handler(
       }
 
       // Si es un error de conexión o red
-      if (fetchError.message && (fetchError.message.includes('fetch') || fetchError.message.includes('network'))) {
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Content-Type', 'application/json');
-        return res.status(503).json({
-          error: 'Error de conexión',
-          message: `No se pudo conectar con la API externa: ${fetchError.message}`,
-          endpoint: endpoint
-        });
-      }
-
-      throw fetchError;
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Content-Type', 'application/json');
+      return res.status(503).json({
+        error: 'Error de conexión',
+        message: `No se pudo conectar con la API externa (${endpoint}): ${fetchError.message || 'Error desconocido'}`,
+        endpoint: endpoint,
+        errorDetails: fetchError.message
+      });
     }
 
   } catch (error) {
