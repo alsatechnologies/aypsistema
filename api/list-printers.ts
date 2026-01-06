@@ -24,13 +24,20 @@ export default async function handler(
     // Obtener rol del usuario del query string (opcional)
     const { rol_usuario } = req.query;
     
+    // Log para debugging
+    console.log('🔧 [LIST-PRINTERS] Rol recibido:', rol_usuario);
+    console.log('🔧 [LIST-PRINTERS] PRINTER_API_URL_2 configurado:', PRINTER_API_URL_2);
+    console.log('🔧 [LIST-PRINTERS] Variable de entorno PRINTER_API_URL_2:', process.env.PRINTER_API_URL_2);
+    
     // Seleccionar API según el rol del usuario
     let apiUrl = PRINTER_API_URL;
     if (rol_usuario === 'Oficina') {
       apiUrl = PRINTER_API_URL_2;
       console.log('🔧 [LIST-PRINTERS] Usando API 2 (ticket_prod) para usuario Oficina');
+      console.log('🔧 [LIST-PRINTERS] URL final seleccionada:', apiUrl);
     } else {
       console.log('🔧 [LIST-PRINTERS] Usando API 1 (apiticket) para otros usuarios');
+      console.log('🔧 [LIST-PRINTERS] URL final seleccionada:', apiUrl);
     }
 
     // Timeout de 10 segundos para listar impresoras
