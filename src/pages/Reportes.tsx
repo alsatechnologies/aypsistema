@@ -252,7 +252,7 @@ const Reportes = () => {
       almacen: a.nombre,
       capacidad_total: a.capacidad_total,
       capacidad_actual: a.capacidad_actual || 0,
-      disponible: (a.capacidad_total - (a.capacidad_actual || 0)),
+      disponible: a.capacidad_actual || 0, // Disponible ahora muestra la capacidad actual
       porcentaje_ocupado: a.capacidad_total > 0 ? ((a.capacidad_actual || 0) / a.capacidad_total * 100).toFixed(2) : 0,
       unidad: a.unidad
     }));
@@ -987,7 +987,6 @@ const Reportes = () => {
                     </TableHeader>
                     <TableBody>
                       {almacenes.map((a) => {
-                        const disponible = a.capacidad_total - (a.capacidad_actual || 0);
                         const porcentajeOcupado = a.capacidad_total > 0 
                           ? ((a.capacidad_actual || 0) / a.capacidad_total * 100) 
                           : 0;
@@ -996,7 +995,7 @@ const Reportes = () => {
                             <TableCell className="font-medium">{a.nombre}</TableCell>
                             <TableCell className="text-right">{formatNumber(a.capacidad_total)}</TableCell>
                             <TableCell className="text-right">{formatNumber(a.capacidad_actual || 0)}</TableCell>
-                            <TableCell className="text-right font-semibold">{formatNumber(disponible)}</TableCell>
+                            <TableCell className="text-right font-semibold">{formatNumber(a.capacidad_actual || 0)}</TableCell>
                             <TableCell className="text-right">
                               <Badge variant={porcentajeOcupado > 80 ? 'destructive' : porcentajeOcupado > 60 ? 'default' : 'secondary'}>
                                 {porcentajeOcupado.toFixed(1)}%
