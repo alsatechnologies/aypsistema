@@ -1084,10 +1084,16 @@ const Reportes = () => {
                     </TableHeader>
                     <TableBody>
                       {reportesProduccion.map((r) => {
-                        const fecha = new Date(r.fecha);
+                        // Parsear fecha desde string YYYY-MM-DD sin problemas de zona horaria
+                        // Usar el mismo método que en Producción para consistencia
+                        const [año, mes, dia] = r.fecha.split('-').map(Number);
+                        const fecha = new Date(año, mes - 1, dia);
                         const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
                         const diaSemana = diasSemana[fecha.getDay()];
-                        const fechaFormateada = `${diaSemana} ${format(fecha, 'dd/MM/yyyy', { locale: es })}`;
+                        const diaStr = String(fecha.getDate()).padStart(2, '0');
+                        const mesStr = String(fecha.getMonth() + 1).padStart(2, '0');
+                        const añoStr = fecha.getFullYear();
+                        const fechaFormateada = `${diaSemana} ${diaStr}/${mesStr}/${añoStr}`;
                         
                         return (
                           <TableRow key={r.id}>
