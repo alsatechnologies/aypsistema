@@ -27,7 +27,7 @@ import { useAlmacenes } from '@/services/hooks/useAlmacenes';
 import { getProductoConAnalisis } from '@/services/supabase/productos';
 import { createMovimiento } from '@/services/supabase/movimientos';
 import type { Recepcion as RecepcionDB } from '@/services/supabase/recepciones';
-import { formatDateTimeMST } from '@/utils/dateUtils';
+import { formatDateTimeMST, formatDateTimeSplitMST } from '@/utils/dateUtils';
 import { validarRecepcion, puedeModificarRegistro } from '@/utils/validations';
 import { handleError } from '@/utils/errorHandler';
 import { getCurrentDateTimeMST } from '@/utils/dateUtils';
@@ -499,61 +499,9 @@ const Reciba = () => {
   };
 
   // Función para formatear fecha y hora según formato esperado por la API
-  // Convierte de UTC (Supabase) a MST
+  // Convierte de UTC (Supabase) a MST usando la función centralizada
   const formatearFechaHora = (fechaHora: string | null) => {
-    if (!fechaHora) return { fecha: '', hora: '' };
-    try {
-      // fechaHora viene en formato ISO de Supabase (UTC): YYYY-MM-DDTHH:mm:ss.mmm
-      // Detectar formato ISO y convertir de UTC a MST
-      const isoPattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|[\+\-]\d{2}:\d{2})?$/;
-      const match = fechaHora.match(isoPattern);
-      
-      if (match) {
-        // Es una fecha ISO - Supabase SIEMPRE devuelve UTC
-        const [, year, month, day, hours, minutes] = match;
-        const yearNum = Number(year);
-        const monthNum = Number(month);
-        const dayNum = Number(day);
-        const utcHours = Number(hours);
-        const minutesNum = Number(minutes);
-        
-        // Convertir de UTC a MST (restar 7 horas)
-        let mstHours = utcHours - 7;
-        let mstDay = dayNum;
-        let mstMonth = monthNum;
-        let mstYear = yearNum;
-        
-        // Manejar desbordamiento de horas
-        if (mstHours < 0) {
-          mstHours += 24;
-          mstDay--;
-          if (mstDay < 1) {
-            mstMonth--;
-            if (mstMonth < 1) {
-              mstMonth = 12;
-              mstYear--;
-            }
-            const daysInPrevMonth = new Date(mstYear, mstMonth, 0).getDate();
-            mstDay = daysInPrevMonth;
-          }
-        }
-        
-        const fechaStr = `${String(mstDay).padStart(2, '0')}/${String(mstMonth).padStart(2, '0')}/${mstYear}`;
-        const horaStr = `${String(mstHours).padStart(2, '0')}:${String(minutesNum).padStart(2, '0')}`;
-        return { fecha: fechaStr, hora: horaStr };
-      }
-      
-      // Fallback: si no es formato ISO, intentar con Date (pero esto puede causar problemas)
-      const fecha = new Date(fechaHora);
-      if (isNaN(fecha.getTime())) {
-        return { fecha: '', hora: '' };
-      }
-      const fechaStr = format(fecha, 'dd/MM/yyyy', { locale: es });
-      const horaStr = format(fecha, 'HH:mm', { locale: es });
-      return { fecha: fechaStr, hora: horaStr };
-    } catch {
-      return { fecha: '', hora: '' };
-    }
+    return formatDateTimeSplitMST(fechaHora);
   };
 
   const handleEliminar = async (recepcion: Recepcion) => {

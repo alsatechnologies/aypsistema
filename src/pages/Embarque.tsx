@@ -27,7 +27,7 @@ import { useClientes } from '@/services/hooks/useClientes';
 import { useAlmacenes } from '@/services/hooks/useAlmacenes';
 import { getProductoConAnalisis } from '@/services/supabase/productos';
 import { createMovimiento } from '@/services/supabase/movimientos';
-import { getCurrentDateTimeMST, formatDateTimeMST } from '@/utils/dateUtils';
+import { getCurrentDateTimeMST, formatDateTimeMST, formatDateTimeSplitMST } from '@/utils/dateUtils';
 import { validarEmbarque, puedeModificarRegistro } from '@/utils/validations';
 import { handleError } from '@/utils/errorHandler';
 import type { Embarque as EmbarqueDB } from '@/services/supabase/embarques';
@@ -510,91 +510,9 @@ const EmbarquePage = () => {
     }
   };
 
-  // Función helper para formatear fecha y hora en MST
+  // Función helper para formatear fecha y hora en MST usando la función centralizada
   const formatearFechaHora = (isoString: string | null) => {
-    if (!isoString) return { fecha: '', hora: '' };
-    try {
-      // Si viene con timezone UTC (Z), convertir explícitamente de UTC a MST (UTC-7)
-      if (isoString.includes('Z')) {
-        const cleanString = isoString.replace('Z', '');
-        const parts = cleanString.split('T');
-        if (parts.length === 2) {
-          const [datePart, timePart] = parts;
-          const [year, month, day] = datePart.split('-').map(Number);
-          const [time] = timePart.split('.');
-          const [utcHours, minutes, seconds = 0] = time.split(':').map(Number);
-          
-          // Convertir de UTC a MST (restar 7 horas)
-          let mstHours = utcHours - 7;
-          let mstDay = day;
-          let mstMonth = month;
-          let mstYear = year;
-          
-          // Manejar desbordamiento de horas
-          if (mstHours < 0) {
-            mstHours += 24;
-            mstDay--;
-            if (mstDay < 1) {
-              mstMonth--;
-              if (mstMonth < 1) {
-                mstMonth = 12;
-                mstYear--;
-              }
-              const daysInPrevMonth = new Date(mstYear, mstMonth, 0).getDate();
-              mstDay = daysInPrevMonth;
-            }
-          }
-          
-          const d = String(mstDay).padStart(2, '0');
-          const m = String(mstMonth).padStart(2, '0');
-          const y = mstYear;
-          const h = String(mstHours).padStart(2, '0');
-          const min = String(minutes).padStart(2, '0');
-          
-          return {
-            fecha: `${d}/${m}/${y}`,
-            hora: `${h}:${min}`
-          };
-        }
-      }
-      
-      // Si viene con timezone explícito (+HH:mm o -HH:mm)
-      if (isoString.match(/[+-]\d{2}:\d{2}$/)) {
-        const utcDate = new Date(isoString);
-        if (isNaN(utcDate.getTime())) {
-          return { fecha: '', hora: '' };
-        }
-        // Convertir de UTC a MST (restar 7 horas)
-        const mstTimestamp = utcDate.getTime() - (7 * 60 * 60 * 1000);
-        const mstDate = new Date(mstTimestamp);
-        const d = String(mstDate.getUTCDate()).padStart(2, '0');
-        const m = String(mstDate.getUTCMonth() + 1).padStart(2, '0');
-        const y = mstDate.getUTCFullYear();
-        const h = String(mstDate.getUTCHours()).padStart(2, '0');
-        const min = String(mstDate.getUTCMinutes()).padStart(2, '0');
-        return {
-          fecha: `${d}/${m}/${y}`,
-          hora: `${h}:${min}`
-        };
-      }
-      
-      // Si no tiene timezone, asumir que ya está en MST y parsear directamente
-      const parts = isoString.split('T');
-      if (parts.length === 2) {
-        const [datePart, timePart] = parts;
-        const [year, month, day] = datePart.split('-');
-        const [time] = timePart.split('.');
-        const [hours, minutes] = time.split(':');
-        return {
-          fecha: `${day}/${month}/${year}`,
-          hora: `${hours}:${minutes}`
-        };
-      }
-      
-      return { fecha: '', hora: '' };
-    } catch {
-      return { fecha: '', hora: '' };
-    }
+    return formatDateTimeSplitMST(isoString);
   };
 
   const handleEliminar = async (embarque: Embarque) => {
