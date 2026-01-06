@@ -330,13 +330,17 @@ const EmbarquePage = () => {
     
       const nuevaBoleta = generateNumeroBoleta(tipoOperacion, codigoBoleta, siguienteConsecutivo);
       
+      // Usar fecha/hora actual en MST
+      const fechaHoraActual = getCurrentDateTimeMST();
+      const fechaActual = fechaHoraActual.split('T')[0];
+      
       await addEmbarque({
         boleta: nuevaBoleta,
         producto_id: data.productoId,
         cliente_id: data.clienteId,
       destino: data.destino,
       chofer: data.chofer,
-      fecha: new Date().toISOString().split('T')[0],
+      fecha: fechaActual,
       estatus: 'Pendiente',
         tipo_transporte: data.tipoTransporte,
         tipo_embarque: data.tipoEmbarque
@@ -827,7 +831,7 @@ const EmbarquePage = () => {
                     <div>
                       <Label className="text-xs text-muted-foreground">Fecha/Hora</Label>
                       <p className="font-medium">
-                        {formatDateTimeMST(selectedEmbarque.created_at || selectedEmbarque.fecha)}
+                        {formatDateTimeMST(getCurrentDateTimeMST())}
                       </p>
                     </div>
                     <div>
