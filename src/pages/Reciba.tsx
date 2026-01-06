@@ -742,7 +742,7 @@ const Reciba = () => {
                     onClick={() => handleRowClick(recepcion)}
                   >
                     <TableCell className="font-mono font-bold text-primary">
-                      {recepcion.boleta.startsWith('TEMP-') ? '-' : recepcion.boleta}
+                      {recepcion.boleta || '-'}
                     </TableCell>
                     <TableCell className="font-medium">{recepcion.producto}</TableCell>
                     <TableCell>{recepcion.proveedor}</TableCell>
