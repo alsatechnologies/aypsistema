@@ -831,7 +831,26 @@ const EmbarquePage = () => {
                     <div>
                       <Label className="text-xs text-muted-foreground">Fecha/Hora</Label>
                       <p className="font-medium">
-                        {formatDateTimeMST(getCurrentDateTimeMST())}
+                        {(() => {
+                          const now = new Date();
+                          // Usar Intl.DateTimeFormat para obtener fecha/hora en zona horaria de México (MST)
+                          const formatter = new Intl.DateTimeFormat('es-MX', {
+                            timeZone: 'America/Mazatlan',
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            hour12: false
+                          });
+                          const parts = formatter.formatToParts(now);
+                          const day = parts.find(p => p.type === 'day')?.value || '';
+                          const month = parts.find(p => p.type === 'month')?.value || '';
+                          const year = parts.find(p => p.type === 'year')?.value || '';
+                          const hour = parts.find(p => p.type === 'hour')?.value || '';
+                          const minute = parts.find(p => p.type === 'minute')?.value || '';
+                          return `${day}/${month}/${year} ${hour}:${minute}`;
+                        })()}
                       </p>
                     </div>
                     <div>
