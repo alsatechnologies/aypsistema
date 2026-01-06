@@ -4,52 +4,17 @@
  */
 
 /**
- * Obtiene la fecha/hora actual en formato ISO para zona horaria MST
- * Como Supabase interpreta fechas sin timezone como UTC, debemos guardar
- * la hora local + 7 horas para que cuando Supabase la interprete como UTC,
- * al convertirla de vuelta a MST (restando 7), quede la hora local correcta.
- * @returns String en formato ISO sin timezone (será interpretado como UTC por Supabase)
+ * Obtiene la fecha/hora actual en formato ISO UTC
+ * Usa toISOString() que devuelve la hora actual en UTC con timezone 'Z'
+ * Esto asegura que Supabase guarde correctamente la hora UTC
+ * Al leer, formatDateTimeMST convertirá de UTC a MST para mostrar
+ * @returns String en formato ISO con timezone UTC (ej: "2026-01-05T20:00:00.000Z")
  */
 export function getCurrentDateTimeMST(): string {
-  const now = new Date();
-  
-  // Obtener la hora local del sistema (que debería estar en MST)
-  const localHours = now.getHours();
-  const localMinutes = now.getMinutes();
-  const localSeconds = now.getSeconds();
-  const localMilliseconds = now.getMilliseconds();
-  
-  // Convertir hora local a UTC (sumar 7 horas para MST)
-  // Esto es porque Supabase interpreta fechas sin timezone como UTC
-  let utcHours = localHours + 7;
-  let utcDay = now.getDate();
-  let utcMonth = now.getMonth() + 1;
-  let utcYear = now.getFullYear();
-  
-  // Manejar desbordamiento de horas
-  if (utcHours >= 24) {
-    utcHours -= 24;
-    utcDay++;
-    const daysInMonth = new Date(utcYear, utcMonth, 0).getDate();
-    if (utcDay > daysInMonth) {
-      utcDay = 1;
-      utcMonth++;
-      if (utcMonth > 12) {
-        utcMonth = 1;
-        utcYear++;
-      }
-    }
-  }
-  
-  const year = String(utcYear);
-  const month = String(utcMonth).padStart(2, '0');
-  const day = String(utcDay).padStart(2, '0');
-  const hours = String(utcHours).padStart(2, '0');
-  const minutes = String(localMinutes).padStart(2, '0');
-  const seconds = String(localSeconds).padStart(2, '0');
-  const milliseconds = String(localMilliseconds).padStart(3, '0');
-  
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.${milliseconds}`;
+  // Usar toISOString() que devuelve la hora actual en UTC
+  // Esto es correcto porque el navegador ya conoce la zona horaria local
+  // y la convierte automáticamente a UTC
+  return new Date().toISOString();
 }
 
 /**
