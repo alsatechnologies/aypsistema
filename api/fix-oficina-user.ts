@@ -112,7 +112,7 @@ export default async function handler(
       });
     }
 
-    const authUserExists = authUsers.users.find(u => u.email === correoOficina);
+    const authUserExists = authUsers?.users?.find((u: any) => u.email === correoOficina);
 
     if (authUserExists) {
       // Usuario existe, intentar actualizar contraseña
