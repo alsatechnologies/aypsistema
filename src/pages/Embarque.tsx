@@ -904,9 +904,13 @@ const EmbarquePage = () => {
                     <div>
                       <Label className="text-xs text-muted-foreground">Fecha/Hora</Label>
                       <p className="font-medium">
-                        {selectedEmbarque.created_at 
-                          ? formatDateTimeMST(selectedEmbarque.created_at)
-                          : formatDateTimeMST(getCurrentDateTimeMST())}
+                        {(() => {
+                          const fechaHora = selectedEmbarque.created_at || getCurrentDateTimeMST();
+                          console.log('Fecha/Hora raw:', fechaHora);
+                          const resultado = formatDateTimeMST(fechaHora);
+                          console.log('Fecha/Hora formateada:', resultado);
+                          return resultado;
+                        })()}
                       </p>
                     </div>
                     <div>

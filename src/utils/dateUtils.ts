@@ -32,24 +32,65 @@ export function formatDateTimeMST(isoString: string | null | undefined): string 
   if (!isoString) return '-';
   
   try {
-    // Si viene con timezone UTC (Z), convertir explícitamente de UTC a MST (UTC-7)
+    // Detectar formato ISO con fecha y hora (YYYY-MM-DDTHH:mm:ss)
+    const isoPattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|[\+\-]\d{2}:\d{2})?$/;
+    const match = isoString.match(isoPattern);
+    
+    if (match) {
+      // Es una fecha ISO - Supabase SIEMPRE devuelve UTC, incluso sin 'Z'
+      const [, year, month, day, hours, minutes, seconds, timezone] = match;
+      const yearNum = Number(year);
+      const monthNum = Number(month);
+      const dayNum = Number(day);
+      const utcHours = Number(hours);
+      const minutesNum = Number(minutes);
+      
+      // Convertir de UTC a MST (restar 7 horas) - SIEMPRE porque viene de Supabase
+      let mstHours = utcHours - 7;
+      let mstDay = dayNum;
+      let mstMonth = monthNum;
+      let mstYear = yearNum;
+      
+      // Manejar desbordamiento de horas (si mstHours < 0, retroceder un día)
+      if (mstHours < 0) {
+        mstHours += 24;
+        mstDay--;
+        if (mstDay < 1) {
+          mstMonth--;
+          if (mstMonth < 1) {
+            mstMonth = 12;
+            mstYear--;
+          }
+          // Obtener días del mes anterior
+          const daysInPrevMonth = new Date(mstYear, mstMonth, 0).getDate();
+          mstDay = daysInPrevMonth;
+        }
+      }
+      
+      const d = String(mstDay).padStart(2, '0');
+      const m = String(mstMonth).padStart(2, '0');
+      const y = mstYear;
+      const h = String(mstHours).padStart(2, '0');
+      const min = String(minutesNum).padStart(2, '0');
+      
+      return `${d}/${m}/${y} ${h}:${min}`;
+    }
+    
+    // Si tiene 'Z' explícito, también tratarlo como UTC
     if (isoString.includes('Z')) {
-      // Parsear manualmente para evitar conversiones automáticas del navegador
       const cleanString = isoString.replace('Z', '');
       const parts = cleanString.split('T');
       if (parts.length === 2) {
         const [datePart, timePart] = parts;
         const [year, month, day] = datePart.split('-').map(Number);
         const [time] = timePart.split('.');
-        const [utcHours, minutes, seconds = 0] = time.split(':').map(Number);
+        const [utcHours, minutes] = time.split(':').map(Number);
         
-        // Convertir de UTC a MST (restar 7 horas)
         let mstHours = utcHours - 7;
         let mstDay = day;
         let mstMonth = month;
         let mstYear = year;
         
-        // Manejar desbordamiento de horas (si mstHours < 0, retroceder un día)
         if (mstHours < 0) {
           mstHours += 24;
           mstDay--;
@@ -59,7 +100,6 @@ export function formatDateTimeMST(isoString: string | null | undefined): string 
               mstMonth = 12;
               mstYear--;
             }
-            // Obtener días del mes anterior
             const daysInPrevMonth = new Date(mstYear, mstMonth, 0).getDate();
             mstDay = daysInPrevMonth;
           }
