@@ -309,9 +309,13 @@ const Reportes = () => {
             
             // Crear mapa de alturas máximas por nombre de tanque
             const alturasMaximasMap = new Map<string, number>();
+            const factoresKgCmMap = new Map<string, number>();
             almacenes.forEach((almacen) => {
               if (almacen.altura_maxima) {
                 alturasMaximasMap.set(almacen.nombre, almacen.altura_maxima);
+              }
+              if (almacen.factor_kg_cm) {
+                factoresKgCmMap.set(almacen.nombre, almacen.factor_kg_cm);
               }
             });
             
@@ -475,6 +479,14 @@ const Reportes = () => {
                                 ? (gomas / alturaMaxima) * 100 
                                 : 0;
 
+                              // Obtener factor de conversión kg/cm del tanque
+                              const factorKgCm = factoresKgCmMap.get(tanque.tanque);
+                              
+                              // Calcular peso en kg del aceite: (aceite en m × 100) × factor_kg_cm
+                              const pesoAceiteKg = factorKgCm && aceite > 0
+                                ? (aceite * 100) * factorKgCm
+                                : null;
+
                               // Colores fijos: Aceite siempre azul, Gomas siempre rojo
                               const aceiteColor = '#3b82f6'; // Azul siempre
                               const gomasColor = gomas > 0 ? '#ef4444' : 'transparent'; // Rojo para gomas
@@ -541,6 +553,14 @@ const Reportes = () => {
                                           <span className="text-muted-foreground">Gomas:</span>
                                           <span className="font-medium">
                                             {gomas.toFixed(2)} m ({porcentajeGomas.toFixed(2)}%)
+                                          </span>
+                                        </div>
+                                      )}
+                                      {pesoAceiteKg !== null && (
+                                        <div className="flex items-center justify-center gap-2 pt-1 border-t">
+                                          <span className="text-muted-foreground">Kg:</span>
+                                          <span className="font-medium">
+                                            {pesoAceiteKg.toLocaleString('es-MX', { maximumFractionDigits: 2 })} kg
                                           </span>
                                         </div>
                                       )}
@@ -1169,11 +1189,15 @@ const Reportes = () => {
                           ...(selectedReporteProduccion.niveles_gomas?.map((g: any) => g.goma) || [])
                         ]);
 
-                        // Crear mapa de alturas máximas por nombre de tanque
+                        // Crear mapa de alturas máximas y factores kg/cm por nombre de tanque
                         const alturasMaximasMap = new Map<string, number>();
+                        const factoresKgCmMap = new Map<string, number>();
                         almacenes.forEach((almacen) => {
                           if (almacen.altura_maxima) {
                             alturasMaximasMap.set(almacen.nombre, almacen.altura_maxima);
+                          }
+                          if (almacen.factor_kg_cm) {
+                            factoresKgCmMap.set(almacen.nombre, almacen.factor_kg_cm);
                           }
                         });
 
@@ -1203,6 +1227,14 @@ const Reportes = () => {
                           const porcentajeGomas = alturaMaxima && alturaMaxima > 0 
                             ? (gomas / alturaMaxima) * 100 
                             : 0;
+
+                          // Obtener factor de conversión kg/cm del tanque
+                          const factorKgCm = factoresKgCmMap.get(tanqueNombre);
+                          
+                          // Calcular peso en kg del aceite: (aceite en m × 100) × factor_kg_cm
+                          const pesoAceiteKg = factorKgCm && aceite > 0
+                            ? (aceite * 100) * factorKgCm
+                            : null;
 
                           // Colores fijos: Aceite siempre azul, Gomas siempre rojo
                           const aceiteColor = '#3b82f6'; // Azul siempre
@@ -1276,6 +1308,14 @@ const Reportes = () => {
                                         <span className="text-muted-foreground">Gomas:</span>
                                         <span className="font-medium">
                                           {gomas.toFixed(2)} m ({porcentajeGomas.toFixed(2)}%)
+                                        </span>
+                                      </div>
+                                    )}
+                                    {pesoAceiteKg !== null && (
+                                      <div className="flex items-center justify-center gap-2 pt-1 border-t">
+                                        <span className="text-muted-foreground">Kg:</span>
+                                        <span className="font-medium">
+                                          {pesoAceiteKg.toLocaleString('es-MX', { maximumFractionDigits: 2 })} kg
                                         </span>
                                       </div>
                                     )}
