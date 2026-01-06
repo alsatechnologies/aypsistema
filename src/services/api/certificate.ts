@@ -103,8 +103,8 @@ export async function generateBoletaRecibaPDF(data: BoletaRecibaRequest): Promis
 
     clearTimeout(timeoutId);
 
-    console.log('[CERTIFICATE] Respuesta status:', response.status, response.statusText);
-    console.log('[CERTIFICATE] Content-Type:', response.headers.get('content-type'));
+    console.log('🔧 [CERTIFICATE] Respuesta status:', response.status);
+    console.log('🔧 [CERTIFICATE] Content-Type:', response.headers.get('content-type'));
 
     if (!response.ok) {
       // Intentar leer como JSON primero (si es un error)
