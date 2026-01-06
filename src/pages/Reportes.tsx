@@ -505,8 +505,8 @@ const Reportes = () => {
                               };
 
                               return (
-                                <Card key={idx} className="p-4">
-                                  <div className="flex flex-col items-center space-y-3">
+                                <Card key={idx} className="flex flex-col h-full">
+                                  <CardContent className="flex flex-col items-center space-y-3 flex-1">
                                     <div className="w-full text-center">
                                       <h4 className="font-semibold text-sm mb-1">{tanque.tanque}</h4>
                                       {alturaMaxima && (
@@ -535,37 +535,41 @@ const Reportes = () => {
                                         />
                                       </PieChart>
                                     </ChartContainer>
-                                    <div className="space-y-1 text-xs text-center w-full">
+                                  </CardContent>
+                                  <CardFooter className="flex flex-col space-y-1 text-xs w-full pt-4">
+                                    <div className="flex items-center justify-center gap-2">
+                                      <span className="text-muted-foreground">Nivel:</span>
+                                      <span className="font-medium">
+                                        {nivel.toFixed(2)} m ({porcentajeNivel.toFixed(2)}%)
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-center gap-2">
+                                      <span className="text-muted-foreground">Aceite:</span>
+                                      <span className="font-medium">
+                                        {aceite.toFixed(2)} m ({porcentajeAceite.toFixed(2)}%)
+                                      </span>
+                                    </div>
+                                    {gomas > 0 && (
                                       <div className="flex items-center justify-center gap-2">
-                                        <span className="text-muted-foreground">Nivel:</span>
+                                        <span className="text-muted-foreground">Gomas:</span>
                                         <span className="font-medium">
-                                          {nivel.toFixed(2)} m ({porcentajeNivel.toFixed(2)}%)
+                                          {gomas.toFixed(2)} m ({porcentajeGomas.toFixed(2)}%)
                                         </span>
                                       </div>
-                                      <div className="flex items-center justify-center gap-2">
-                                        <span className="text-muted-foreground">Aceite:</span>
-                                        <span className="font-medium">
-                                          {aceite.toFixed(2)} m ({porcentajeAceite.toFixed(2)}%)
-                                        </span>
-                                      </div>
-                                      {gomas > 0 && (
+                                    )}
+                                    {pesoAceiteKg !== null && (
+                                      <div className="flex flex-col items-center justify-center gap-2 pt-2 mt-2">
+                                        <div className="w-full border-t border-red-500"></div>
                                         <div className="flex items-center justify-center gap-2">
-                                          <span className="text-muted-foreground">Gomas:</span>
-                                          <span className="font-medium">
-                                            {gomas.toFixed(2)} m ({porcentajeGomas.toFixed(2)}%)
-                                          </span>
-                                        </div>
-                                      )}
-                                      {pesoAceiteKg !== null && (
-                                        <div className="flex items-center justify-center gap-2 pt-1 border-t">
                                           <span className="text-muted-foreground">Kg:</span>
                                           <span className="font-medium">
                                             {pesoAceiteKg.toLocaleString('es-MX', { maximumFractionDigits: 2 })} kg
                                           </span>
                                         </div>
-                                      )}
-                                    </div>
-                                  </div>
+                                        <div className="w-full border-t border-red-500"></div>
+                                      </div>
+                                    )}
+                                  </CardFooter>
                                 </Card>
                               );
                             })}
@@ -1254,9 +1258,9 @@ const Reportes = () => {
                           };
 
                           return (
-                            <Card key={index} className="p-4">
-                              <div className="space-y-3">
-                                <div>
+                            <Card key={index} className="flex flex-col h-full">
+                              <CardContent className="flex flex-col items-center space-y-3 flex-1">
+                                <div className="w-full text-center">
                                   <h4 className="font-semibold text-sm mb-1">{tanqueNombre}</h4>
                                   {tanqueData?.producto && (
                                     <p className="text-xs text-muted-foreground">{tanqueData.producto}</p>
@@ -1269,59 +1273,61 @@ const Reportes = () => {
                                 </div>
                                 
                                 {/* Gráfico Donut */}
-                                <div className="flex flex-col items-center">
-                                  <ChartContainer
-                                    config={donutConfig}
-                                    className="w-32 h-32"
-                                  >
-                                    <PieChart>
-                                      <ChartTooltip
-                                        cursor={false}
-                                        content={<ChartTooltipContent hideLabel />}
-                                      />
-                                      <Pie
-                                        data={donutData}
-                                        dataKey="value"
-                                        nameKey="name"
-                                        innerRadius={30}
-                                        outerRadius={50}
-                                        startAngle={90}
-                                        endAngle={-270}
-                                      />
-                                    </PieChart>
-                                  </ChartContainer>
-                                  <div className="mt-2 space-y-1 text-xs text-center">
-                                    <div className="flex items-center justify-center gap-2">
-                                      <span className="text-muted-foreground">Nivel:</span>
-                                      <span className="font-medium">
-                                        {nivel.toFixed(2)} m ({porcentajeNivel.toFixed(2)}%)
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center justify-center gap-2">
-                                      <span className="text-muted-foreground">Aceite:</span>
-                                      <span className="font-medium">
-                                        {aceite.toFixed(2)} m ({porcentajeAceite.toFixed(2)}%)
-                                      </span>
-                                    </div>
-                                    {gomas > 0 && (
-                                      <div className="flex items-center justify-center gap-2">
-                                        <span className="text-muted-foreground">Gomas:</span>
-                                        <span className="font-medium">
-                                          {gomas.toFixed(2)} m ({porcentajeGomas.toFixed(2)}%)
-                                        </span>
-                                      </div>
-                                    )}
-                                    {pesoAceiteKg !== null && (
-                                      <div className="flex items-center justify-center gap-2 pt-1 border-t">
-                                        <span className="text-muted-foreground">Kg:</span>
-                                        <span className="font-medium">
-                                          {pesoAceiteKg.toLocaleString('es-MX', { maximumFractionDigits: 2 })} kg
-                                        </span>
-                                      </div>
-                                    )}
-                                  </div>
+                                <ChartContainer
+                                  config={donutConfig}
+                                  className="w-32 h-32"
+                                >
+                                  <PieChart>
+                                    <ChartTooltip
+                                      cursor={false}
+                                      content={<ChartTooltipContent hideLabel />}
+                                    />
+                                    <Pie
+                                      data={donutData}
+                                      dataKey="value"
+                                      nameKey="name"
+                                      innerRadius={30}
+                                      outerRadius={50}
+                                      startAngle={90}
+                                      endAngle={-270}
+                                    />
+                                  </PieChart>
+                                </ChartContainer>
+                              </CardContent>
+                              <CardFooter className="flex flex-col space-y-1 text-xs w-full pt-4">
+                                <div className="flex items-center justify-center gap-2">
+                                  <span className="text-muted-foreground">Nivel:</span>
+                                  <span className="font-medium">
+                                    {nivel.toFixed(2)} m ({porcentajeNivel.toFixed(2)}%)
+                                  </span>
                                 </div>
-                              </div>
+                                <div className="flex items-center justify-center gap-2">
+                                  <span className="text-muted-foreground">Aceite:</span>
+                                  <span className="font-medium">
+                                    {aceite.toFixed(2)} m ({porcentajeAceite.toFixed(2)}%)
+                                  </span>
+                                </div>
+                                {gomas > 0 && (
+                                  <div className="flex items-center justify-center gap-2">
+                                    <span className="text-muted-foreground">Gomas:</span>
+                                    <span className="font-medium">
+                                      {gomas.toFixed(2)} m ({porcentajeGomas.toFixed(2)}%)
+                                    </span>
+                                  </div>
+                                )}
+                                {pesoAceiteKg !== null && (
+                                  <div className="flex flex-col items-center justify-center gap-2 pt-2 mt-2">
+                                    <div className="w-full border-t border-red-500"></div>
+                                    <div className="flex items-center justify-center gap-2">
+                                      <span className="text-muted-foreground">Kg:</span>
+                                      <span className="font-medium">
+                                        {pesoAceiteKg.toLocaleString('es-MX', { maximumFractionDigits: 2 })} kg
+                                      </span>
+                                    </div>
+                                    <div className="w-full border-t border-red-500"></div>
+                                  </div>
+                                )}
+                              </CardFooter>
                             </Card>
                           );
                         });
