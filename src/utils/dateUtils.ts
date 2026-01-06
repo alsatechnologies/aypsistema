@@ -33,6 +33,7 @@ export function formatDateTimeMST(isoString: string | null | undefined): string 
   
   try {
     // Detectar formato ISO con fecha y hora (YYYY-MM-DDTHH:mm:ss)
+    // Supabase siempre devuelve UTC, incluso sin 'Z' explícito
     const isoPattern = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|[\+\-]\d{2}:\d{2})?$/;
     const match = isoString.match(isoPattern);
     
