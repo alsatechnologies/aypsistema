@@ -2,7 +2,8 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { checkRateLimit, getClientIP } from './utils/rateLimit.js';
 
 const PRINTER_API_URL = process.env.PRINTER_API_URL || 'https://apiticket.alsatechnologies.com';
-const PRINTER_API_URL_2 = process.env.PRINTER_API_URL_2 || 'https://ticket_prod.alsatechnologies.com';
+// Forzar ticket_prod para Oficina, ignorar variable de entorno si está configurada con apiticket2
+const PRINTER_API_URL_2 = 'https://ticket_prod.alsatechnologies.com';
 
 export default async function handler(
   req: VercelRequest,
