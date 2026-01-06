@@ -249,6 +249,7 @@ export async function generateBoletaRecibaPDF(data: BoletaRecibaRequest): Promis
 export async function generateBoletaEmbarquePDF(data: BoletaEmbarqueRequest): Promise<CertificateResponse> {
   try {
     console.log('Generando boleta de SALIDA (Embarque):', data.boleta_no);
+    console.log('🔧 [CERTIFICATE] Rol usuario:', data.rol_usuario);
     
     // Timeout de 35 segundos en frontend (el servidor tiene 30s)
     const controller = new AbortController();
@@ -263,13 +264,17 @@ export async function generateBoletaEmbarquePDF(data: BoletaEmbarqueRequest): Pr
       signal: controller.signal,
     }).catch((fetchError: any) => {
       clearTimeout(timeoutId);
+      console.error('❌ [CERTIFICATE] Error en fetch:', fetchError);
       if (fetchError.name === 'AbortError') {
         throw new Error('Timeout al generar PDF de salida (más de 35 segundos)');
       }
-      throw fetchError;
+      throw new Error(`Error de conexión: ${fetchError.message || 'No se pudo conectar con el servidor'}`);
     });
 
     clearTimeout(timeoutId);
+
+    console.log('🔧 [CERTIFICATE] Respuesta status:', response.status);
+    console.log('🔧 [CERTIFICATE] Content-Type:', response.headers.get('content-type'));
 
     // Verificar Content-Type antes de parsear JSON
     const contentType = response.headers.get('content-type') || '';
@@ -280,15 +285,18 @@ export async function generateBoletaEmbarquePDF(data: BoletaEmbarqueRequest): Pr
         try {
           const errorData = await response.json();
           errorMessage = errorData.error || errorData.message || errorMessage;
+          console.error('❌ [CERTIFICATE] Error de API:', errorData);
         } catch (e) {
           // Si no se puede parsear JSON, usar el texto de respuesta
           const textResponse = await response.text();
           errorMessage = textResponse || errorMessage;
+          console.error('❌ [CERTIFICATE] Error al parsear respuesta:', textResponse.substring(0, 500));
         }
       } else {
         // Si no es JSON, leer como texto
         const textResponse = await response.text();
         errorMessage = textResponse || errorMessage;
+        console.error('❌ [CERTIFICATE] Respuesta no es JSON:', textResponse.substring(0, 500));
       }
       throw new Error(errorMessage);
     }
