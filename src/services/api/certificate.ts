@@ -79,6 +79,7 @@ export interface CertificateResponse {
 export async function generateBoletaRecibaPDF(data: BoletaRecibaRequest): Promise<CertificateResponse> {
   try {
     console.log('[CERTIFICATE] Generando boleta de ENTRADA (Reciba):', data.boleta_no);
+    console.log('🔧 [CERTIFICATE] Rol usuario:', data.rol_usuario);
     console.log('[CERTIFICATE] Datos:', JSON.stringify(data, null, 2));
     
     // Timeout de 35 segundos en frontend (el servidor tiene 30s)
