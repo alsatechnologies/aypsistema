@@ -623,7 +623,7 @@ const Reciba = () => {
       console.log('📄 [RECIBA] Datos de boleta preparados:', boletaData);
       toast.loading('Generando boleta PDF...', { id: 'generating-pdf' });
       
-      const result = await generateBoletaRecibaPDF(boletaData);
+      const result = await generateBoletaRecibaPDF({ ...boletaData, rol_usuario: usuario?.rol });
       
       console.log('📄 [RECIBA] Resultado de generación:', result);
       

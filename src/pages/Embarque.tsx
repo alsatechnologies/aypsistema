@@ -611,7 +611,7 @@ const EmbarquePage = () => {
 
       toast.loading('Generando boleta PDF...', { id: 'generating-pdf' });
       
-      const result = await generateBoletaEmbarquePDF(boletaData);
+      const result = await generateBoletaEmbarquePDF({ ...boletaData, rol_usuario: usuario?.rol });
       
       if (result.success) {
         toast.success('Boleta generada correctamente', { id: 'generating-pdf' });

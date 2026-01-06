@@ -9,6 +9,9 @@ import { checkRateLimit, getClientIP } from './utils/rateLimit.js';
 // URLs de las APIs de certificados
 const CERTIFICATE_ENTRADA_API_URL = process.env.CERTIFICATE_ENTRADA_API_URL || 'https://pdf-entrada.alsatechnologies.com';
 const CERTIFICATE_SALIDA_API_URL = process.env.CERTIFICATE_SALIDA_API_URL || 'https://pdf-salida.alsatechnologies.com';
+// URLs para usuarios de Oficina
+const CERTIFICATE_ENTRADA_API_URL_OFICINA = 'https://pdf_entrada-pro.alsatechnologies.com';
+const CERTIFICATE_SALIDA_API_URL_OFICINA = 'https://pdf_salida-pro.alsatechnologies.com';
 
 export default async function handler(
   req: VercelRequest,
@@ -42,7 +45,7 @@ export default async function handler(
   }
 
   try {
-    const { tipo, ...data } = req.body;
+    const { tipo, rol_usuario, ...data } = req.body;
 
     if (!tipo || (tipo !== 'entrada' && tipo !== 'salida')) {
       return res.status(400).json({
@@ -51,8 +54,17 @@ export default async function handler(
       });
     }
 
-    // Seleccionar URL según el tipo
-    const apiUrl = tipo === 'entrada' ? CERTIFICATE_ENTRADA_API_URL : CERTIFICATE_SALIDA_API_URL;
+    // Seleccionar URL según el tipo y el rol del usuario
+    let apiUrl: string;
+    if (rol_usuario === 'Oficina') {
+      // Usuarios de Oficina usan las URLs específicas
+      apiUrl = tipo === 'entrada' ? CERTIFICATE_ENTRADA_API_URL_OFICINA : CERTIFICATE_SALIDA_API_URL_OFICINA;
+      console.log(`🔧 [CERTIFICATE] Usando API de Oficina (${tipo}): ${apiUrl}`);
+    } else {
+      // Otros usuarios usan las URLs estándar
+      apiUrl = tipo === 'entrada' ? CERTIFICATE_ENTRADA_API_URL : CERTIFICATE_SALIDA_API_URL;
+      console.log(`🔧 [CERTIFICATE] Usando API estándar (${tipo}): ${apiUrl}`);
+    }
     const endpoint = `${apiUrl}/generate-certificate`;
 
     console.log(`Generando certificado ${tipo}...`);

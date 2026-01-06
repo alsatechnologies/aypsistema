@@ -43,6 +43,7 @@ export interface BoletaRecibaRequest {
   pesos_info1: PesosInfo1;
   pesos_info2: PesosInfo2;
   observaciones?: string;
+  rol_usuario?: string; // Rol del usuario para determinar qué API usar
 }
 
 // La API de salida usa el MISMO formato que la de entrada
@@ -61,6 +62,7 @@ export interface BoletaEmbarqueRequest {
   pesos_info1: PesosInfo1;
   pesos_info2: PesosInfo2;
   observaciones?: string;
+  rol_usuario?: string; // Rol del usuario para determinar qué API usar
 }
 
 export interface CertificateResponse {

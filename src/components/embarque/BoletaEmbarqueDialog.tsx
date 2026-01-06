@@ -7,6 +7,7 @@ import { Printer, X, Ship } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { generateBoletaEmbarquePDF, openPDF } from '@/services/api/certificate';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Embarque {
   boleta: string;
@@ -44,6 +45,7 @@ interface BoletaEmbarqueDialogProps {
 }
 
 const BoletaEmbarqueDialog: React.FC<BoletaEmbarqueDialogProps> = ({ open, onOpenChange, embarque }) => {
+  const { usuario } = useAuth();
   const printRef = useRef<HTMLDivElement>(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
@@ -107,7 +109,7 @@ const BoletaEmbarqueDialog: React.FC<BoletaEmbarqueDialogProps> = ({ open, onOpe
 
       toast.loading('Generando boleta PDF...', { id: 'generating-pdf-embarque' });
       
-      const result = await generateBoletaEmbarquePDF(boletaData);
+      const result = await generateBoletaEmbarquePDF({ ...boletaData, rol_usuario: usuario?.rol });
       
       if (result.success) {
         toast.success('Boleta generada correctamente', { id: 'generating-pdf-embarque' });
