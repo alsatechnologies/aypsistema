@@ -150,9 +150,14 @@ const Ingreso = () => {
       }
       
       await loadIngresos();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating ingreso:', error);
-      toast.error('Error al registrar ingreso');
+      const errorMessage = error?.message || error?.details || 'Error desconocido';
+      if (errorMessage.includes('CORS') || errorMessage.includes('NetworkError')) {
+        toast.error('Error de conexión. Verifica tu conexión a internet y la configuración de Supabase.');
+      } else {
+        toast.error(`Error al registrar ingreso: ${errorMessage}`);
+      }
     }
   };
 
