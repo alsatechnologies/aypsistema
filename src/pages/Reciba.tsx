@@ -24,6 +24,7 @@ import { useRecepciones } from '@/services/hooks/useRecepciones';
 import { useProductos } from '@/services/hooks/useProductos';
 import { useProveedores } from '@/services/hooks/useProveedores';
 import { useAlmacenes } from '@/services/hooks/useAlmacenes';
+import { getOrdenByBoleta } from '@/services/supabase/ordenes';
 import { getProductoConAnalisis } from '@/services/supabase/productos';
 import { createMovimiento } from '@/services/supabase/movimientos';
 import type { Recepcion as RecepcionDB } from '@/services/supabase/recepciones';
@@ -592,6 +593,18 @@ const Reciba = () => {
         unidad: 'kg'
       }));
 
+      // Obtener la orden asociada para obtener el nombre del vehículo
+      let nombreVehiculo = selectedRecepcion.tipoTransporte || 'Camión';
+      try {
+        const orden = await getOrdenByBoleta(selectedRecepcion.boleta);
+        if (orden?.vehiculo) {
+          nombreVehiculo = orden.vehiculo;
+        }
+      } catch (error) {
+        // Si no se encuentra la orden, usar el tipo de transporte como fallback
+        console.warn('No se encontró orden para obtener nombre del vehículo:', error);
+      }
+
       const boletaData = {
         boleta_no: selectedRecepcion.boleta.startsWith('TEMP-') ? 'PENDIENTE' : selectedRecepcion.boleta,
         fecha: fechaActual,
@@ -599,7 +612,7 @@ const Reciba = () => {
         productor: proveedor.empresa,
         producto: producto.nombre,
         procedencia: selectedRecepcion.destino || 'N/A',
-        vehiculo: selectedRecepcion.tipoTransporte || 'N/A',
+        vehiculo: nombreVehiculo,
         placas: selectedRecepcion.placas || 'N/A',
         chofer: selectedRecepcion.chofer || 'N/A',
         analisis: analisisArray,
