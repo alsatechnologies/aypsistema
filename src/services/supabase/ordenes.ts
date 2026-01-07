@@ -91,6 +91,31 @@ export async function createOrden(orden: Omit<Orden, 'id' | 'created_at' | 'upda
   return data;
 }
 
+// Obtener orden por boleta
+export async function getOrdenByBoleta(boleta: string) {
+  if (!supabase) {
+    throw new Error('Supabase no está configurado');
+  }
+  
+  const { data, error } = await supabase
+    .from('ordenes')
+    .select(`
+      *,
+      producto:productos(id, nombre),
+      cliente:clientes(id, empresa),
+      proveedor:proveedores(id, empresa)
+    `)
+    .eq('boleta', boleta)
+    .eq('activo', true)
+    .single();
+  
+  if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+    throw error;
+  }
+  
+  return data || null;
+}
+
 // Actualizar orden
 export async function updateOrden(id: number, orden: Partial<Orden>) {
   if (!supabase) {

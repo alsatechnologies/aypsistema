@@ -25,6 +25,7 @@ import { useEmbarques } from '@/services/hooks/useEmbarques';
 import { useProductos } from '@/services/hooks/useProductos';
 import { useClientes } from '@/services/hooks/useClientes';
 import { useAlmacenes } from '@/services/hooks/useAlmacenes';
+import { getOrdenByBoleta } from '@/services/supabase/ordenes';
 import { getProductoConAnalisis } from '@/services/supabase/productos';
 import { createMovimiento } from '@/services/supabase/movimientos';
 import { getCurrentDateTimeMST, formatDateTimeMST, formatDateTimeSplitMST } from '@/utils/dateUtils';
@@ -602,6 +603,18 @@ const EmbarquePage = () => {
         unidad: '%'
       }));
 
+      // Obtener la orden asociada para obtener el nombre del vehículo
+      let nombreVehiculo = selectedEmbarque.tipoTransporte || 'Camión';
+      try {
+        const orden = await getOrdenByBoleta(selectedEmbarque.boleta);
+        if (orden?.vehiculo) {
+          nombreVehiculo = orden.vehiculo;
+        }
+      } catch (error) {
+        // Si no se encuentra la orden, usar el tipo de transporte como fallback
+        console.warn('No se encontró orden para obtener nombre del vehículo:', error);
+      }
+
       // La API de salida usa el mismo formato que entrada
       // "productor" = cliente, "procedencia" = destino
       const boletaData = {
@@ -611,7 +624,7 @@ const EmbarquePage = () => {
         productor: cliente.empresa,  // La API espera "productor" aunque sea cliente
         producto: producto.nombre,
         procedencia: selectedEmbarque.destino || 'N/A',  // La API espera "procedencia" aunque sea destino
-        vehiculo: selectedEmbarque.tipoTransporte || 'Camión',
+        vehiculo: nombreVehiculo,
         placas: formData.placas || selectedEmbarque.placas || 'N/A',
         chofer: selectedEmbarque.chofer || 'N/A',
         analisis: analisisArray,
