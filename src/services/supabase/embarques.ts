@@ -163,17 +163,26 @@ export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
     .single();
   
   // Si se está completando y no tiene código de lote, generarlo
-  if (embarque.estatus === 'Completado' && !embarque.codigo_lote && embarque.cliente_id && embarque.producto_id && embarque.almacen_id) {
+  // Usar valores del objeto que se pasa o del embarque anterior
+  const estatusFinal = embarque.estatus || embarqueAnterior?.estatus;
+  const codigoLoteActual = embarque.codigo_lote !== undefined ? embarque.codigo_lote : embarqueAnterior?.codigo_lote;
+  const clienteId = embarque.cliente_id || embarqueAnterior?.cliente_id;
+  const productoId = embarque.producto_id || embarqueAnterior?.producto_id;
+  const almacenId = embarque.almacen_id || embarqueAnterior?.almacen_id;
+  const tipoEmbarque = embarque.tipo_embarque || embarqueAnterior?.tipo_embarque;
+  
+  if (estatusFinal === 'Completado' && !codigoLoteActual && clienteId && productoId && almacenId) {
     try {
-      const tipoOperacion = embarque.tipo_embarque === 'Nacional' ? 'Embarque Nacional' : 'Embarque Exportación';
+      const tipoOperacion = tipoEmbarque === 'Nacional' ? 'Embarque Nacional' : 'Embarque Exportación';
       const { codigo } = await generarCodigoLoteParaOperacion(
         tipoOperacion,
-        embarque.cliente_id,
+        clienteId,
         null,
-        embarque.producto_id,
-        embarque.almacen_id
+        productoId,
+        almacenId
       );
       embarque.codigo_lote = codigo;
+      logger.info(`Código de lote generado para embarque ${id}: ${codigo}`, { embarqueId: id, codigo }, 'Embarques');
     } catch (error) {
       logger.error('Error al generar código de lote', error, 'Embarques');
     }
