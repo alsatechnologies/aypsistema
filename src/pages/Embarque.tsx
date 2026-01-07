@@ -248,8 +248,19 @@ const EmbarquePage = () => {
       ? PREDEFINED_SCALES.FERROVIARIA.scale_id 
       : PREDEFINED_SCALES.CAMION.scale_id;
     
+    const scaleConfig = selectedEmbarque?.tipoTransporte === 'Ferroviaria'
+      ? PREDEFINED_SCALES.FERROVIARIA
+      : PREDEFINED_SCALES.CAMION;
+    
+    console.log('Leyendo peso de báscula:', {
+      tipoTransporte: selectedEmbarque?.tipoTransporte,
+      scaleId,
+      com: scaleConfig.address,
+      baudrate: scaleConfig.baudrate
+    });
+    
     try {
-      toast.loading('Leyendo peso de la báscula...', { id: 'reading-weight-tara' });
+      toast.loading(`Leyendo peso de la báscula ${scaleId} (${scaleConfig.address})...`, { id: 'reading-weight-tara' });
       const result = await getScaleWeight(scaleId, 'weight');
       
       if (result.success && result.weight !== undefined) {
@@ -272,8 +283,19 @@ const EmbarquePage = () => {
       ? PREDEFINED_SCALES.FERROVIARIA.scale_id 
       : PREDEFINED_SCALES.CAMION.scale_id;
     
+    const scaleConfig = selectedEmbarque?.tipoTransporte === 'Ferroviaria'
+      ? PREDEFINED_SCALES.FERROVIARIA
+      : PREDEFINED_SCALES.CAMION;
+    
+    console.log('Leyendo peso de báscula:', {
+      tipoTransporte: selectedEmbarque?.tipoTransporte,
+      scaleId,
+      com: scaleConfig.address,
+      baudrate: scaleConfig.baudrate
+    });
+    
     try {
-      toast.loading('Leyendo peso de la báscula...', { id: 'reading-weight-bruto' });
+      toast.loading(`Leyendo peso de la báscula ${scaleId} (${scaleConfig.address})...`, { id: 'reading-weight-bruto' });
       const result = await getScaleWeight(scaleId, 'weight');
       
       if (result.success && result.weight !== undefined) {
@@ -872,7 +894,26 @@ const EmbarquePage = () => {
                   </div>
 
                   {/* Tipo de Transporte Tabs */}
-                  <Tabs defaultValue={(selectedEmbarque.tipoTransporte || 'Camión').toLowerCase()} className="w-full">
+                  <Tabs 
+                    value={(selectedEmbarque.tipoTransporte || 'Camión').toLowerCase()} 
+                    onValueChange={async (value) => {
+                      const nuevoTipo = value === 'ferroviaria' ? 'Ferroviaria' : 'Camión';
+                      if (selectedEmbarque.tipoTransporte !== nuevoTipo) {
+                        try {
+                          await updateEmbarque(selectedEmbarque.id, {
+                            tipo_transporte: nuevoTipo
+                          });
+                          // Actualizar el estado local
+                          setSelectedEmbarque({ ...selectedEmbarque, tipoTransporte: nuevoTipo });
+                          toast.success(`Tipo de transporte actualizado a: ${nuevoTipo}`);
+                        } catch (error) {
+                          handleError(error, { module: 'Embarque', action: 'updateTipoTransporte' });
+                          toast.error('Error al actualizar tipo de transporte');
+                        }
+                      }
+                    }}
+                    className="w-full"
+                  >
                     <TabsList className="grid w-full grid-cols-2">
                       <TabsTrigger value="camión" className="flex items-center gap-2">
                         <Truck className="h-4 w-4" />
@@ -902,14 +943,25 @@ const EmbarquePage = () => {
                     </TabsContent>
 
                     <TabsContent value="ferroviaria" className="mt-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Número de Carro</Label>
-                          <Input placeholder="FERR-12345" />
+                      <div className="space-y-4">
+                        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
+                          <p className="text-sm text-blue-800 dark:text-blue-200">
+                            <strong>Báscula configurada:</strong> {PREDEFINED_SCALES.FERROVIARIA.scale_id} 
+                            <br />
+                            <strong>Puerto COM:</strong> {PREDEFINED_SCALES.FERROVIARIA.address}
+                            <br />
+                            <strong>Baudrate:</strong> {PREDEFINED_SCALES.FERROVIARIA.baudrate}
+                          </p>
                         </div>
-                        <div className="space-y-2">
-                          <Label>Línea Ferroviaria</Label>
-                          <Input placeholder="Ferromex" />
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Número de Carro</Label>
+                            <Input placeholder="FERR-12345" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Línea Ferroviaria</Label>
+                            <Input placeholder="Ferromex" />
+                          </div>
                         </div>
                       </div>
                     </TabsContent>
