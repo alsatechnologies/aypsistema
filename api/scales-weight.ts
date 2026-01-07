@@ -22,17 +22,23 @@ export default async function handler(
   }
 
   // Rate limiting: 60 requests por minuto por IP (lecturas frecuentes de báscula)
-  const clientIP = getClientIP(req);
-  const rateLimit = checkRateLimit(`scales:${clientIP}`, 60, 60000);
-  
-  if (!rateLimit.allowed) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Retry-After', Math.ceil((rateLimit.resetTime - Date.now()) / 1000).toString());
-    return res.status(429).json({
-      success: false,
-      error: 'Demasiadas solicitudes a la báscula. Por favor, espera un momento.',
-      retryAfter: Math.ceil((rateLimit.resetTime - Date.now()) / 1000),
-    });
+  // Envolver en try-catch para evitar que falle todo si hay un problema con rate limiting
+  try {
+    const clientIP = getClientIP(req);
+    const rateLimit = checkRateLimit(`scales:${clientIP}`, 60, 60000);
+    
+    if (!rateLimit.allowed) {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Retry-After', Math.ceil((rateLimit.resetTime - Date.now()) / 1000).toString());
+      return res.status(429).json({
+        success: false,
+        error: 'Demasiadas solicitudes a la báscula. Por favor, espera un momento.',
+        retryAfter: Math.ceil((rateLimit.resetTime - Date.now()) / 1000),
+      });
+    }
+  } catch (rateLimitError) {
+    // Si falla el rate limiting, continuar de todas formas (no bloquear la lectura)
+    console.warn('Error en rate limiting, continuando:', rateLimitError);
   }
 
   // Obtener parámetros del query, asegurándose de que sean strings
@@ -58,25 +64,41 @@ export default async function handler(
     const apiUrl = `http://apiscales.alsatechnologies.com/scales/${encodedScaleId}/${encodedGetType}`;
     console.log('Llamando a API de básculas:', apiUrl);
     console.log('Parámetros codificados:', { encodedScaleId, encodedGetType });
+    console.log('Scale ID original:', scale_id);
+    console.log('Get type original:', get_type);
 
     // Hacer la solicitud al servidor de básculas con timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos timeout
 
-    const response = await fetch(apiUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json, text/plain, */*',
-      },
-      signal: controller.signal,
-    }).catch((fetchError: any) => {
+    let response: Response;
+    try {
+      response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json, text/plain, */*',
+        },
+        signal: controller.signal,
+      });
+    } catch (fetchError: any) {
       clearTimeout(timeoutId);
+      console.error('Error en fetch:', fetchError);
+      console.error('Error name:', fetchError?.name);
+      console.error('Error message:', fetchError?.message);
+      console.error('Error code:', fetchError?.code);
+      
       if (fetchError.name === 'AbortError') {
         throw new Error('Timeout al conectar con la báscula (más de 10 segundos)');
       }
-      throw fetchError;
-    });
+      
+      // Proporcionar mensaje más descriptivo
+      if (fetchError.code === 'ENOTFOUND' || fetchError.code === 'ECONNREFUSED') {
+        throw new Error(`No se pudo conectar con la API de básculas (${apiUrl}). Verifica que el servidor esté disponible.`);
+      }
+      
+      throw new Error(`Error de conexión: ${fetchError.message || 'Error desconocido'}`);
+    }
     
     clearTimeout(timeoutId);
 
@@ -153,11 +175,20 @@ export default async function handler(
   } catch (error) {
     console.error('Error en proxy de básculas:', error);
     const errorMessage = error instanceof Error ? error.message : 'Error desconocido al leer peso';
+    const errorStack = error instanceof Error ? error.stack : undefined;
     console.error('Mensaje de error:', errorMessage);
+    console.error('Stack trace:', errorStack);
+    console.error('Tipo de error:', error?.constructor?.name);
+    console.error('Error completo:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    
     res.setHeader('Access-Control-Allow-Origin', '*');
     return res.status(500).json({
       success: false,
       error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? {
+        stack: errorStack,
+        type: error?.constructor?.name,
+      } : undefined,
     });
   }
 }
