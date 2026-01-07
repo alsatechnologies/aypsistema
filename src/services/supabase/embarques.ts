@@ -221,15 +221,25 @@ export async function deleteEmbarque(id: number) {
     throw new Error('Embarque no encontrado');
   }
   
-  // Verificar si hay referencias (movimientos)
+  // Eliminar movimientos asociados antes de eliminar el embarque
   const { data: movimientos } = await supabase
     .from('movimientos')
     .select('id')
-    .eq('boleta', embarqueAnterior.boleta)
-    .limit(1);
+    .eq('boleta', embarqueAnterior.boleta);
   
   if (movimientos && movimientos.length > 0) {
-    throw new Error('No se puede eliminar: existe un movimiento asociado con esta boleta');
+    // Eliminar todos los movimientos asociados
+    const { error: errorMovimientos } = await supabase
+      .from('movimientos')
+      .delete()
+      .eq('boleta', embarqueAnterior.boleta);
+    
+    if (errorMovimientos) {
+      logger.error('Error al eliminar movimientos asociados', errorMovimientos, 'Embarques');
+      throw new Error(`Error al eliminar movimientos asociados: ${errorMovimientos.message}`);
+    }
+    
+    logger.info(`Eliminados ${movimientos.length} movimiento(s) asociado(s) al embarque`, { boleta: embarqueAnterior.boleta }, 'Embarques');
   }
   
   // Registrar en auditoría antes de eliminar
