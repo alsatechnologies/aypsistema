@@ -943,25 +943,14 @@ const EmbarquePage = () => {
                     </TabsContent>
 
                     <TabsContent value="ferroviaria" className="mt-4">
-                      <div className="space-y-4">
-                        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
-                          <p className="text-sm text-blue-800 dark:text-blue-200">
-                            <strong>Báscula configurada:</strong> {PREDEFINED_SCALES.FERROVIARIA.scale_id} 
-                            <br />
-                            <strong>Puerto COM:</strong> {PREDEFINED_SCALES.FERROVIARIA.address}
-                            <br />
-                            <strong>Baudrate:</strong> {PREDEFINED_SCALES.FERROVIARIA.baudrate}
-                          </p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Número de Carro</Label>
+                          <Input placeholder="FERR-12345" />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Número de Carro</Label>
-                            <Input placeholder="FERR-12345" />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Línea Ferroviaria</Label>
-                            <Input placeholder="Ferromex" />
-                          </div>
+                        <div className="space-y-2">
+                          <Label>Línea Ferroviaria</Label>
+                          <Input placeholder="Ferromex" />
                         </div>
                       </div>
                     </TabsContent>
