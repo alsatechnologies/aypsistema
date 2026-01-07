@@ -200,7 +200,8 @@ const EmbarquePage = () => {
     return <Badge className={colors[tipo]}>{tipo}</Badge>;
   };
 
-  const getTransporteIcon = (tipo: string) => {
+  const getTransporteIcon = (tipo: string | null | undefined) => {
+    if (!tipo) return <Truck className="h-4 w-4 text-muted-foreground" />;
     return tipo === 'Camión' ? <Truck className="h-4 w-4 text-muted-foreground" /> : <Train className="h-4 w-4 text-muted-foreground" />;
   };
 
@@ -736,7 +737,7 @@ const EmbarquePage = () => {
                     <TableCell>
                       <span className="flex items-center gap-1">
                         {getTransporteIcon(embarque.tipoTransporte)}
-                        {embarque.tipoTransporte}
+                        {embarque.tipoTransporte || 'Camión'}
                       </span>
                     </TableCell>
                     <TableCell className="font-mono">{embarque.placas || '-'}</TableCell>
@@ -808,7 +809,7 @@ const EmbarquePage = () => {
                     <span className="ml-2">{getEstatusBadge(selectedEmbarque.estatus)}</span>
                     <span className="flex items-center gap-1">
                       {getTransporteIcon(selectedEmbarque.tipoTransporte)}
-                      {selectedEmbarque.tipoTransporte}
+                      {selectedEmbarque.tipoTransporte || 'Camión'}
                     </span>
                     {selectedEmbarque.tipoEmbarque === 'Exportación' && (
                       <Badge className="bg-purple-500 text-white ml-2">Exportación</Badge>
@@ -871,7 +872,7 @@ const EmbarquePage = () => {
                   </div>
 
                   {/* Tipo de Transporte Tabs */}
-                  <Tabs defaultValue={selectedEmbarque.tipoTransporte.toLowerCase()} className="w-full">
+                  <Tabs defaultValue={(selectedEmbarque.tipoTransporte || 'Camión').toLowerCase()} className="w-full">
                     <TabsList className="grid w-full grid-cols-2">
                       <TabsTrigger value="camión" className="flex items-center gap-2">
                         <Truck className="h-4 w-4" />
