@@ -222,15 +222,25 @@ export async function deleteRecepcion(id: number) {
     throw new Error('Recepción no encontrada');
   }
   
-  // Verificar si hay referencias (movimientos)
+  // Eliminar movimientos asociados antes de eliminar la recepción
   const { data: movimientos } = await supabase
     .from('movimientos')
     .select('id')
-    .eq('boleta', recepcionAnterior.boleta)
-    .limit(1);
+    .eq('boleta', recepcionAnterior.boleta);
   
   if (movimientos && movimientos.length > 0) {
-    throw new Error('No se puede eliminar: existe un movimiento asociado con esta boleta');
+    // Eliminar todos los movimientos asociados
+    const { error: errorMovimientos } = await supabase
+      .from('movimientos')
+      .delete()
+      .eq('boleta', recepcionAnterior.boleta);
+    
+    if (errorMovimientos) {
+      logger.error('Error al eliminar movimientos asociados', errorMovimientos, 'Recepciones');
+      throw new Error(`Error al eliminar movimientos asociados: ${errorMovimientos.message}`);
+    }
+    
+    logger.info(`Eliminados ${movimientos.length} movimiento(s) asociado(s) a la recepción`, { boleta: recepcionAnterior.boleta }, 'Recepciones');
   }
   
   // Registrar en auditoría antes de eliminar
