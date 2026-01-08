@@ -20,7 +20,7 @@ const NavItem = ({
     <Link to={to} className="w-full">
       <div className={`flex items-center px-4 py-3 mt-1 rounded-lg ${active ? 'text-primary font-medium bg-primary/10' : 'text-muted-foreground hover:bg-accent'}`}>
         <Icon size={20} className={active ? 'text-primary' : ''} />
-        <span className="ml-4">{label}</span>
+        <span className="ml-4 font-medium" style={{ fontWeight: 500 }}>{label}</span>
       </div>
     </Link>
   );
@@ -140,7 +140,7 @@ const Sidebar = () => {
           onClick={handleLogout}
         >
           <LogOut size={20} />
-          <span className="ml-4">Cerrar sesión</span>
+          <span className="ml-4 font-medium" style={{ fontWeight: 500 }}>Cerrar sesión</span>
         </button>
       </div>
     </div>
