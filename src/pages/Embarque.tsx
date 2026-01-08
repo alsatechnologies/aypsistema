@@ -501,26 +501,31 @@ const EmbarquePage = () => {
       
       const codigoLoteFinal = embarqueActualizado?.codigo_lote || codigoLote;
       
-      // Crear movimiento de salida
+      // Crear movimiento de salida solo si no existe uno para esta boleta
       try {
-        const producto = productosDB.find(p => p.id === selectedEmbarque.productoId);
-        const cliente = clientesDB.find(c => c.id === selectedEmbarque.clienteId);
-        const almacen = formData.almacenId ? almacenesDB.find(a => a.id === formData.almacenId) : null;
+        const { getMovimientoByBoleta } = await import('@/services/supabase/movimientos');
+        const movimientoExistente = await getMovimientoByBoleta(selectedEmbarque.boleta);
         
-        await createMovimiento({
-          boleta: selectedEmbarque.boleta,
-          producto_id: selectedEmbarque.productoId || null,
-          cliente_proveedor: cliente?.empresa || null,
-          tipo: 'Salida',
-          transporte: selectedEmbarque.tipoTransporte || null,
-          fecha: selectedEmbarque.fecha,
-          ubicacion: almacen?.nombre || selectedEmbarque.destino || null,
-          peso_neto: pesoNeto,
-          peso_bruto: formData.pesoBruto,
-          peso_tara: formData.pesoTara,
-          chofer: selectedEmbarque.chofer || null,
-          placas: formData.placas || null
-        });
+        if (!movimientoExistente) {
+          const producto = productosDB.find(p => p.id === selectedEmbarque.productoId);
+          const cliente = clientesDB.find(c => c.id === selectedEmbarque.clienteId);
+          const almacen = formData.almacenId ? almacenesDB.find(a => a.id === formData.almacenId) : null;
+          
+          await createMovimiento({
+            boleta: selectedEmbarque.boleta,
+            producto_id: selectedEmbarque.productoId || null,
+            cliente_proveedor: cliente?.empresa || null,
+            tipo: 'Salida',
+            transporte: selectedEmbarque.tipoTransporte || null,
+            fecha: selectedEmbarque.fecha,
+            ubicacion: almacen?.nombre || selectedEmbarque.destino || null,
+            peso_neto: pesoNeto,
+            peso_bruto: formData.pesoBruto,
+            peso_tara: formData.pesoTara,
+            chofer: selectedEmbarque.chofer || null,
+            placas: formData.placas || null
+          });
+        }
       } catch (error) {
         console.error('Error creating movimiento:', error);
         // No mostrar error al usuario, solo loguear

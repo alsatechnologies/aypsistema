@@ -438,26 +438,31 @@ const Reciba = () => {
       
       const mensajeLote = recepcionActualizada?.codigo_lote ? ` - Lote: ${recepcionActualizada.codigo_lote}` : '';
       
-      // Crear movimiento de entrada
+      // Crear movimiento de entrada solo si no existe uno para esta boleta
       try {
-        const producto = productosDB.find(p => p.id === productoSeleccionado);
-        const proveedor = proveedoresDB.find(p => p.id === proveedorIdFinal);
-        const almacen = almacenSeleccionado ? almacenesDB.find(a => a.id === almacenSeleccionado) : null;
+        const { getMovimientoByBoleta } = await import('@/services/supabase/movimientos');
+        const movimientoExistente = await getMovimientoByBoleta(boletaFinal);
         
-        await createMovimiento({
-          boleta: boletaFinal,
-          producto_id: productoSeleccionado,
-          cliente_proveedor: proveedor?.empresa || null,
-          tipo: 'Entrada',
-          transporte: tipoBascula === 'Camión' ? 'Camión' : 'Ferroviaria',
-          fecha: selectedRecepcion.fecha,
-          ubicacion: almacen?.nombre || null,
-          peso_neto: pesoNeto,
-          peso_bruto: pesoBruto,
-          peso_tara: pesoTara,
-          chofer: selectedRecepcion.chofer || null,
-          placas: selectedRecepcion.placas || null
-        });
+        if (!movimientoExistente) {
+          const producto = productosDB.find(p => p.id === productoSeleccionado);
+          const proveedor = proveedoresDB.find(p => p.id === proveedorIdFinal);
+          const almacen = almacenSeleccionado ? almacenesDB.find(a => a.id === almacenSeleccionado) : null;
+          
+          await createMovimiento({
+            boleta: boletaFinal,
+            producto_id: productoSeleccionado,
+            cliente_proveedor: proveedor?.empresa || null,
+            tipo: 'Entrada',
+            transporte: tipoBascula === 'Camión' ? 'Camión' : 'Ferroviaria',
+            fecha: selectedRecepcion.fecha,
+            ubicacion: almacen?.nombre || null,
+            peso_neto: pesoNeto,
+            peso_bruto: pesoBruto,
+            peso_tara: pesoTara,
+            chofer: selectedRecepcion.chofer || null,
+            placas: selectedRecepcion.placas || null
+          });
+        }
       } catch (error) {
         console.error('Error creating movimiento:', error);
         // No mostrar error al usuario, solo loguear
