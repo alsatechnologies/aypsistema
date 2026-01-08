@@ -173,7 +173,21 @@ export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
   
   if (estatusFinal === 'Completado' && !codigoLoteActual && clienteId && productoId && almacenId) {
     try {
+      // Validar que tenemos todos los datos necesarios
+      if (!tipoEmbarque) {
+        throw new Error('No se puede generar lote: falta el tipo de embarque (Nacional/Exportación)');
+      }
+      
       const tipoOperacion = tipoEmbarque === 'Nacional' ? 'Embarque Nacional' : 'Embarque Exportación';
+      
+      logger.info(`Generando código de lote para embarque ${id}`, {
+        embarqueId: id,
+        tipoOperacion,
+        clienteId,
+        productoId,
+        almacenId
+      }, 'Embarques');
+      
       const { codigo } = await generarCodigoLoteParaOperacion(
         tipoOperacion,
         clienteId,
@@ -181,11 +195,35 @@ export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
         productoId,
         almacenId
       );
+      
       embarque.codigo_lote = codigo;
       logger.info(`Código de lote generado para embarque ${id}: ${codigo}`, { embarqueId: id, codigo }, 'Embarques');
     } catch (error) {
-      logger.error('Error al generar código de lote', error, 'Embarques');
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      const errorDetails = error instanceof Error ? error.stack : String(error);
+      
+      logger.error('Error al generar código de lote', {
+        error: errorMessage,
+        details: errorDetails,
+        embarqueId: id,
+        clienteId,
+        productoId,
+        almacenId,
+        tipoEmbarque
+      }, 'Embarques');
+      
+      // No lanzar el error para que el embarque se pueda guardar sin lote
+      // El usuario puede regenerar el lote después
+      console.error(`[EMBARQUES] Error al generar lote para embarque ${id}:`, errorMessage);
     }
+  } else if (estatusFinal === 'Completado' && !codigoLoteActual) {
+    // Log cuando faltan datos requeridos
+    logger.warn(`No se puede generar lote para embarque ${id}: faltan datos requeridos`, {
+      embarqueId: id,
+      tieneClienteId: !!clienteId,
+      tieneProductoId: !!productoId,
+      tieneAlmacenId: !!almacenId
+    }, 'Embarques');
   }
   
   const { data, error } = await supabase

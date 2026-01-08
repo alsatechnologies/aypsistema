@@ -98,9 +98,43 @@ export async function generarCodigoLote(
         consecutivo: 1
       });
 
-    if (insertError) throw insertError;
+    if (insertError) {
+      // Si es un error 409 (conflict), puede ser que se creó entre la consulta y el insert
+      if (insertError.code === '23505' || insertError.message?.includes('duplicate') || insertError.message?.includes('unique')) {
+        // Intentar obtener el consecutivo nuevamente
+        const { data: retryData, error: retryError } = await supabase
+          .from('consecutivos_lotes')
+          .select('id, consecutivo')
+          .eq('tipo_operacion_codigo', tipoOperacionCodigo)
+          .eq('origen_codigo', origenCodigo)
+          .eq('producto_codigo', productoCodigo)
+          .eq('almacen_codigo', almacenCodigo)
+          .eq('anio', anio)
+          .single();
+        
+        if (retryError) {
+          throw new Error(`Error al crear consecutivo de lote: ${retryError.message}`);
+        }
+        
+        nuevoConsecutivo = (retryData?.consecutivo || 0) + 1;
+        const { error: updateError } = await supabase
+          .from('consecutivos_lotes')
+          .update({ consecutivo: nuevoConsecutivo })
+          .eq('id', retryData.id);
+        
+        if (updateError) {
+          throw new Error(`Error al actualizar consecutivo de lote: ${updateError.message}`);
+        }
+      } else {
+        throw new Error(`Error al crear consecutivo de lote: ${insertError.message}`);
+      }
+    }
   } else if (consecutivoError) {
-    throw consecutivoError;
+    // Error 406 u otro error
+    if (consecutivoError.code === 'PGRST406' || consecutivoError.message?.includes('406')) {
+      throw new Error(`Error de formato en la consulta de consecutivos. Verifica que los códigos sean válidos: tipo=${tipoOperacionCodigo}, origen=${origenCodigo}, producto=${productoCodigo}, almacen=${almacenCodigo}`);
+    }
+    throw new Error(`Error al obtener consecutivo de lote: ${consecutivoError.message}`);
   } else {
     // Existe esta combinación, incrementar
     nuevoConsecutivo = consecutivoData.consecutivo + 1;
@@ -109,7 +143,9 @@ export async function generarCodigoLote(
       .update({ consecutivo: nuevoConsecutivo })
       .eq('id', consecutivoData.id);
 
-    if (updateError) throw updateError;
+    if (updateError) {
+      throw new Error(`Error al actualizar consecutivo de lote: ${updateError.message}`);
+    }
   }
 
   // Formatear consecutivo a 3 dígitos
@@ -308,14 +344,28 @@ export async function getCodigoProducto(productoId: number): Promise<string> {
     return '00';
   }
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('productos')
-    .select('codigo_lote, codigo_boleta')
+    .select('codigo_lote, codigo_boleta, nombre')
     .eq('id', productoId)
     .single();
 
+  if (error) {
+    throw new Error(`Error al obtener código de producto (ID: ${productoId}): ${error.message}`);
+  }
+
+  if (!data) {
+    throw new Error(`Producto no encontrado (ID: ${productoId})`);
+  }
+
   // Priorizar codigo_lote si existe, sino usar codigo_boleta
-  return data?.codigo_lote || data?.codigo_boleta || '00';
+  const codigo = data.codigo_lote || data.codigo_boleta || '00';
+  
+  if (codigo === '00') {
+    console.warn(`Producto ${data.nombre} (ID: ${productoId}) no tiene código de lote ni código de boleta configurado`);
+  }
+  
+  return codigo;
 }
 
 // Obtener código de almacén por ID
@@ -324,13 +374,27 @@ export async function getCodigoAlmacen(almacenId: number): Promise<string> {
     return '00';
   }
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('almacenes')
-    .select('codigo_lote')
+    .select('codigo_lote, nombre')
     .eq('id', almacenId)
     .single();
 
-  return data?.codigo_lote || String(almacenId).padStart(2, '0');
+  if (error) {
+    throw new Error(`Error al obtener código de almacén (ID: ${almacenId}): ${error.message}`);
+  }
+
+  if (!data) {
+    throw new Error(`Almacén no encontrado (ID: ${almacenId})`);
+  }
+
+  const codigo = data.codigo_lote || String(almacenId).padStart(2, '0');
+  
+  if (!data.codigo_lote) {
+    console.warn(`Almacén ${data.nombre} (ID: ${almacenId}) no tiene código de lote configurado, usando ID como código`);
+  }
+  
+  return codigo;
 }
 
 // Generar código de lote automáticamente para una operación
