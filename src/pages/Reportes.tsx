@@ -287,7 +287,7 @@ const Reportes = () => {
   return (
     <Layout>
       <Header title="Reportes" subtitle="Generación de reportes del sistema" />
-      <div className="p-6" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="p-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="entradas">Entradas</TabsTrigger>
