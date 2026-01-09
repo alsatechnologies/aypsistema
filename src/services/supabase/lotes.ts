@@ -358,11 +358,11 @@ export async function getCodigoProducto(productoId: number): Promise<string> {
     throw new Error(`Producto no encontrado (ID: ${productoId})`);
   }
 
-  // Priorizar codigo_lote si existe, sino usar codigo_boleta
-  const codigo = data.codigo_lote || data.codigo_boleta || '00';
+  // Priorizar codigo_lote si existe, sino usar '41' (Otros)
+  const codigo = data.codigo_lote || '41';
   
-  if (codigo === '00') {
-    console.warn(`Producto ${data.nombre} (ID: ${productoId}) no tiene código de lote ni código de boleta configurado`);
+  if (!data.codigo_lote) {
+    console.warn(`Producto ${data.nombre} (ID: ${productoId}) no tiene código de lote configurado, usando '41' (Otros)`);
   }
   
   return codigo;
