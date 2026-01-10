@@ -53,9 +53,10 @@ export interface ConsecutivoLote {
 }
 
 // Generar código de lote según el formato: AC-17160525-003
-// Consecutivo es SOLO POR PRODUCTO (independiente de cliente, almacén, año, etc.)
+// Consecutivo es POR TIPO DE OPERACIÓN + PRODUCTO
+// (cliente, almacén, año NO afectan el consecutivo)
 export async function generarCodigoLote(
-  tipoOperacionCodigo: string, // 'AC-', 'VN-', 'VE-'
+  tipoOperacionCodigo: string, // 'AC-', 'NL-', 'EX-'
   origenCodigo: string, // '17'
   productoCodigo: string, // '16'
   almacenCodigo: string, // '05'
@@ -70,17 +71,19 @@ export async function generarCodigoLote(
     return { codigo, consecutivo };
   }
 
-  // Consecutivo SOLO POR PRODUCTO (cliente, almacén, año NO afectan el consecutivo)
+  // Consecutivo POR TIPO DE OPERACIÓN + PRODUCTO
+  // (cliente, almacén, año NO afectan el consecutivo)
   const { data: consecutivoData, error: consecutivoError } = await supabase
     .from('consecutivos_lotes')
     .select('id, consecutivo')
+    .eq('tipo_operacion_codigo', tipoOperacionCodigo)
     .eq('producto_codigo', productoCodigo)
     .single();
 
   let nuevoConsecutivo: number;
 
   if (consecutivoError && consecutivoError.code === 'PGRST116') {
-    // No existe consecutivo para este producto, crear nuevo con consecutivo 1
+    // No existe consecutivo para esta combinación tipo+producto, crear nuevo con consecutivo 1
     nuevoConsecutivo = 1;
     const { error: insertError } = await supabase
       .from('consecutivos_lotes')
@@ -101,6 +104,7 @@ export async function generarCodigoLote(
         const { data: retryData, error: retryError } = await supabase
           .from('consecutivos_lotes')
           .select('id, consecutivo')
+          .eq('tipo_operacion_codigo', tipoOperacionCodigo)
           .eq('producto_codigo', productoCodigo)
           .single();
         
@@ -124,11 +128,11 @@ export async function generarCodigoLote(
   } else if (consecutivoError) {
     // Error 406 u otro error
     if (consecutivoError.code === 'PGRST406' || consecutivoError.message?.includes('406')) {
-      throw new Error(`Error de formato en la consulta de consecutivos. Verifica que el código de producto sea válido: producto=${productoCodigo}`);
+      throw new Error(`Error de formato en la consulta de consecutivos. Verifica los códigos: tipo=${tipoOperacionCodigo}, producto=${productoCodigo}`);
     }
     throw new Error(`Error al obtener consecutivo de lote: ${consecutivoError.message}`);
   } else {
-    // Existe consecutivo para este producto, incrementar
+    // Existe consecutivo para esta combinación, incrementar
     nuevoConsecutivo = consecutivoData.consecutivo + 1;
     const { error: updateError } = await supabase
       .from('consecutivos_lotes')
