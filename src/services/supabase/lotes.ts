@@ -53,7 +53,7 @@ export interface ConsecutivoLote {
 }
 
 // Generar código de lote según el formato: AC-17160525-003
-// Consecutivo es POR COMBINACIÓN COMPLETA (tipo + origen + producto + almacén + año)
+// Consecutivo es SOLO POR PRODUCTO (independiente de cliente, almacén, año, etc.)
 export async function generarCodigoLote(
   tipoOperacionCodigo: string, // 'AC-', 'VN-', 'VE-'
   origenCodigo: string, // '17'
@@ -70,21 +70,17 @@ export async function generarCodigoLote(
     return { codigo, consecutivo };
   }
 
-  // Consecutivo POR COMBINACIÓN COMPLETA (tipo + origen + producto + almacén + año)
+  // Consecutivo SOLO POR PRODUCTO (cliente, almacén, año NO afectan el consecutivo)
   const { data: consecutivoData, error: consecutivoError } = await supabase
     .from('consecutivos_lotes')
     .select('id, consecutivo')
-    .eq('tipo_operacion_codigo', tipoOperacionCodigo)
-    .eq('origen_codigo', origenCodigo)
     .eq('producto_codigo', productoCodigo)
-    .eq('almacen_codigo', almacenCodigo)
-    .eq('anio', anio)
     .single();
 
   let nuevoConsecutivo: number;
 
   if (consecutivoError && consecutivoError.code === 'PGRST116') {
-    // No existe esta combinación, crear nuevo con consecutivo 1
+    // No existe consecutivo para este producto, crear nuevo con consecutivo 1
     nuevoConsecutivo = 1;
     const { error: insertError } = await supabase
       .from('consecutivos_lotes')
@@ -99,17 +95,13 @@ export async function generarCodigoLote(
       });
 
     if (insertError) {
-      // Si es un error 409 (conflict), puede ser que se creó entre la consulta y el insert
+      // Si es un error de duplicado, otro proceso creó el registro primero
       if (insertError.code === '23505' || insertError.message?.includes('duplicate') || insertError.message?.includes('unique')) {
         // Intentar obtener el consecutivo nuevamente
         const { data: retryData, error: retryError } = await supabase
           .from('consecutivos_lotes')
           .select('id, consecutivo')
-          .eq('tipo_operacion_codigo', tipoOperacionCodigo)
-          .eq('origen_codigo', origenCodigo)
           .eq('producto_codigo', productoCodigo)
-          .eq('almacen_codigo', almacenCodigo)
-          .eq('anio', anio)
           .single();
         
         if (retryError) {
@@ -132,11 +124,11 @@ export async function generarCodigoLote(
   } else if (consecutivoError) {
     // Error 406 u otro error
     if (consecutivoError.code === 'PGRST406' || consecutivoError.message?.includes('406')) {
-      throw new Error(`Error de formato en la consulta de consecutivos. Verifica que los códigos sean válidos: tipo=${tipoOperacionCodigo}, origen=${origenCodigo}, producto=${productoCodigo}, almacen=${almacenCodigo}`);
+      throw new Error(`Error de formato en la consulta de consecutivos. Verifica que el código de producto sea válido: producto=${productoCodigo}`);
     }
     throw new Error(`Error al obtener consecutivo de lote: ${consecutivoError.message}`);
   } else {
-    // Existe esta combinación, incrementar
+    // Existe consecutivo para este producto, incrementar
     nuevoConsecutivo = consecutivoData.consecutivo + 1;
     const { error: updateError } = await supabase
       .from('consecutivos_lotes')
