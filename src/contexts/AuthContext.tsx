@@ -28,7 +28,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const permisosPorRol: Record<Rol, string[]> = {
   'Oficina': ['oficina', 'reciba', 'embarque', 'movimientos', 'proveedores', 'clientes', 'reportes'],
   'Portero': ['ingreso'],
-  'Báscula': ['reciba', 'embarque', 'movimientos', 'reportes', 'configuracion'],
+  'Báscula': ['reciba', 'embarque', 'movimientos', 'reportes', 'configuracion', 'produccion'],
   'Calidad': ['control-calidad'],
   'Laboratorio': ['laboratorio'],
   'Producción': ['produccion'],
