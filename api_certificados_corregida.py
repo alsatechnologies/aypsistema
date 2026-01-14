@@ -470,11 +470,11 @@ async def draw_pesosTable(c: canvas.Canvas, data: PesosInfo1, page_color: int):
 
     pesos_data = [
         ["PESO BRUTO (KG)"],
-        [create_value_cell(f"{data.peso_bruto:.3f}", data.fechabruto + " " + data.horabruto)],
+        [create_value_cell(f"{data.peso_bruto:,.3f}", data.fechabruto + " " + data.horabruto)],
         ["PESO TARA (KG)"],
-        [create_value_cell(f"{data.peso_tara:.3f}", data.fechatara + " " + data.horatara)],
+        [create_value_cell(f"{data.peso_tara:,.3f}", data.fechatara + " " + data.horatara)],
         ["PESO NETO (KG)"],
-        [create_value_cell(f"{data.peso_neto:.3f}", data.fechaneto)]
+        [create_value_cell(f"{data.peso_neto:,.3f}", data.fechaneto)]
     ]
 
     row_heights = [
@@ -519,11 +519,11 @@ async def draw_pesosTable(c: canvas.Canvas, data: PesosInfo1, page_color: int):
 
     pesos_data_bottom = [
         ["PESO BRUTO (KG)"],
-        [create_value_cell(f"{data.peso_bruto:.3f}", data.fechabruto + " " + data.horabruto)],
+        [create_value_cell(f"{data.peso_bruto:,.3f}", data.fechabruto + " " + data.horabruto)],
         ["PESO TARA (KG)"],
-        [create_value_cell(f"{data.peso_tara:.3f}", data.fechatara + " " + data.horatara)],
+        [create_value_cell(f"{data.peso_tara:,.3f}", data.fechatara + " " + data.horatara)],
         ["PESO NETO (KG)"],
-        [create_value_cell(f"{data.peso_neto:.3f}", data.fechaneto)]
+        [create_value_cell(f"{data.peso_neto:,.3f}", data.fechaneto)]
     ]
     
     pesos_table_bottom = Table(pesos_data_bottom, colWidths=[120], rowHeights=row_heights)
@@ -577,9 +577,9 @@ async def draw_deductionTable(c: canvas.Canvas, data: PesosInfo2, page_color: in
 
     pesos_data = [
         ["DEDUCCIÓN (KG)"],
-        [create_value_cell(f"{data.deduccion:.3f}")],
+        [create_value_cell(f"{data.deduccion:,.3f}")],
         ["PESO NETO ANALIZADO (KG)"],
-        [create_value_cell(f"{data.peso_neto_analizado:.3f}")]
+        [create_value_cell(f"{data.peso_neto_analizado:,.3f}")]
     ]
 
     row_heights = [
@@ -614,9 +614,9 @@ async def draw_deductionTable(c: canvas.Canvas, data: PesosInfo2, page_color: in
 
     pesos_data_second = [
         ["DEDUCCIÓN (KG)"],
-        [create_value_cell(f"{data.deduccion:.3f}")],
+        [create_value_cell(f"{data.deduccion:,.3f}")],
         ["PESO NETO ANALIZADO (KG)"],
-        [create_value_cell(f"{data.peso_neto_analizado:.3f}")]
+        [create_value_cell(f"{data.peso_neto_analizado:,.3f}")]
     ]
     pesos_table_second = Table(pesos_data_second, colWidths=[130], rowHeights=row_heights)
     table_style_second = [
