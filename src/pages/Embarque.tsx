@@ -20,7 +20,6 @@ import NuevoEmbarqueDialog from '@/components/embarque/NuevoEmbarqueDialog';
 import BoletaEmbarqueDialog from '@/components/embarque/BoletaEmbarqueDialog';
 import { generateNumeroBoleta, TipoOperacion } from '@/utils/folioGenerator';
 import { toast } from 'sonner';
-import { generarCodigoLoteParaOperacion } from '@/services/supabase/lotes';
 import { useEmbarques } from '@/services/hooks/useEmbarques';
 import { useProductos } from '@/services/hooks/useProductos';
 import { useClientes } from '@/services/hooks/useClientes';
@@ -456,24 +455,8 @@ const EmbarquePage = () => {
       return;
     }
 
-    // Generar código de lote automáticamente
-    let codigoLote = selectedEmbarque.codigoLote;
-    if (!codigoLote && selectedEmbarque.clienteId && selectedEmbarque.productoId && selectedEmbarque.almacenId) {
-      try {
-        const tipoOperacion = selectedEmbarque.tipoEmbarque === 'Nacional' ? 'Embarque Nacional' : 'Embarque Exportación';
-        const { codigo } = await generarCodigoLoteParaOperacion(
-          tipoOperacion,
-          selectedEmbarque.clienteId,
-          null,
-          selectedEmbarque.productoId,
-          selectedEmbarque.almacenId
-        );
-        codigoLote = codigo;
-      } catch (error) {
-        handleError(error, { module: 'Embarque', action: 'generarCodigoLote' });
-        toast.warning('Error al generar código de lote, pero el embarque se guardará');
-      }
-    }
+    // El código de lote se genera automáticamente en el backend (updateEmbarque)
+    // Esto evita condiciones de carrera cuando se guardan múltiples embarques simultáneamente
     
     try {
       const embarqueActualizado = await updateEmbarque(selectedEmbarque.id, {
@@ -490,7 +473,7 @@ const EmbarquePage = () => {
         sello_salida_4: formData.sellos.selloSalida4 || null,
         valores_analisis: Object.keys(formData.valoresAnalisis).length > 0 ? formData.valoresAnalisis : null,
         estatus: 'Completado',
-        codigo_lote: codigoLote || null,
+        // No pasar codigo_lote - el backend lo genera automáticamente si no existe
         hora_peso_bruto: horaPesoBruto || null,
         hora_peso_tara: horaPesoTara || null,
         hora_peso_neto: horaPesoNeto || null,
@@ -499,7 +482,7 @@ const EmbarquePage = () => {
         observaciones: observaciones || null
       });
       
-      const codigoLoteFinal = embarqueActualizado?.codigo_lote || codigoLote;
+      const codigoLoteFinal = embarqueActualizado?.codigo_lote;
       
       // Crear movimiento de salida solo si no existe uno para esta boleta
       try {

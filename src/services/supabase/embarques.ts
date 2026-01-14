@@ -155,23 +155,36 @@ export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
     throw new Error('Supabase no está configurado');
   }
   
-  // Obtener datos anteriores para auditoría
+  // Obtener datos anteriores para auditoría Y para verificar si ya tiene lote
   const { data: embarqueAnterior } = await supabase
     .from('embarques')
     .select('*')
     .eq('id', id)
     .single();
   
-  // Si se está completando y no tiene código de lote, generarlo
-  // Usar valores del objeto que se pasa o del embarque anterior
+  // ⚠️ IMPORTANTE: Verificar directamente en BD si YA tiene lote
+  // Esto previene duplicados cuando se guarda múltiples veces
+  const loteExistenteEnBD = embarqueAnterior?.codigo_lote;
+  
+  // Si ya tiene lote en la BD, NO regenerar (previene duplicados)
+  if (loteExistenteEnBD) {
+    logger.info(`Embarque ${id} ya tiene lote asignado: ${loteExistenteEnBD}`, { embarqueId: id, lote: loteExistenteEnBD }, 'Embarques');
+    // No modificar el codigo_lote si ya existe
+    delete embarque.codigo_lote;
+  }
+  
+  // Si se está completando y NO tiene lote en BD, intentar generarlo
   const estatusFinal = embarque.estatus || embarqueAnterior?.estatus;
-  const codigoLoteActual = embarque.codigo_lote !== undefined ? embarque.codigo_lote : embarqueAnterior?.codigo_lote;
   const clienteId = embarque.cliente_id || embarqueAnterior?.cliente_id;
   const productoId = embarque.producto_id || embarqueAnterior?.producto_id;
   const almacenId = embarque.almacen_id || embarqueAnterior?.almacen_id;
   const tipoEmbarque = embarque.tipo_embarque || embarqueAnterior?.tipo_embarque;
   
-  if (estatusFinal === 'Completado' && !codigoLoteActual && clienteId && productoId && almacenId) {
+  // Solo generar lote si:
+  // 1. El estatus final es 'Completado'
+  // 2. NO existe lote en la BD (verificación directa)
+  // 3. Tenemos todos los datos requeridos
+  if (estatusFinal === 'Completado' && !loteExistenteEnBD && clienteId && productoId && almacenId) {
     try {
       // Validar que tenemos todos los datos necesarios
       if (!tipoEmbarque) {
@@ -216,7 +229,7 @@ export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
       // El usuario puede regenerar el lote después
       console.error(`[EMBARQUES] Error al generar lote para embarque ${id}:`, errorMessage);
     }
-  } else if (estatusFinal === 'Completado' && !codigoLoteActual) {
+  } else if (estatusFinal === 'Completado' && !loteExistenteEnBD) {
     // Log cuando faltan datos requeridos
     logger.warn(`No se puede generar lote para embarque ${id}: faltan datos requeridos`, {
       embarqueId: id,
