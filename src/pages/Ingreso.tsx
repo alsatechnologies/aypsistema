@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, LogOut, Car, Clock, MapPin, User, Calendar, X } from 'lucide-react';
+import { Plus, Search, LogOut, Car, Clock, MapPin, User, Calendar, X, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import NuevoIngresoDialog, { NuevoIngresoData, MotivoVisita } from '@/components/ingreso/NuevoIngresoDialog';
@@ -15,6 +15,8 @@ import { useRecepciones } from '@/services/hooks/useRecepciones';
 import { createRecepcion } from '@/services/supabase/recepciones';
 import type { Ingreso as IngresoDB } from '@/services/supabase/ingresos';
 import { getCurrentDateTimeMST, formatDateTimeMST } from '@/utils/dateUtils';
+import { useAuth } from '@/contexts/AuthContext';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface Ingreso {
   id: number;
@@ -35,13 +37,15 @@ interface Ingreso {
 }
 
 const Ingreso = () => {
-  const { ingresos: ingresosDB, loading, loadingMore, hasMore, addIngreso, updateIngreso, loadIngresos, loadMore } = useIngresos();
+  const { ingresos: ingresosDB, loading, loadingMore, hasMore, addIngreso, updateIngreso, deleteIngreso, loadIngresos, loadMore } = useIngresos();
   const { addOrden } = useOrdenes();
+  const { esAdministrador } = useAuth();
   
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
+  const [ingresoAEliminar, setIngresoAEliminar] = useState<number | null>(null);
   
   // Mapear ingresos de DB a formato local
   const ingresos: Ingreso[] = ingresosDB.map(i => ({
@@ -82,6 +86,19 @@ const Ingreso = () => {
     } catch (error) {
       console.error('Error updating ingreso:', error);
       toast.error('Error al registrar salida');
+    }
+  };
+
+  const handleEliminarIngreso = async () => {
+    if (!ingresoAEliminar) return;
+    
+    try {
+      await deleteIngreso(ingresoAEliminar);
+      toast.success('Ingreso eliminado correctamente');
+      setIngresoAEliminar(null);
+    } catch (error) {
+      console.error('Error eliminando ingreso:', error);
+      toast.error('Error al eliminar ingreso');
     }
   };
 
@@ -330,17 +347,32 @@ const Ingreso = () => {
                         )}
                       </TableCell>
                       <TableCell className="text-right min-w-[160px]">
-                        {!ingreso.fechaHoraSalida && (
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            className="text-primary border-primary hover:bg-primary hover:text-primary-foreground"
-                            onClick={() => handleMarcarSalida(ingreso.id)}
-                          >
-                            <LogOut className="h-3 w-3 mr-1" />
-                            Marcar Salida
-                          </Button>
-                        )}
+                        <div className="flex items-center justify-end gap-2">
+                          {!ingreso.fechaHoraSalida && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="text-primary border-primary hover:bg-primary hover:text-primary-foreground"
+                              onClick={() => handleMarcarSalida(ingreso.id)}
+                            >
+                              <LogOut className="h-3 w-3 mr-1" />
+                              Marcar Salida
+                            </Button>
+                          )}
+                          {esAdministrador() && (
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIngresoAEliminar(ingreso.id);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -367,6 +399,27 @@ const Ingreso = () => {
           onOpenChange={setDialogOpen}
           onSubmit={handleNuevoIngreso}
         />
+
+        {/* Diálogo de confirmación para eliminar */}
+        <AlertDialog open={ingresoAEliminar !== null} onOpenChange={(open) => !open && setIngresoAEliminar(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Eliminar este ingreso?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta acción no se puede deshacer. El registro de ingreso será eliminado permanentemente.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleEliminarIngreso}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                Eliminar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </Layout>
   );
