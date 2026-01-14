@@ -133,24 +133,44 @@ export async function updateRecepcion(id: number, recepcion: Partial<Recepcion>)
     throw new Error('Supabase no está configurado');
   }
   
-  // Obtener datos anteriores para auditoría
+  // Obtener datos anteriores para auditoría Y para verificar si ya tiene lote
   const { data: recepcionAnterior } = await supabase
     .from('recepciones')
     .select('*')
     .eq('id', id)
     .single();
   
-  // Si se está completando y no tiene código de lote, generarlo
-  if (recepcion.estatus === 'Completado' && !recepcion.codigo_lote && recepcion.proveedor_id && recepcion.producto_id && recepcion.almacen_id) {
+  // ⚠️ IMPORTANTE: Verificar directamente en BD si YA tiene lote
+  // Esto previene duplicados cuando se guarda múltiples veces
+  const loteExistenteEnBD = recepcionAnterior?.codigo_lote;
+  
+  // Si ya tiene lote en la BD, NO regenerar (previene duplicados)
+  if (loteExistenteEnBD) {
+    logger.info(`Recepción ${id} ya tiene lote asignado: ${loteExistenteEnBD}`, { recepcionId: id, lote: loteExistenteEnBD }, 'Recepciones');
+    // No modificar el codigo_lote si ya existe
+    delete recepcion.codigo_lote;
+  }
+  
+  // Usar valores del objeto que se pasa o de la recepción anterior
+  const proveedorId = recepcion.proveedor_id || recepcionAnterior?.proveedor_id;
+  const productoId = recepcion.producto_id || recepcionAnterior?.producto_id;
+  const almacenId = recepcion.almacen_id || recepcionAnterior?.almacen_id;
+  
+  // Solo generar lote si:
+  // 1. El estatus es 'Completado'
+  // 2. NO existe lote en la BD (verificación directa)
+  // 3. Tenemos todos los datos requeridos
+  if (recepcion.estatus === 'Completado' && !loteExistenteEnBD && proveedorId && productoId && almacenId) {
     try {
       const { codigo } = await generarCodigoLoteParaOperacion(
         'Reciba',
         null,
-        recepcion.proveedor_id,
-        recepcion.producto_id,
-        recepcion.almacen_id
+        proveedorId,
+        productoId,
+        almacenId
       );
       recepcion.codigo_lote = codigo;
+      logger.info(`Código de lote generado para recepción ${id}: ${codigo}`, { recepcionId: id, codigo }, 'Recepciones');
     } catch (error) {
       logger.error('Error al generar código de lote', error, 'Recepciones');
     }

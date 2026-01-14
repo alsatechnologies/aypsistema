@@ -78,6 +78,7 @@ const Reciba = () => {
   const [selectedRecepcion, setSelectedRecepcion] = useState<Recepcion | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isNuevaOperacionOpen, setIsNuevaOperacionOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [tipoBascula, setTipoBascula] = useState<'Camión' | 'Ferroviaria'>('Camión');
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
@@ -355,10 +356,15 @@ const Reciba = () => {
   const handleGuardarBoleta = async () => {
     if (!selectedRecepcion) return;
     
+    // Prevenir clicks múltiples
+    if (isSaving) return;
+    setIsSaving(true);
+    
     // Validar que no esté completado (o que el usuario tenga permisos)
     const validacionEstatus = puedeModificarRegistro(selectedRecepcion.estatus, usuario?.rol);
     if (!validacionEstatus.valid) {
       toast.error(validacionEstatus.errors[0]);
+      setIsSaving(false);
       return;
     }
     
@@ -473,6 +479,8 @@ const Reciba = () => {
     setIsDialogOpen(false);
     } catch (error) {
       handleError(error, { module: 'Reciba', action: 'guardarBoleta' }, 'Error al guardar boleta');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -1212,9 +1220,10 @@ const Reciba = () => {
                   <Button 
                     className="bg-primary hover:bg-primary/90 flex items-center gap-2"
                     onClick={handleGuardarBoleta}
+                    disabled={isSaving}
                   >
                     <Save className="h-4 w-4" />
-                    Guardar Boleta
+                    {isSaving ? 'Guardando...' : 'Guardar Boleta'}
                   </Button>
                 </DialogFooter>
               </>
