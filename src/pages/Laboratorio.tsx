@@ -10,8 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Plus, FlaskConical, Clock, CheckCircle, Eye, FileText, Trash2, Calendar, X, Factory, Settings2, Droplets, Thermometer, TestTube } from 'lucide-react';
+import { Search, Plus, FlaskConical, Clock, CheckCircle, Eye, FileText, Trash2, Calendar, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLaboratorio } from '@/services/hooks/useLaboratorio';
 import type { ReporteLab as ReporteLabDB } from '@/services/supabase/laboratorio';
@@ -111,7 +110,7 @@ const Laboratorio = () => {
     aceiteAcidez: '',
     aceiteOleico: '',
     aceiteHumedad: '',
-    aceiteFlashPoint: '-' as '+' | '-',
+    aceiteFlashPoint: '+' as '+' | '-',
     aceiteFlashPointValor: ''
   });
 
@@ -300,7 +299,7 @@ const Laboratorio = () => {
         aceiteAcidez: '',
         aceiteOleico: '',
         aceiteHumedad: '',
-        aceiteFlashPoint: '-',
+        aceiteFlashPoint: '+',
         aceiteFlashPointValor: ''
       });
       setIsNuevoReporteOpen(false);
@@ -407,613 +406,510 @@ const Laboratorio = () => {
 
         {/* Nuevo Reporte Dialog */}
         <Dialog open={isNuevoReporteOpen} onOpenChange={setIsNuevoReporteOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="pb-4 border-b">
-              <DialogTitle className="flex items-center gap-3 text-xl">
-                <div className="p-2 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg">
-                  <FlaskConical className="h-5 w-5 text-white" />
-                </div>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <FlaskConical className="h-5 w-5" />
                 Nuevo Reporte de Laboratorio
               </DialogTitle>
             </DialogHeader>
-            
-            <div className="py-4">
-              {/* Info General - Card moderna */}
-              <div className="bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl p-4 mb-6">
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs uppercase tracking-wider text-slate-500 font-semibold">Turno</Label>
-                    <Select value={formData.turno} onValueChange={(v) => setFormData({ ...formData, turno: v as any })}>
-                      <SelectTrigger className="bg-white border-slate-200">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Matutino">🌅 Matutino</SelectItem>
-                        <SelectItem value="Vespertino">🌤️ Vespertino</SelectItem>
-                        <SelectItem value="Nocturno">🌙 Nocturno</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs uppercase tracking-wider text-slate-500 font-semibold">Responsable</Label>
-                    <Select value={formData.responsable} onValueChange={(v) => setFormData({ ...formData, responsable: v })}>
-                      <SelectTrigger className="bg-white border-slate-200">
-                        <SelectValue placeholder="Seleccionar..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {responsables.map(r => (
-                          <SelectItem key={r} value={r}>{r}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs uppercase tracking-wider text-slate-500 font-semibold">Fecha</Label>
-                    <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-md px-3 py-2 text-sm">
-                      <Calendar className="h-4 w-4 text-slate-400" />
-                      {new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })}
-                    </div>
-                  </div>
+            <div className="space-y-6 py-4">
+              {/* Info General */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Turno *</Label>
+                  <Select value={formData.turno} onValueChange={(v) => setFormData({ ...formData, turno: v as any })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Matutino">Matutino</SelectItem>
+                      <SelectItem value="Vespertino">Vespertino</SelectItem>
+                      <SelectItem value="Nocturno">Nocturno</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Responsable *</Label>
+                  <Select value={formData.responsable} onValueChange={(v) => setFormData({ ...formData, responsable: v })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar responsable" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {responsables.map(r => (
+                        <SelectItem key={r} value={r}>{r}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
-              {/* Tabs principales */}
-              <Tabs defaultValue="planta" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 h-12 p-1 bg-slate-100 rounded-lg mb-6">
-                  <TabsTrigger 
-                    value="planta" 
-                    className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all"
-                  >
-                    <Factory className="h-4 w-4" />
-                    PLANTA
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="expander" 
-                    className="flex items-center gap-2 data-[state=active]:bg-gradient-to-r data-[state=active]:from-amber-500 data-[state=active]:to-orange-600 data-[state=active]:text-white data-[state=active]:shadow-lg rounded-md transition-all"
-                  >
-                    <Settings2 className="h-4 w-4" />
-                    EXPANDER
-                  </TabsTrigger>
-                </TabsList>
+              <Separator />
 
-                {/* TAB PLANTA */}
-                <TabsContent value="planta" className="space-y-4 mt-0">
-                  {/* PASTA */}
-                  <div className="border border-slate-200 rounded-xl overflow-hidden">
-                    <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-4 py-3">
-                      <h3 className="font-semibold text-white flex items-center gap-2">
-                        <TestTube className="h-4 w-4" />
-                        PASTA
-                      </h3>
+              {/* PLANTA */}
+              <div>
+                <h3 className="font-semibold text-lg mb-3 bg-red-600 text-white p-2 text-center">PLANTA</h3>
+                
+                {/* PASTA */}
+                <div className="mb-4 border rounded-lg p-4 bg-gray-50">
+                  <h3 className="font-semibold text-lg mb-3">PASTA</h3>
+                  
+                  {/* TEXTURA */}
+                <div className="mb-4">
+                  <Label className="text-base font-semibold mb-2 block">TEXTURA</Label>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm text-red-600 font-semibold">PROMEDIO (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.pastaTexturaPromedio} 
+                        onChange={(e) => setFormData({ ...formData, pastaTexturaPromedio: e.target.value })} 
+                      />
                     </div>
-                    <div className="p-4 space-y-5 bg-white">
-                      {/* TEXTURA */}
-                      <div>
-                        <Label className="text-sm font-semibold text-slate-700 mb-3 block">TEXTURA</Label>
-                        <div className="grid grid-cols-3 gap-3">
-                          <div className="space-y-1.5">
-                            <Label className="text-xs text-blue-600 font-medium">Promedio (%)</Label>
-                            <Input 
-                              type="number" 
-                              step="0.01"
-                              className="border-slate-200 focus:border-blue-400"
-                              value={formData.pastaTexturaPromedio} 
-                              onChange={(e) => setFormData({ ...formData, pastaTexturaPromedio: e.target.value })} 
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-xs text-blue-600 font-medium">Alto (%)</Label>
-                            <Input 
-                              type="number" 
-                              step="0.01"
-                              className="border-slate-200 focus:border-blue-400"
-                              value={formData.pastaTexturaAlto} 
-                              onChange={(e) => setFormData({ ...formData, pastaTexturaAlto: e.target.value })} 
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-xs text-blue-600 font-medium">Bajo (%)</Label>
-                            <Input 
-                              type="number" 
-                              step="0.01"
-                              className="border-slate-200 focus:border-blue-400"
-                              value={formData.pastaTexturaBajo} 
-                              onChange={(e) => setFormData({ ...formData, pastaTexturaBajo: e.target.value })} 
-                            />
-                          </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm text-red-600 font-semibold">ALTO (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.pastaTexturaAlto} 
+                        onChange={(e) => setFormData({ ...formData, pastaTexturaAlto: e.target.value })} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm text-red-600 font-semibold">BAJO (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.pastaTexturaBajo} 
+                        onChange={(e) => setFormData({ ...formData, pastaTexturaBajo: e.target.value })} 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* HUMEDAD */}
+                <div className="mb-4">
+                  <Label className="text-base font-semibold mb-2 block">HUMEDAD</Label>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm text-red-600 font-semibold">PROMEDIO (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.pastaHumedadPromedio} 
+                        onChange={(e) => setFormData({ ...formData, pastaHumedadPromedio: e.target.value })} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm text-red-600 font-semibold">ALTO (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.pastaHumedadAlto} 
+                        onChange={(e) => setFormData({ ...formData, pastaHumedadAlto: e.target.value })} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm text-red-600 font-semibold">BAJO (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.pastaHumedadBajo} 
+                        onChange={(e) => setFormData({ ...formData, pastaHumedadBajo: e.target.value })} 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* PROTEINA - Repeater */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-base font-semibold">PROTEINA</Label>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setFormData({
+                          ...formData,
+                          pastaProteina: [...formData.pastaProteina, { valor: '', porcentaje: '' }]
+                        });
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Agregar Fila
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    {formData.pastaProteina.map((item, index) => (
+                      <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-end">
+                        <div className="space-y-2">
+                          <Label className="text-sm">Valor</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="Ej: 5.30"
+                            value={item.valor}
+                            onChange={(e) => {
+                              const newProteina = [...formData.pastaProteina];
+                              newProteina[index].valor = e.target.value;
+                              setFormData({ ...formData, pastaProteina: newProteina });
+                            }}
+                          />
                         </div>
-                      </div>
-
-                      <Separator className="bg-slate-100" />
-
-                      {/* HUMEDAD */}
-                      <div>
-                        <Label className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                          <Droplets className="h-4 w-4 text-blue-500" />
-                          HUMEDAD
-                        </Label>
-                        <div className="grid grid-cols-3 gap-3">
-                          <div className="space-y-1.5">
-                            <Label className="text-xs text-blue-600 font-medium">Promedio (%)</Label>
-                            <Input 
-                              type="number" 
-                              step="0.01"
-                              className="border-slate-200 focus:border-blue-400"
-                              value={formData.pastaHumedadPromedio} 
-                              onChange={(e) => setFormData({ ...formData, pastaHumedadPromedio: e.target.value })} 
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-xs text-blue-600 font-medium">Alto (%)</Label>
-                            <Input 
-                              type="number" 
-                              step="0.01"
-                              className="border-slate-200 focus:border-blue-400"
-                              value={formData.pastaHumedadAlto} 
-                              onChange={(e) => setFormData({ ...formData, pastaHumedadAlto: e.target.value })} 
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-xs text-blue-600 font-medium">Bajo (%)</Label>
-                            <Input 
-                              type="number" 
-                              step="0.01"
-                              className="border-slate-200 focus:border-blue-400"
-                              value={formData.pastaHumedadBajo} 
-                              onChange={(e) => setFormData({ ...formData, pastaHumedadBajo: e.target.value })} 
-                            />
-                          </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm">Porcentaje (%)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="Ej: 21.47"
+                            value={item.porcentaje}
+                            onChange={(e) => {
+                              const newProteina = [...formData.pastaProteina];
+                              newProteina[index].porcentaje = e.target.value;
+                              setFormData({ ...formData, pastaProteina: newProteina });
+                            }}
+                          />
                         </div>
-                      </div>
-
-                      <Separator className="bg-slate-100" />
-
-                      {/* PROTEINA */}
-                      <div>
-                        <div className="flex items-center justify-between mb-3">
-                          <Label className="text-sm font-semibold text-slate-700">PROTEÍNA</Label>
+                        {formData.pastaProteina.length > 1 && (
                           <Button
                             type="button"
                             size="sm"
-                            variant="outline"
-                            className="h-8 text-xs border-blue-200 text-blue-600 hover:bg-blue-50"
+                            variant="ghost"
                             onClick={() => {
-                              setFormData({
-                                ...formData,
-                                pastaProteina: [...formData.pastaProteina, { valor: '', porcentaje: '' }]
-                              });
+                              const newProteina = formData.pastaProteina.filter((_, i) => i !== index);
+                              setFormData({ ...formData, pastaProteina: newProteina });
                             }}
                           >
-                            <Plus className="h-3 w-3 mr-1" />
-                            Agregar
+                            <Trash2 className="h-4 w-4 text-red-500" />
                           </Button>
-                        </div>
-                        <div className="space-y-2">
-                          {formData.pastaProteina.map((item, index) => (
-                            <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-end bg-slate-50 p-2 rounded-lg">
-                              <div className="space-y-1">
-                                <Label className="text-xs text-slate-500">Valor</Label>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  placeholder="5.30"
-                                  className="h-9 border-slate-200"
-                                  value={item.valor}
-                                  onChange={(e) => {
-                                    const newProteina = [...formData.pastaProteina];
-                                    newProteina[index].valor = e.target.value;
-                                    setFormData({ ...formData, pastaProteina: newProteina });
-                                  }}
-                                />
-                              </div>
-                              <div className="space-y-1">
-                                <Label className="text-xs text-slate-500">Porcentaje (%)</Label>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  placeholder="21.47"
-                                  className="h-9 border-slate-200"
-                                  value={item.porcentaje}
-                                  onChange={(e) => {
-                                    const newProteina = [...formData.pastaProteina];
-                                    newProteina[index].porcentaje = e.target.value;
-                                    setFormData({ ...formData, pastaProteina: newProteina });
-                                  }}
-                                />
-                              </div>
-                              {formData.pastaProteina.length > 1 && (
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-9 w-9 p-0"
-                                  onClick={() => {
-                                    const newProteina = formData.pastaProteina.filter((_, i) => i !== index);
-                                    setFormData({ ...formData, pastaProteina: newProteina });
-                                  }}
-                                >
-                                  <Trash2 className="h-4 w-4 text-red-400 hover:text-red-600" />
-                                </Button>
-                              )}
-                            </div>
-                          ))}
-                        </div>
+                        )}
                       </div>
+                    ))}
+                  </div>
+                </div>
 
-                      <Separator className="bg-slate-100" />
-
-                      {/* RESIDUALES */}
-                      <div>
-                        <Label className="text-sm font-semibold text-slate-700 mb-3 block">RESIDUALES</Label>
-                        <div className="grid grid-cols-3 gap-3">
-                          <div className="space-y-1.5">
-                            <Label className="text-xs text-blue-600 font-medium">Promedio (%)</Label>
-                            <Input 
-                              type="number" 
-                              step="0.01"
-                              className="border-slate-200 focus:border-blue-400"
-                              value={formData.pastaResidualesPromedio} 
-                              onChange={(e) => setFormData({ ...formData, pastaResidualesPromedio: e.target.value })} 
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-xs text-blue-600 font-medium">Alto (%)</Label>
-                            <Input 
-                              type="number" 
-                              step="0.01"
-                              className="border-slate-200 focus:border-blue-400"
-                              value={formData.pastaResidualesAlto} 
-                              onChange={(e) => setFormData({ ...formData, pastaResidualesAlto: e.target.value })} 
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-xs text-blue-600 font-medium">Bajo (%)</Label>
-                            <Input 
-                              type="number" 
-                              step="0.01"
-                              className="border-slate-200 focus:border-blue-400"
-                              value={formData.pastaResidualesBajo} 
-                              onChange={(e) => setFormData({ ...formData, pastaResidualesBajo: e.target.value })} 
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <Separator className="bg-slate-100" />
-
-                      {/* TEMPERATURA */}
-                      <div>
-                        <Label className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                          <Thermometer className="h-4 w-4 text-orange-500" />
-                          TEMPERATURA PROMEDIO
-                        </Label>
-                        <div className="max-w-[200px]">
-                          <Input 
-                            type="number" 
-                            step="0.1" 
-                            placeholder="48.5 °C"
-                            className="border-slate-200 focus:border-orange-400"
-                            value={formData.pastaTemperatura} 
-                            onChange={(e) => setFormData({ ...formData, pastaTemperatura: e.target.value })} 
-                          />
-                        </div>
-                      </div>
+                {/* RESIDUALES */}
+                <div className="mb-4">
+                  <Label className="text-base font-semibold mb-2 block">RESIDUALES</Label>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm text-red-600 font-semibold">PROMEDIO (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.pastaResidualesPromedio} 
+                        onChange={(e) => setFormData({ ...formData, pastaResidualesPromedio: e.target.value })} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm text-red-600 font-semibold">ALTO (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.pastaResidualesAlto} 
+                        onChange={(e) => setFormData({ ...formData, pastaResidualesAlto: e.target.value })} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm text-red-600 font-semibold">BAJO (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.pastaResidualesBajo} 
+                        onChange={(e) => setFormData({ ...formData, pastaResidualesBajo: e.target.value })} 
+                      />
                     </div>
                   </div>
+                </div>
 
-                  {/* ACEITE PLANTA */}
-                  <div className="border border-slate-200 rounded-xl overflow-hidden">
-                    <div className="bg-gradient-to-r from-amber-500 to-yellow-500 px-4 py-3">
-                      <h3 className="font-semibold text-white flex items-center gap-2">
-                        <Droplets className="h-4 w-4" />
-                        ACEITE PLANTA
-                      </h3>
+                {/* TEMPERATURA PROMEDIO */}
+                <div className="mb-4">
+                  <Label className="text-base font-semibold mb-2 block">TEMPERATURA PROMEDIO (°C)</Label>
+                  <div className="grid grid-cols-1 gap-4 max-w-xs">
+                    <div className="space-y-2">
+                      <Input 
+                        type="number" 
+                        step="0.1" 
+                        placeholder="Ej: 48.5"
+                        value={formData.pastaTemperatura} 
+                        onChange={(e) => setFormData({ ...formData, pastaTemperatura: e.target.value })} 
+                      />
                     </div>
-                    <div className="p-4 bg-white">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-amber-600 font-medium">Acidez (%)</Label>
-                          <Input type="number" step="0.01" className="border-slate-200 focus:border-amber-400" value={formData.aceiteAcidez} onChange={(e) => setFormData({ ...formData, aceiteAcidez: e.target.value })} />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-amber-600 font-medium">Ácido Oleico (%)</Label>
-                          <Input type="number" step="0.1" className="border-slate-200 focus:border-amber-400" value={formData.aceiteOleico} onChange={(e) => setFormData({ ...formData, aceiteOleico: e.target.value })} />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-amber-600 font-medium">Humedad (%)</Label>
-                          <Input type="number" step="0.01" className="border-slate-200 focus:border-amber-400" value={formData.aceiteHumedad} onChange={(e) => setFormData({ ...formData, aceiteHumedad: e.target.value })} />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-amber-600 font-medium">Flash Point</Label>
-                          <Select value={formData.aceiteFlashPoint} onValueChange={(v) => setFormData({ ...formData, aceiteFlashPoint: v as '+' | '-', aceiteFlashPointValor: v === '-' ? '' : formData.aceiteFlashPointValor })}>
-                            <SelectTrigger className="border-slate-200"><SelectValue /></SelectTrigger>
+                  </div>
+                </div>
+
+                {/* ACEITE PLANTA */}
+                <div className="mb-4 border rounded-lg p-4 bg-gray-50">
+                  <h3 className="font-semibold text-lg mb-3">ACEITE PLANTA</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Acidez (%)</Label>
+                      <Input type="number" step="0.01" value={formData.aceiteAcidez} onChange={(e) => setFormData({ ...formData, aceiteAcidez: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Ácido Oleico (%)</Label>
+                      <Input type="number" step="0.1" value={formData.aceiteOleico} onChange={(e) => setFormData({ ...formData, aceiteOleico: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Humedad (%)</Label>
+                      <Input type="number" step="0.01" value={formData.aceiteHumedad} onChange={(e) => setFormData({ ...formData, aceiteHumedad: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Flash Point</Label>
+                      <Select value={formData.aceiteFlashPoint} onValueChange={(v) => setFormData({ ...formData, aceiteFlashPoint: v as any, aceiteFlashPointValor: v === '-' ? '' : formData.aceiteFlashPointValor })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="+">+ (Positivo)</SelectItem>
+                          <SelectItem value="-">- (Negativo)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {formData.aceiteFlashPoint === '+' && (
+                      <div className="space-y-2">
+                        <Label>Valor Flash Point</Label>
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          placeholder="Ej: 250"
+                          value={formData.aceiteFlashPointValor} 
+                          onChange={(e) => setFormData({ ...formData, aceiteFlashPointValor: e.target.value })} 
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* EXPANDER */}
+              <div>
+                <h3 className="font-semibold text-lg mb-3 bg-red-600 text-white p-2 text-center">EXPANDER</h3>
+                
+                {/* HOJUELA (PROVISIONAL) */}
+                <div className="mb-4 border rounded-lg p-4 bg-gray-50">
+                  <Label className="text-base font-semibold mb-3 block">HOJUELA (PROVISIONAL)</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">RESIDUAL (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.expanderHojuelaResidual} 
+                        onChange={(e) => setFormData({ ...formData, expanderHojuelaResidual: e.target.value })} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">HUMEDAD (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.expanderHojuelaHumedad} 
+                        onChange={(e) => setFormData({ ...formData, expanderHojuelaHumedad: e.target.value })} 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* SEMILLA */}
+                <div className="mb-4 border rounded-lg p-4 bg-gray-50">
+                  <Label className="text-base font-semibold mb-3 block">SEMILLA</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">HUMEDAD (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.expanderSemillaHumedad} 
+                        onChange={(e) => setFormData({ ...formData, expanderSemillaHumedad: e.target.value })} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">CONTENIDO ACEITE (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.expanderSemillaContenidoAceite} 
+                        onChange={(e) => setFormData({ ...formData, expanderSemillaContenidoAceite: e.target.value })} 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* COSTRA VIBRADOR */}
+                <div className="mb-4 border rounded-lg p-4 bg-gray-50">
+                  <Label className="text-base font-semibold mb-3 block">COSTRA VIBRADOR</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">RESIDUAL (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.expanderCostraVibradorResidual} 
+                        onChange={(e) => setFormData({ ...formData, expanderCostraVibradorResidual: e.target.value })} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">HUMEDAD (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.expanderCostraVibradorHumedad} 
+                        onChange={(e) => setFormData({ ...formData, expanderCostraVibradorHumedad: e.target.value })} 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* COSTRA DIRECTA */}
+                <div className="mb-4 border rounded-lg p-4 bg-gray-50">
+                  <Label className="text-base font-semibold mb-3 block">COSTRA DIRECTA</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">RESIDUAL (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.expanderCostraDirectaResidual} 
+                        onChange={(e) => setFormData({ ...formData, expanderCostraDirectaResidual: e.target.value })} 
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">HUMEDAD (%)</Label>
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        value={formData.expanderCostraDirectaHumedad} 
+                        onChange={(e) => setFormData({ ...formData, expanderCostraDirectaHumedad: e.target.value })} 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ACEITE */}
+                <div className="mb-4 border rounded-lg p-4 bg-gray-50">
+                  <div className="flex items-center justify-between mb-3">
+                    <Label className="text-base font-semibold">ACEITE</Label>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setFormData({
+                          ...formData,
+                          expanderAceite: [...formData.expanderAceite, { tipo: 'Expander', filtroNumeros: '', humedad: '', acidez: '', acidoOleico: '' }]
+                        });
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Agregar Fila
+                    </Button>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-5 gap-2 font-semibold text-sm border-b pb-2">
+                      <div>Tipo</div>
+                      <div>Filtro</div>
+                      <div>HUMEDAD (%)</div>
+                      <div>ACIDEZ (%)</div>
+                      <div>ÁCIDO OLEICO (%)</div>
+                    </div>
+                    {formData.expanderAceite.map((item, index) => (
+                      <div key={index} className="grid grid-cols-5 gap-2 items-end">
+                        <div className="space-y-2">
+                          <Select 
+                            value={item.tipo} 
+                            onValueChange={(v) => {
+                              const newAceite = [...formData.expanderAceite];
+                              newAceite[index].tipo = v as any;
+                              setFormData({ ...formData, expanderAceite: newAceite });
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="+">+ (Positivo)</SelectItem>
-                              <SelectItem value="-">- (Negativo)</SelectItem>
+                              <SelectItem value="Expander">Expander</SelectItem>
+                              <SelectItem value="Prensa">Prensa</SelectItem>
+                              <SelectItem value="Desborrador">Desborrador</SelectItem>
+                              <SelectItem value="Filtro">Filtro</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
-                        {formData.aceiteFlashPoint === '+' && (
-                          <div className="space-y-1.5">
-                            <Label className="text-xs text-amber-600 font-medium">Valor Flash Point</Label>
-                            <Input 
-                              type="number" 
-                              step="0.1" 
-                              placeholder="250"
-                              className="border-slate-200 focus:border-amber-400"
-                              value={formData.aceiteFlashPointValor} 
-                              onChange={(e) => setFormData({ ...formData, aceiteFlashPointValor: e.target.value })} 
+                        <div className="space-y-2">
+                          {item.tipo === 'Filtro' ? (
+                            <Input
+                              placeholder="Ej: 19, 23, 2, 4 y 8"
+                              value={item.filtroNumeros}
+                              onChange={(e) => {
+                                const newAceite = [...formData.expanderAceite];
+                                newAceite[index].filtroNumeros = e.target.value;
+                                setFormData({ ...formData, expanderAceite: newAceite });
+                              }}
                             />
-                          </div>
-                        )}
+                          ) : (
+                            <Input disabled className="bg-gray-100" />
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={item.humedad}
+                            onChange={(e) => {
+                              const newAceite = [...formData.expanderAceite];
+                              newAceite[index].humedad = e.target.value;
+                              setFormData({ ...formData, expanderAceite: newAceite });
+                            }}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={item.acidez}
+                            onChange={(e) => {
+                              const newAceite = [...formData.expanderAceite];
+                              newAceite[index].acidez = e.target.value;
+                              setFormData({ ...formData, expanderAceite: newAceite });
+                            }}
+                          />
+                        </div>
+                        <div className="space-y-2 flex gap-2">
+                          <Input
+                            type="number"
+                            step="0.0001"
+                            placeholder="0.0000"
+                            value={item.acidoOleico}
+                            onChange={(e) => {
+                              const newAceite = [...formData.expanderAceite];
+                              newAceite[index].acidoOleico = e.target.value;
+                              setFormData({ ...formData, expanderAceite: newAceite });
+                            }}
+                          />
+                          {formData.expanderAceite.length > 1 && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                const newAceite = formData.expanderAceite.filter((_, i) => i !== index);
+                                setFormData({ ...formData, expanderAceite: newAceite });
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
-                </TabsContent>
-
-                {/* TAB EXPANDER */}
-                <TabsContent value="expander" className="space-y-4 mt-0">
-                  {/* Grid de 2 columnas para las primeras 4 secciones */}
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* HOJUELA */}
-                    <div className="border border-slate-200 rounded-xl overflow-hidden">
-                      <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-2">
-                        <h3 className="font-semibold text-white text-sm">HOJUELA (PROVISIONAL)</h3>
-                      </div>
-                      <div className="p-4 bg-white space-y-3">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-orange-600 font-medium">Residual (%)</Label>
-                          <Input 
-                            type="number" 
-                            step="0.01"
-                            className="h-9 border-slate-200 focus:border-orange-400"
-                            value={formData.expanderHojuelaResidual} 
-                            onChange={(e) => setFormData({ ...formData, expanderHojuelaResidual: e.target.value })} 
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-orange-600 font-medium">Humedad (%)</Label>
-                          <Input 
-                            type="number" 
-                            step="0.01"
-                            className="h-9 border-slate-200 focus:border-orange-400"
-                            value={formData.expanderHojuelaHumedad} 
-                            onChange={(e) => setFormData({ ...formData, expanderHojuelaHumedad: e.target.value })} 
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* SEMILLA */}
-                    <div className="border border-slate-200 rounded-xl overflow-hidden">
-                      <div className="bg-gradient-to-r from-green-500 to-emerald-500 px-4 py-2">
-                        <h3 className="font-semibold text-white text-sm">SEMILLA</h3>
-                      </div>
-                      <div className="p-4 bg-white space-y-3">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-green-600 font-medium">Humedad (%)</Label>
-                          <Input 
-                            type="number" 
-                            step="0.01"
-                            className="h-9 border-slate-200 focus:border-green-400"
-                            value={formData.expanderSemillaHumedad} 
-                            onChange={(e) => setFormData({ ...formData, expanderSemillaHumedad: e.target.value })} 
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-green-600 font-medium">Contenido Aceite (%)</Label>
-                          <Input 
-                            type="number" 
-                            step="0.01"
-                            className="h-9 border-slate-200 focus:border-green-400"
-                            value={formData.expanderSemillaContenidoAceite} 
-                            onChange={(e) => setFormData({ ...formData, expanderSemillaContenidoAceite: e.target.value })} 
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* COSTRA VIBRADOR */}
-                    <div className="border border-slate-200 rounded-xl overflow-hidden">
-                      <div className="bg-gradient-to-r from-purple-500 to-violet-500 px-4 py-2">
-                        <h3 className="font-semibold text-white text-sm">COSTRA VIBRADOR</h3>
-                      </div>
-                      <div className="p-4 bg-white space-y-3">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-purple-600 font-medium">Residual (%)</Label>
-                          <Input 
-                            type="number" 
-                            step="0.01"
-                            className="h-9 border-slate-200 focus:border-purple-400"
-                            value={formData.expanderCostraVibradorResidual} 
-                            onChange={(e) => setFormData({ ...formData, expanderCostraVibradorResidual: e.target.value })} 
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-purple-600 font-medium">Humedad (%)</Label>
-                          <Input 
-                            type="number" 
-                            step="0.01"
-                            className="h-9 border-slate-200 focus:border-purple-400"
-                            value={formData.expanderCostraVibradorHumedad} 
-                            onChange={(e) => setFormData({ ...formData, expanderCostraVibradorHumedad: e.target.value })} 
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* COSTRA DIRECTA */}
-                    <div className="border border-slate-200 rounded-xl overflow-hidden">
-                      <div className="bg-gradient-to-r from-rose-500 to-pink-500 px-4 py-2">
-                        <h3 className="font-semibold text-white text-sm">COSTRA DIRECTA</h3>
-                      </div>
-                      <div className="p-4 bg-white space-y-3">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-rose-600 font-medium">Residual (%)</Label>
-                          <Input 
-                            type="number" 
-                            step="0.01"
-                            className="h-9 border-slate-200 focus:border-rose-400"
-                            value={formData.expanderCostraDirectaResidual} 
-                            onChange={(e) => setFormData({ ...formData, expanderCostraDirectaResidual: e.target.value })} 
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-rose-600 font-medium">Humedad (%)</Label>
-                          <Input 
-                            type="number" 
-                            step="0.01"
-                            className="h-9 border-slate-200 focus:border-rose-400"
-                            value={formData.expanderCostraDirectaHumedad} 
-                            onChange={(e) => setFormData({ ...formData, expanderCostraDirectaHumedad: e.target.value })} 
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* ACEITE - Tabla moderna */}
-                  <div className="border border-slate-200 rounded-xl overflow-hidden">
-                    <div className="bg-gradient-to-r from-amber-500 to-yellow-500 px-4 py-3 flex items-center justify-between">
-                      <h3 className="font-semibold text-white flex items-center gap-2">
-                        <Droplets className="h-4 w-4" />
-                        ACEITE
-                      </h3>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        className="h-7 text-xs bg-white/20 hover:bg-white/30 text-white border-0"
-                        onClick={() => {
-                          setFormData({
-                            ...formData,
-                            expanderAceite: [...formData.expanderAceite, { tipo: 'Expander', filtroNumeros: '', humedad: '', acidez: '', acidoOleico: '' }]
-                          });
-                        }}
-                      >
-                        <Plus className="h-3 w-3 mr-1" />
-                        Agregar
-                      </Button>
-                    </div>
-                    <div className="p-4 bg-white">
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-slate-200">
-                              <th className="text-left py-2 px-2 text-slate-500 font-medium text-xs">Tipo</th>
-                              <th className="text-left py-2 px-2 text-slate-500 font-medium text-xs">Filtro</th>
-                              <th className="text-left py-2 px-2 text-slate-500 font-medium text-xs">Humedad</th>
-                              <th className="text-left py-2 px-2 text-slate-500 font-medium text-xs">Acidez</th>
-                              <th className="text-left py-2 px-2 text-slate-500 font-medium text-xs">Ác. Oleico</th>
-                              <th className="w-10"></th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {formData.expanderAceite.map((item, index) => (
-                              <tr key={index} className="border-b border-slate-100 last:border-0">
-                                <td className="py-2 px-2">
-                                  <Select 
-                                    value={item.tipo} 
-                                    onValueChange={(v) => {
-                                      const newAceite = [...formData.expanderAceite];
-                                      newAceite[index].tipo = v as any;
-                                      setFormData({ ...formData, expanderAceite: newAceite });
-                                    }}
-                                  >
-                                    <SelectTrigger className="h-8 text-xs border-slate-200">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="Expander">Expander</SelectItem>
-                                      <SelectItem value="Prensa">Prensa</SelectItem>
-                                      <SelectItem value="Desborrador">Desborrador</SelectItem>
-                                      <SelectItem value="Filtro">Filtro</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </td>
-                                <td className="py-2 px-2">
-                                  {item.tipo === 'Filtro' ? (
-                                    <Input
-                                      placeholder="19, 23, 2..."
-                                      className="h-8 text-xs border-slate-200"
-                                      value={item.filtroNumeros}
-                                      onChange={(e) => {
-                                        const newAceite = [...formData.expanderAceite];
-                                        newAceite[index].filtroNumeros = e.target.value;
-                                        setFormData({ ...formData, expanderAceite: newAceite });
-                                      }}
-                                    />
-                                  ) : (
-                                    <Input disabled className="h-8 text-xs bg-slate-50 border-slate-200" />
-                                  )}
-                                </td>
-                                <td className="py-2 px-2">
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    placeholder="0.00"
-                                    className="h-8 text-xs border-slate-200"
-                                    value={item.humedad}
-                                    onChange={(e) => {
-                                      const newAceite = [...formData.expanderAceite];
-                                      newAceite[index].humedad = e.target.value;
-                                      setFormData({ ...formData, expanderAceite: newAceite });
-                                    }}
-                                  />
-                                </td>
-                                <td className="py-2 px-2">
-                                  <Input
-                                    type="number"
-                                    step="0.01"
-                                    placeholder="0.00"
-                                    className="h-8 text-xs border-slate-200"
-                                    value={item.acidez}
-                                    onChange={(e) => {
-                                      const newAceite = [...formData.expanderAceite];
-                                      newAceite[index].acidez = e.target.value;
-                                      setFormData({ ...formData, expanderAceite: newAceite });
-                                    }}
-                                  />
-                                </td>
-                                <td className="py-2 px-2">
-                                  <Input
-                                    type="number"
-                                    step="0.0001"
-                                    placeholder="0.0000"
-                                    className="h-8 text-xs border-slate-200"
-                                    value={item.acidoOleico}
-                                    onChange={(e) => {
-                                      const newAceite = [...formData.expanderAceite];
-                                      newAceite[index].acidoOleico = e.target.value;
-                                      setFormData({ ...formData, expanderAceite: newAceite });
-                                    }}
-                                  />
-                                </td>
-                                <td className="py-2 px-2">
-                                  {formData.expanderAceite.length > 1 && (
-                                    <Button
-                                      type="button"
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-8 w-8 p-0"
-                                      onClick={() => {
-                                        const newAceite = formData.expanderAceite.filter((_, i) => i !== index);
-                                        setFormData({ ...formData, expanderAceite: newAceite });
-                                      }}
-                                    >
-                                      <Trash2 className="h-3.5 w-3.5 text-red-400 hover:text-red-600" />
-                                    </Button>
-                                  )}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
-                </TabsContent>
-              </Tabs>
+                </div>
+              </div>
             </div>
             <DialogFooter>
               <DialogClose asChild>
