@@ -116,8 +116,13 @@ const Movimientos = () => {
     const matchProducto = filtroProducto === 'todos' || m.producto === filtroProducto;
     const matchTransporte = filtroTransporte === 'todos' || (m.transporte && m.transporte === filtroTransporte);
     
-    const matchFechaDesde = !fechaDesde || new Date(m.fecha) >= fechaDesde;
-    const matchFechaHasta = !fechaHasta || new Date(m.fecha) <= fechaHasta;
+    // Comparar fechas usando solo la parte de fecha (YYYY-MM-DD) para evitar problemas de timezone
+    const movimientoFecha = m.fecha ? m.fecha.split('T')[0] : '';
+    const fechaDesdeStr = fechaDesde ? format(fechaDesde, 'yyyy-MM-dd') : '';
+    const fechaHastaStr = fechaHasta ? format(fechaHasta, 'yyyy-MM-dd') : '';
+    
+    const matchFechaDesde = !fechaDesdeStr || movimientoFecha >= fechaDesdeStr;
+    const matchFechaHasta = !fechaHastaStr || movimientoFecha <= fechaHastaStr;
 
     return matchSearch && matchTipo && matchProducto && matchTransporte && matchFechaDesde && matchFechaHasta;
   });
