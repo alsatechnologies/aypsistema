@@ -159,6 +159,7 @@ const EmbarquePage = () => {
   const [horaPesoBruto, setHoraPesoBruto] = useState<string | null>(null);
   const [horaPesoNeto, setHoraPesoNeto] = useState<string | null>(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [observaciones, setObservaciones] = useState<string>('');
 
   // Cargar análisis cuando se selecciona un embarque
@@ -432,10 +433,15 @@ const EmbarquePage = () => {
   const handleGuardar = async () => {
     if (!selectedEmbarque) return;
     
+    // Prevenir clicks múltiples
+    if (isSaving) return;
+    setIsSaving(true);
+    
     // Validar que no esté completado (o que el usuario tenga permisos)
     const validacionEstatus = puedeModificarRegistro(selectedEmbarque.estatus, usuario?.rol);
     if (!validacionEstatus.valid) {
       toast.error(validacionEstatus.errors[0]);
+      setIsSaving(false);
       return;
     }
     
@@ -515,10 +521,12 @@ const EmbarquePage = () => {
       }
       
       await loadEmbarques();
-    setIsDialogOpen(false);
+      setIsDialogOpen(false);
       toast.success('Embarque guardado correctamente' + (codigoLoteFinal ? ` - Lote: ${codigoLoteFinal}` : ''));
     } catch (error) {
       handleError(error, { module: 'Embarque', action: 'guardarEmbarque' }, 'Error al guardar embarque');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -1140,9 +1148,13 @@ const EmbarquePage = () => {
                     <Printer className="h-4 w-4" />
                     {isGeneratingPDF ? 'Generando...' : 'Imprimir'}
                   </Button>
-                  <Button onClick={handleGuardar} className="bg-primary hover:bg-primary/90 flex items-center gap-2">
+                  <Button 
+                    onClick={handleGuardar} 
+                    className="bg-primary hover:bg-primary/90 flex items-center gap-2"
+                    disabled={isSaving}
+                  >
                     <Save className="h-4 w-4" />
-                    Guardar Boleta
+                    {isSaving ? 'Guardando...' : 'Guardar Boleta'}
                   </Button>
                 </DialogFooter>
               </>
