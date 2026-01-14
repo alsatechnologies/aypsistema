@@ -36,9 +36,20 @@ const NuevoIngresoDialog: React.FC<NuevoIngresoDialogProps> = ({ open, onOpenCha
     ubicacion: '',
   });
 
+  // Función para capitalizar la primera letra de cada palabra
+  const toTitleCase = (str: string): string => {
+    return str
+      .toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
 
   const handleChange = (field: keyof NuevoIngresoData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    // Aplicar Title Case a campos de texto (excepto placas)
+    const fieldsToCapitalize: (keyof NuevoIngresoData)[] = ['nombreChofer', 'empresa', 'procedenciaDestino'];
+    const finalValue = fieldsToCapitalize.includes(field) ? toTitleCase(value) : value;
+    setFormData(prev => ({ ...prev, [field]: finalValue }));
   };
 
   const handleSubmit = () => {
