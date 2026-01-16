@@ -1241,14 +1241,9 @@ const Reportes = () => {
         <Dialog open={isDetalleProduccionOpen} onOpenChange={setIsDetalleProduccionOpen}>
           <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <div className="flex items-center justify-between">
-                <DialogTitle className="flex items-center gap-2">
-                  <Factory className="h-5 w-5" />
-                  Detalle del Reporte {selectedReporteProduccion?.id}
-                </DialogTitle>
+              <div className="flex items-center gap-4">
                 {selectedReporteProduccion && (
                   <Button 
-                    variant="outline" 
                     size="sm"
                     onClick={() => {
                       const r = selectedReporteProduccion;
@@ -1272,12 +1267,16 @@ const Reportes = () => {
                       link.download = `reporte_produccion_${r.id}_${r.fecha}.csv`;
                       link.click();
                     }}
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 bg-red-800 hover:bg-red-900 text-white"
                   >
                     <Download className="h-4 w-4" />
                     Exportar CSV
                   </Button>
                 )}
+                <DialogTitle className="flex items-center gap-2">
+                  <Factory className="h-5 w-5" />
+                  Detalle del Reporte {selectedReporteProduccion?.id}
+                </DialogTitle>
               </div>
             </DialogHeader>
 
