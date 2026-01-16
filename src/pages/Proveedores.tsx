@@ -138,10 +138,14 @@ const Proveedores = () => {
     ].join('\r\n');
 
     // BOM (\uFEFF) para que Excel detecte UTF-8 correctamente en Windows
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    // Usar tipo text/tab-separated-values para mejor compatibilidad con Windows Excel
+    const blob = new Blob(['\uFEFF' + csvContent], { 
+      type: 'text/tab-separated-values;charset=utf-8;' 
+    });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `proveedores_${new Date().toISOString().split('T')[0]}.csv`;
+    // Usar extensión .tsv para Windows Excel, pero también funciona con .csv
+    link.download = `proveedores_${new Date().toISOString().split('T')[0]}.tsv`;
     link.click();
     toast.success('Archivo descargado');
   };
