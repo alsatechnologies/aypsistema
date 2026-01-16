@@ -5,10 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { History, Plus, Edit, Trash2, User, RefreshCw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { formatDateTimeMST } from '@/utils/dateUtils';
 
 interface AuditoriaEntry {
   id: number;
@@ -58,9 +57,32 @@ const HistorialCambiosButton: React.FC<HistorialCambiosButtonProps> = ({
   const [historial, setHistorial] = useState<AuditoriaEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<AuditoriaEntry | null>(null);
+  const [usuariosMap, setUsuariosMap] = useState<Map<string, string>>(new Map());
 
   // Solo mostrar para administradores
   if (!esAdministrador()) return null;
+
+  const loadUsuarios = async () => {
+    if (!supabase) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('correo, nombre_completo');
+      
+      if (error) throw error;
+      
+      const map = new Map<string, string>();
+      (data || []).forEach(u => {
+        if (u.correo && u.nombre_completo) {
+          map.set(u.correo, u.nombre_completo);
+        }
+      });
+      setUsuariosMap(map);
+    } catch (error) {
+      console.error('Error al cargar usuarios:', error);
+    }
+  };
 
   const loadHistorial = async () => {
     if (!supabase) return;
@@ -85,15 +107,13 @@ const HistorialCambiosButton: React.FC<HistorialCambiosButtonProps> = ({
 
   const handleOpen = () => {
     setIsOpen(true);
+    loadUsuarios();
     loadHistorial();
   };
 
-  const formatFecha = (fecha: string) => {
-    try {
-      return format(new Date(fecha), "dd/MM/yyyy HH:mm", { locale: es });
-    } catch {
-      return fecha;
-    }
+  const getNombreUsuario = (email: string | null) => {
+    if (!email) return 'Sistema';
+    return usuariosMap.get(email) || email;
   };
 
   const getAccionBadge = (accion: string) => {
@@ -205,12 +225,12 @@ const HistorialCambiosButton: React.FC<HistorialCambiosButtonProps> = ({
                     <div className="flex items-center gap-3">
                       {getAccionBadge(entry.accion)}
                       <span className="text-sm text-muted-foreground">
-                        {formatFecha(entry.fecha_hora)}
+                        {formatDateTimeMST(entry.fecha_hora)}
                       </span>
                     </div>
                     <div className="flex items-center gap-1 text-sm text-muted-foreground">
                       <User className="h-3 w-3" />
-                      {entry.usuario_email || 'Sistema'}
+                      {getNombreUsuario(entry.usuario_email)}
                     </div>
                   </div>
 

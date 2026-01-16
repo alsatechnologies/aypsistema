@@ -16,6 +16,7 @@ import { supabase } from '@/lib/supabase';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { formatDateTimeMST } from '@/utils/dateUtils';
 
 interface AuditoriaEntry {
   id: number;
@@ -65,6 +66,30 @@ const Auditoria = () => {
   const [fechaFin, setFechaFin] = useState<Date | undefined>();
   const [selectedEntry, setSelectedEntry] = useState<AuditoriaEntry | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [usuariosMap, setUsuariosMap] = useState<Map<string, string>>(new Map());
+
+  // Cargar usuarios para mapear email -> nombre
+  const loadUsuarios = async () => {
+    if (!supabase) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('correo, nombre_completo');
+      
+      if (error) throw error;
+      
+      const map = new Map<string, string>();
+      (data || []).forEach(u => {
+        if (u.correo && u.nombre_completo) {
+          map.set(u.correo, u.nombre_completo);
+        }
+      });
+      setUsuariosMap(map);
+    } catch (error) {
+      console.error('Error al cargar usuarios:', error);
+    }
+  };
 
   // Cargar registros de auditoría
   const loadAuditoria = async () => {
@@ -90,14 +115,24 @@ const Auditoria = () => {
   };
 
   useEffect(() => {
+    loadUsuarios();
     loadAuditoria();
   }, []);
 
-  // Obtener usuarios únicos para filtro
+  // Función para obtener nombre de usuario
+  const getNombreUsuario = (email: string | null) => {
+    if (!email) return 'Sistema';
+    return usuariosMap.get(email) || email;
+  };
+
+  // Obtener usuarios únicos para filtro (con nombres)
   const usuariosUnicos = useMemo(() => {
     const emails = new Set(registros.map(r => r.usuario_email).filter(Boolean));
-    return Array.from(emails) as string[];
-  }, [registros]);
+    return Array.from(emails).map(email => ({
+      email: email as string,
+      nombre: usuariosMap.get(email as string) || email as string
+    }));
+  }, [registros, usuariosMap]);
 
   // Obtener tablas únicas para filtro
   const tablasUnicas = useMemo(() => {
@@ -114,8 +149,9 @@ const Auditoria = () => {
         const matchBoleta = registro.datos_nuevos?.boleta?.toString().toLowerCase().includes(searchLower) ||
                           registro.datos_anteriores?.boleta?.toString().toLowerCase().includes(searchLower);
         const matchEmail = registro.usuario_email?.toLowerCase().includes(searchLower);
+        const matchNombre = getNombreUsuario(registro.usuario_email).toLowerCase().includes(searchLower);
         const matchRegistroId = registro.registro_id.toString().includes(search);
-        if (!matchBoleta && !matchEmail && !matchRegistroId) return false;
+        if (!matchBoleta && !matchEmail && !matchNombre && !matchRegistroId) return false;
       }
 
       // Filtro de tabla
@@ -140,15 +176,7 @@ const Auditoria = () => {
 
       return true;
     });
-  }, [registros, search, filtroTabla, filtroAccion, filtroUsuario, fechaInicio, fechaFin]);
-
-  const formatFecha = (fecha: string) => {
-    try {
-      return format(new Date(fecha), "dd/MM/yyyy HH:mm:ss", { locale: es });
-    } catch {
-      return fecha;
-    }
-  };
+  }, [registros, search, filtroTabla, filtroAccion, filtroUsuario, fechaInicio, fechaFin, getNombreUsuario]);
 
   const getAccionBadge = (accion: string) => {
     const config = ACCIONES_AMIGABLES[accion] || { label: accion, color: 'bg-gray-100 text-gray-700', icon: null };
@@ -296,9 +324,9 @@ const Auditoria = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos</SelectItem>
-                    {usuariosUnicos.map(email => (
-                      <SelectItem key={email} value={email}>
-                        {email}
+                    {usuariosUnicos.map(u => (
+                      <SelectItem key={u.email} value={u.email}>
+                        {u.nombre}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -404,7 +432,7 @@ const Auditoria = () => {
                       registrosFiltrados.map((registro) => (
                         <TableRow key={registro.id} className="hover:bg-muted/50">
                           <TableCell className="font-mono text-xs">
-                            {formatFecha(registro.fecha_hora)}
+                            {formatDateTimeMST(registro.fecha_hora)}
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline">
@@ -420,7 +448,7 @@ const Auditoria = () => {
                           <TableCell className="text-sm">
                             <div className="flex items-center gap-1">
                               <User className="h-3 w-3 text-muted-foreground" />
-                              {registro.usuario_email || 'Sistema'}
+                              {getNombreUsuario(registro.usuario_email)}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -454,7 +482,7 @@ const Auditoria = () => {
             <DialogDescription>
               {selectedEntry && (
                 <span>
-                  {getTablaNombre(selectedEntry.tabla)} • {formatFecha(selectedEntry.fecha_hora)}
+                  {getTablaNombre(selectedEntry.tabla)} • {formatDateTimeMST(selectedEntry.fecha_hora)}
                 </span>
               )}
             </DialogDescription>
@@ -478,7 +506,7 @@ const Auditoria = () => {
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">Usuario</Label>
-                  <p className="font-medium">{selectedEntry.usuario_email || 'Sistema'}</p>
+                  <p className="font-medium">{getNombreUsuario(selectedEntry.usuario_email)}</p>
                 </div>
                 {selectedEntry.datos_nuevos?.boleta && (
                   <div>
