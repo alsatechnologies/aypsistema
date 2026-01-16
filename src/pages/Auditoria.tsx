@@ -197,48 +197,108 @@ const Auditoria = () => {
     setIsDetailOpen(true);
   };
 
+  // Mapeo de nombres de campos a etiquetas amigables
+  const CAMPOS_AMIGABLES: Record<string, string> = {
+    'cantidad': 'Cantidad',
+    'producto_id': 'ID Producto',
+    'almacen_id': 'ID Almacén',
+    '_producto': 'Producto',
+    '_almacen': 'Almacén',
+    'peso_bruto': 'Peso Bruto',
+    'peso_tara': 'Peso Tara',
+    'peso_neto': 'Peso Neto',
+    'estatus': 'Estatus',
+    'boleta': 'Boleta',
+    'codigo_lote': 'Código de Lote',
+    'producto': 'Producto',
+    'cliente': 'Cliente',
+    'proveedor': 'Proveedor',
+    'chofer': 'Chofer',
+    'placas': 'Placas',
+    'observaciones': 'Observaciones',
+    'destino': 'Destino',
+    'origen': 'Origen',
+    'tipo_transporte': 'Tipo Transporte',
+    'tipo_operacion': 'Tipo Operación',
+    'fecha_hora_ingreso': 'Fecha/Hora Ingreso',
+    'fecha_hora_salida': 'Fecha/Hora Salida',
+    'hora_peso_bruto': 'Hora Peso Bruto',
+    'hora_peso_tara': 'Hora Peso Tara',
+    'analisis': 'Análisis',
+  };
+
+  const getEtiquetaCampo = (key: string) => {
+    return CAMPOS_AMIGABLES[key] || key;
+  };
+
   const renderJsonDiff = (anterior: Record<string, any> | null, nuevo: Record<string, any> | null) => {
     const allKeys = new Set([
       ...Object.keys(anterior || {}),
       ...Object.keys(nuevo || {})
     ]);
 
-    // Campos a excluir del diff
-    const excludeKeys = ['created_at', 'updated_at', 'id'];
+    // Campos a excluir del diff (técnicos/internos)
+    const excludeKeys = ['created_at', 'updated_at', 'id', 'producto_id', 'almacen_id', 'cliente_id', 'proveedor_id'];
+    
+    // Campos de contexto que se muestran arriba (no cambian, solo dan contexto)
+    const contextKeys = ['_producto', '_almacen'];
+    
+    // Extraer contexto
+    const contexto = contextKeys
+      .filter(key => nuevo?.[key] || anterior?.[key])
+      .map(key => ({
+        label: getEtiquetaCampo(key),
+        value: nuevo?.[key] || anterior?.[key]
+      }));
 
     return (
-      <div className="space-y-2 max-h-96 overflow-y-auto">
-        {Array.from(allKeys)
-          .filter(key => !excludeKeys.includes(key))
-          .map(key => {
-            const valorAnterior = anterior?.[key];
-            const valorNuevo = nuevo?.[key];
-            const cambio = JSON.stringify(valorAnterior) !== JSON.stringify(valorNuevo);
+      <div className="space-y-3">
+        {/* Contexto (producto, almacén, etc.) */}
+        {contexto.length > 0 && (
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-xs text-blue-600 font-medium mb-1">Contexto:</p>
+            {contexto.map((ctx, idx) => (
+              <p key={idx} className="text-sm">
+                <span className="font-medium">{ctx.label}:</span> {ctx.value}
+              </p>
+            ))}
+          </div>
+        )}
+        
+        {/* Cambios */}
+        <div className="space-y-2 max-h-96 overflow-y-auto">
+          {Array.from(allKeys)
+            .filter(key => !excludeKeys.includes(key) && !contextKeys.includes(key))
+            .map(key => {
+              const valorAnterior = anterior?.[key];
+              const valorNuevo = nuevo?.[key];
+              const cambio = JSON.stringify(valorAnterior) !== JSON.stringify(valorNuevo);
 
-            if (!cambio && anterior && nuevo) return null;
+              if (!cambio && anterior && nuevo) return null;
 
-            return (
-              <div key={key} className={cn(
-                "p-2 rounded text-sm",
-                cambio ? "bg-yellow-50 border border-yellow-200" : "bg-gray-50"
-              )}>
-                <span className="font-medium text-gray-700">{key}:</span>
-                {anterior && valorAnterior !== undefined && (
-                  <div className="ml-2 text-red-600">
-                    <span className="text-xs text-gray-500">Antes: </span>
-                    {typeof valorAnterior === 'object' ? JSON.stringify(valorAnterior) : String(valorAnterior || '-')}
-                  </div>
-                )}
-                {nuevo && valorNuevo !== undefined && (
-                  <div className="ml-2 text-green-600">
-                    <span className="text-xs text-gray-500">Después: </span>
-                    {typeof valorNuevo === 'object' ? JSON.stringify(valorNuevo) : String(valorNuevo || '-')}
-                  </div>
-                )}
-              </div>
-            );
-          })
-          .filter(Boolean)}
+              return (
+                <div key={key} className={cn(
+                  "p-2 rounded text-sm",
+                  cambio ? "bg-yellow-50 border border-yellow-200" : "bg-gray-50"
+                )}>
+                  <span className="font-medium text-gray-700">{getEtiquetaCampo(key)}:</span>
+                  {anterior && valorAnterior !== undefined && (
+                    <div className="ml-2 text-red-600">
+                      <span className="text-xs text-gray-500">Antes: </span>
+                      {typeof valorAnterior === 'object' ? JSON.stringify(valorAnterior) : String(valorAnterior || '-')}
+                    </div>
+                  )}
+                  {nuevo && valorNuevo !== undefined && (
+                    <div className="ml-2 text-green-600">
+                      <span className="text-xs text-gray-500">Después: </span>
+                      {typeof valorNuevo === 'object' ? JSON.stringify(valorNuevo) : String(valorNuevo || '-')}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+            .filter(Boolean)}
+        </div>
       </div>
     );
   };

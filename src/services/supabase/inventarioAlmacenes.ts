@@ -99,6 +99,22 @@ export async function upsertInventarioAlmacen(
     throw new Error('Supabase no está configurado');
   }
   
+  // Obtener nombres de producto y almacén para el registro de auditoría
+  const { data: producto } = await supabase
+    .from('productos')
+    .select('nombre')
+    .eq('id', productoId)
+    .single();
+  
+  const { data: almacen } = await supabase
+    .from('almacenes')
+    .select('nombre')
+    .eq('id', almacenId)
+    .single();
+  
+  const nombreProducto = producto?.nombre || `Producto #${productoId}`;
+  const nombreAlmacen = almacen?.nombre || `Almacén #${almacenId}`;
+  
   // Verificar si ya existe
   const { data: existente } = await supabase
     .from('inventario_almacenes')
@@ -124,8 +140,8 @@ export async function upsertInventarioAlmacen(
       tabla: 'inventario_almacenes', 
       registro_id: existente.id, 
       accion: 'UPDATE', 
-      datos_anteriores: existente, 
-      datos_nuevos: data 
+      datos_anteriores: { ...existente, _producto: nombreProducto, _almacen: nombreAlmacen }, 
+      datos_nuevos: { ...data, _producto: nombreProducto, _almacen: nombreAlmacen }
     });
     return data;
   } else {
@@ -145,7 +161,7 @@ export async function upsertInventarioAlmacen(
       tabla: 'inventario_almacenes', 
       registro_id: data.id, 
       accion: 'INSERT', 
-      datos_nuevos: data 
+      datos_nuevos: { ...data, _producto: nombreProducto, _almacen: nombreAlmacen }
     });
     return data;
   }
