@@ -214,17 +214,32 @@ const Reportes = () => {
 
     const rows = data.map(item => headers.map(header => {
       const key = headerToKey[header] || header.toLowerCase().replace(/\s+/g, '_');
-      const value = item[key] ?? '';
-      return `"${String(value).replace(/"/g, '""')}"`;
+      let value = item[key] ?? '';
+      
+      // Si es un número, mantener formato con punto como separador decimal
+      if (typeof value === 'number') {
+        value = value.toString().replace(',', '.');
+      }
+      
+      // Escapar comillas dobles y envolver en comillas solo si contiene delimitador, comillas o saltos de línea
+      const stringValue = String(value);
+      if (stringValue.includes(';') || stringValue.includes('"') || stringValue.includes('\n') || stringValue.includes('\r')) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+      }
+      
+      return stringValue;
     }));
     
+    // Usar CRLF (\r\n) para compatibilidad con Windows Excel
     const csvContent = [
       headers.join(';'),
       ...rows.map(row => row.join(';'))
-    ].join('\n');
+    ].join('\r\n');
 
-    // BOM (\uFEFF) para que Excel detecte UTF-8 correctamente
-    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    // BOM (\uFEFF) para que Excel detecte UTF-8 correctamente en Windows
+    const blob = new Blob(['\uFEFF' + csvContent], { 
+      type: 'text/csv;charset=utf-8;' 
+    });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `${filename}_${format(new Date(), 'yyyy-MM-dd')}.csv`;

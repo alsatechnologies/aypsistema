@@ -130,12 +130,13 @@ const Proveedores = () => {
       p.empresa, p.producto, p.telefono, p.email, p.fechaAlta, p.ubicacion
     ]);
 
+    // Usar CRLF (\r\n) para compatibilidad con Windows Excel
     const csvContent = [
       headers.join(';'),
       ...rows.map(row => row.join(';'))
-    ].join('\n');
+    ].join('\r\n');
 
-    // BOM (\uFEFF) para que Excel detecte UTF-8 correctamente
+    // BOM (\uFEFF) para que Excel detecte UTF-8 correctamente en Windows
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
