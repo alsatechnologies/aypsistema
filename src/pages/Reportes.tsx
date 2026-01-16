@@ -160,9 +160,12 @@ const Reportes = () => {
       const matchCliente = filtroCliente === 'todos' || 
         (e.cliente_id && e.cliente_id.toString() === filtroCliente);
       
-      return matchSearch && matchCliente;
+      const matchProducto = filtroProducto === 'todos' || 
+        (e.producto_id && e.producto_id.toString() === filtroProducto);
+      
+      return matchSearch && matchCliente && matchProducto;
     });
-  }, [embarques, search, filtroCliente]);
+  }, [embarques, search, filtroCliente, filtroProducto]);
 
   // Calculate totals
   const totalEntradas = filteredRecepciones.reduce((acc, r) => acc + (r.peso_neto || 0), 0);
