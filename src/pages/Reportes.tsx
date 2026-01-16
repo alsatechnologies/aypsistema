@@ -295,11 +295,35 @@ const Reportes = () => {
       head: [['Boleta', 'Fecha', 'Producto', 'Cliente', 'Destino', 'Chofer', 'Placas', 'Peso Bruto (Kg)', 'Peso Tara (Kg)', 'Peso Neto (Kg)', 'Lote', 'Estatus']],
       body: tableData,
       startY: 38,
-      styles: { fontSize: 7, cellPadding: 1.5 },
-      headStyles: { fillColor: [139, 92, 246], textColor: 255, fontStyle: 'bold' },
+      styles: { 
+        fontSize: 6, 
+        cellPadding: 1,
+        overflow: 'linebreak',
+        cellWidth: 'wrap'
+      },
+      headStyles: { 
+        fillColor: [109, 34, 52], // #6D2234
+        textColor: 255, 
+        fontStyle: 'bold',
+        fontSize: 7
+      },
       alternateRowStyles: { fillColor: [245, 245, 245] },
-      margin: { top: 38, left: 14, right: 14 },
-      tableWidth: 'wrap'
+      margin: { top: 38, left: 10, right: 10 },
+      tableWidth: 'auto',
+      columnStyles: {
+        0: { cellWidth: 25 }, // Boleta
+        1: { cellWidth: 25 }, // Fecha
+        2: { cellWidth: 40 }, // Producto
+        3: { cellWidth: 45 }, // Cliente
+        4: { cellWidth: 30 }, // Destino
+        5: { cellWidth: 30 }, // Chofer
+        6: { cellWidth: 25 }, // Placas
+        7: { cellWidth: 30 }, // Peso Bruto
+        8: { cellWidth: 30 }, // Peso Tara
+        9: { cellWidth: 30 }, // Peso Neto
+        10: { cellWidth: 35 }, // Lote
+        11: { cellWidth: 25 }  // Estatus
+      }
     });
     
     // Guardar PDF
