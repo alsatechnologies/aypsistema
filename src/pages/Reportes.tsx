@@ -27,6 +27,8 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { Pie, PieChart } from 'recharts';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import {
   ChartContainer,
   ChartTooltip,
@@ -245,6 +247,64 @@ const Reportes = () => {
       estatus: e.estatus
     }));
     exportToCSV(data, headers, 'reporte_salidas');
+  };
+
+  const handleExportSalidasPDF = () => {
+    const doc = new jsPDF('landscape', 'mm', 'a4');
+    
+    // Título
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Reporte de Salidas (Embarque)', 14, 15);
+    
+    // Información del reporte
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    const fechaReporte = new Date().toLocaleDateString('es-MX', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    doc.text(`Generado el: ${fechaReporte}`, 14, 22);
+    doc.text(`Total de registros: ${filteredEmbarques.length}`, 14, 27);
+    
+    // Calcular total de salidas
+    const totalSalidas = filteredEmbarques.reduce((sum, e) => sum + (e.peso_neto || 0), 0);
+    doc.text(`Total de Salidas: ${totalSalidas.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Kg`, 14, 32);
+    
+    // Preparar datos para la tabla
+    const tableData = filteredEmbarques.map(e => [
+      e.boleta || '',
+      e.fecha ? new Date(e.fecha).toLocaleDateString('es-MX') : '',
+      e.producto?.nombre || '',
+      e.cliente?.empresa || '',
+      e.destino || '',
+      e.chofer || '',
+      e.placas || '',
+      (e.peso_bruto || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      (e.peso_tara || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      (e.peso_neto || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      e.codigo_lote || '',
+      e.estatus || ''
+    ]);
+    
+    // Crear tabla
+    autoTable(doc, {
+      head: [['Boleta', 'Fecha', 'Producto', 'Cliente', 'Destino', 'Chofer', 'Placas', 'Peso Bruto (Kg)', 'Peso Tara (Kg)', 'Peso Neto (Kg)', 'Lote', 'Estatus']],
+      body: tableData,
+      startY: 38,
+      styles: { fontSize: 7, cellPadding: 1.5 },
+      headStyles: { fillColor: [139, 92, 246], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      margin: { top: 38, left: 14, right: 14 },
+      tableWidth: 'wrap'
+    });
+    
+    // Guardar PDF
+    const fechaArchivo = new Date().toISOString().split('T')[0];
+    doc.save(`reporte_salidas_${fechaArchivo}.pdf`);
   };
 
   const handleExportInventario = () => {
@@ -970,10 +1030,16 @@ const Reportes = () => {
                       {filteredEmbarques.length} registro(s) encontrado(s)
                     </CardDescription>
                   </div>
-                  <Button onClick={handleExportSalidas} className="flex items-center gap-2">
-                    <Download className="h-4 w-4" />
-                    Exportar CSV
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button onClick={handleExportSalidas} variant="outline" className="flex items-center gap-2">
+                      <Download className="h-4 w-4" />
+                      Exportar CSV
+                    </Button>
+                    <Button onClick={handleExportSalidasPDF} className="flex items-center gap-2 bg-red-800 hover:bg-red-900 text-white">
+                      <FileText className="h-4 w-4" />
+                      Exportar PDF
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
