@@ -350,6 +350,49 @@ export async function getTotalSalidasPasta() {
   return totalSalidas;
 }
 
+// Obtener salidas por producto desde el inicio del sistema
+export async function getSalidasPorProducto(productoId?: number) {
+  if (!supabase) {
+    throw new Error('Supabase no está configurado');
+  }
+  
+  let query = supabase
+    .from('embarques')
+    .select(`
+      peso_neto,
+      producto_id,
+      producto:productos(id, nombre),
+      estatus
+    `)
+    .eq('estatus', 'Completado')
+    .not('peso_neto', 'is', null);
+  
+  if (productoId) {
+    query = query.eq('producto_id', productoId);
+  }
+  
+  const { data: embarques, error } = await query;
+  
+  if (error) throw error;
+  
+  // Agrupar por producto_id y sumar peso_neto
+  const salidasPorProducto = (embarques || []).reduce((acc: Record<number, number>, e) => {
+    const pid = e.producto_id;
+    if (pid) {
+      acc[pid] = (acc[pid] || 0) + (e.peso_neto || 0);
+    }
+    return acc;
+  }, {});
+  
+  if (productoId) {
+    // Si se solicitó un producto específico, retornar su total
+    return salidasPorProducto[productoId] || 0;
+  }
+  
+  // Si no se especificó producto, retornar objeto con todos los productos
+  return salidasPorProducto;
+}
+
 // Eliminar embarque permanentemente
 export async function deleteEmbarque(id: number) {
   if (!supabase) {

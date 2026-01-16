@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import { generarCodigoLoteParaOperacion } from './lotes';
 import { registrarAuditoria } from './auditoria';
 import { logger } from '@/services/logger';
+import { upsertInventarioAlmacen } from './inventarioAlmacenes';
 
 export interface Recepcion {
   id: number;
@@ -188,6 +189,61 @@ export async function updateRecepcion(id: number, recepcion: Partial<Recepcion>)
     .single();
   
   if (error) throw error;
+  
+  // SUMAR AL INVENTARIO: Si la recepción está completada y tiene peso_neto y almacen_id
+  // Sumar automáticamente al inventario del almacén correspondiente
+  const estatusFinal = recepcion.estatus || recepcionAnterior?.estatus;
+  if (estatusFinal === 'Completado' && productoId && almacenId) {
+    const pesoNeto = data.peso_neto || recepcion.peso_neto;
+    const pesoNetoAnterior = recepcionAnterior?.peso_neto;
+    
+    // Solo sumar si hay peso_neto válido y es mayor a 0
+    if (pesoNeto && pesoNeto > 0) {
+      try {
+        // Obtener inventario actual del almacén para este producto
+        const { data: inventarioActual } = await supabase
+          .from('inventario_almacenes')
+          .select('cantidad')
+          .eq('almacen_id', almacenId)
+          .eq('producto_id', productoId)
+          .single();
+        
+        const cantidadActual = inventarioActual?.cantidad || 0;
+        
+        // Si había un peso_neto anterior, primero restarlo (para correcciones)
+        // Luego sumar el nuevo peso_neto
+        const cantidadAjustada = pesoNetoAnterior && pesoNetoAnterior > 0
+          ? cantidadActual - pesoNetoAnterior + pesoNeto
+          : cantidadActual + pesoNeto;
+        
+        // Asegurar que no sea negativo
+        const nuevaCantidad = Math.max(0, cantidadAjustada);
+        
+        // Actualizar inventario
+        await upsertInventarioAlmacen(almacenId, productoId, nuevaCantidad);
+        
+        logger.info(`Inventario actualizado para recepción ${id}`, {
+          recepcionId: id,
+          almacenId,
+          productoId,
+          pesoNeto,
+          cantidadAnterior: cantidadActual,
+          cantidadNueva: nuevaCantidad
+        }, 'Recepciones');
+      } catch (inventarioError) {
+        // Log el error pero no fallar el guardado de la recepción
+        const errorMessage = inventarioError instanceof Error ? inventarioError.message : 'Error desconocido';
+        logger.error('Error al actualizar inventario después de recepción', {
+          error: errorMessage,
+          recepcionId: id,
+          almacenId,
+          productoId,
+          pesoNeto
+        }, 'Recepciones');
+        console.error(`[RECEPCIONES] Error al actualizar inventario para recepción ${id}:`, errorMessage);
+      }
+    }
+  }
   
   // Registrar en auditoría
   await registrarAuditoria({
