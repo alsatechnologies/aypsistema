@@ -1035,7 +1035,7 @@ const Reportes = () => {
                       <Download className="h-4 w-4" />
                       Exportar CSV
                     </Button>
-                    <Button onClick={handleExportSalidasPDF} className="flex items-center gap-2 bg-red-800 hover:bg-red-900 text-white">
+                    <Button onClick={handleExportSalidasPDF} className="flex items-center gap-2 bg-[#6D2234] hover:bg-[#5a1c2a] text-white">
                       <FileText className="h-4 w-4" />
                       Exportar PDF
                     </Button>
