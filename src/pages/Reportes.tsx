@@ -215,15 +215,27 @@ const Reportes = () => {
 
     const rows = data.map(item => headers.map(header => {
       const key = headerToKey[header] || header.toLowerCase().replace(/\s+/g, '_');
-      let value = item[key] ?? '';
+      let value = item[key];
       
-      // Si es un número, mantener formato con punto como separador decimal
+      // Manejar valores undefined o null
+      if (value === undefined || value === null) {
+        value = '';
+      }
+      
+      // Si es un número, convertir a string con punto como separador decimal
       if (typeof value === 'number') {
         value = value.toString().replace(',', '.');
       }
       
-      // Escapar comillas dobles y envolver en comillas solo si contiene delimitador (tab), comillas o saltos de línea
+      // Convertir a string y manejar valores vacíos
       const stringValue = String(value);
+      
+      // Si está vacío, retornar string vacío (sin comillas)
+      if (stringValue === '' || stringValue === 'undefined' || stringValue === 'null') {
+        return '';
+      }
+      
+      // Escapar comillas dobles y envolver en comillas solo si contiene delimitador (tab), comillas o saltos de línea
       if (stringValue.includes('\t') || stringValue.includes('"') || stringValue.includes('\n') || stringValue.includes('\r')) {
         return `"${stringValue.replace(/"/g, '""')}"`;
       }
@@ -1198,10 +1210,16 @@ const Reportes = () => {
                   <Button 
                     onClick={() => {
                       const headers = ['Producto', 'Cantidad Total'];
-                      const data = inventarioPorProducto.map(item => ({
-                        producto: item.producto?.nombre || `Producto #${item.producto_id}`,
-                        cantidad: item.total
-                      }));
+                      const data = inventarioPorProducto.map(item => {
+                        // Calcular el total ajustado (restando salidas históricas) igual que en la tabla
+                        const salidasProducto = salidasPorProducto[item.producto_id] || 0;
+                        const totalAjustado = Math.max(0, (item.total || 0) - salidasProducto);
+                        
+                        return {
+                          producto: item.producto?.nombre || `Producto #${item.producto_id}`,
+                          cantidad: totalAjustado
+                        };
+                      });
                       exportToCSV(data, headers, 'inventario_por_producto');
                     }} 
                     className="flex items-center gap-2"
