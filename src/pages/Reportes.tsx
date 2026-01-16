@@ -1133,7 +1133,8 @@ const Reportes = () => {
                               </Badge>
                             </TableCell>
                           </TableRow>
-                        ))}
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </>
