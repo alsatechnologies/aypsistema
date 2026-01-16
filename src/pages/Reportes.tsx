@@ -1262,20 +1262,7 @@ const Reportes = () => {
                           <TableRow key={a.id}>
                             <TableCell className="font-medium">{a.nombre}</TableCell>
                             <TableCell className="text-right">{formatNumber(a.capacidad_total)}</TableCell>
-                            <TableCell className="text-right">
-                              {esPasta ? (
-                                <div className="space-y-1">
-                                  <div className="line-through text-muted-foreground text-sm">
-                                    {formatNumber(a.capacidad_actual || 0)}
-                                  </div>
-                                  <div className="font-semibold">
-                                    {formatNumber(capacidadConSalidas)}
-                                  </div>
-                                </div>
-                              ) : (
-                                formatNumber(a.capacidad_actual || 0)
-                              )}
-                            </TableCell>
+                            <TableCell className="text-right">{formatNumber(capacidadConSalidas)}</TableCell>
                             <TableCell className="text-right font-semibold">
                               {formatNumber(capacidadConSalidas)}
                             </TableCell>
