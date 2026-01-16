@@ -230,35 +230,30 @@ const Reportes = () => {
       // Convertir a string y manejar valores vacíos
       const stringValue = String(value);
       
-      // Si está vacío, retornar string vacío (sin comillas)
+      // Escapar comillas dobles y envolver TODOS los valores en comillas para máxima compatibilidad con Excel
+      // Esto evita problemas cuando los valores contienen comas, punto y coma, o saltos de línea
+      // Incluso los valores vacíos se envuelven en comillas para mantener consistencia
       if (stringValue === '' || stringValue === 'undefined' || stringValue === 'null') {
-        return '';
+        return '""';
       }
       
-      // Escapar comillas dobles y envolver en comillas solo si contiene delimitador (tab), comillas o saltos de línea
-      if (stringValue.includes('\t') || stringValue.includes('"') || stringValue.includes('\n') || stringValue.includes('\r')) {
-        return `"${stringValue.replace(/"/g, '""')}"`;
-      }
-      
-      return stringValue;
+      return `"${stringValue.replace(/"/g, '""')}"`;
     }));
     
-    // Usar TABULACIONES (\t) para compatibilidad universal con Excel (Windows y Mac)
+    // Usar COMA (,) como delimitador - formato CSV estándar universal
     // Usar CRLF (\r\n) para compatibilidad con Windows Excel
     const csvContent = [
-      headers.join('\t'),
-      ...rows.map(row => row.join('\t'))
+      headers.join(','),
+      ...rows.map(row => row.join(','))
     ].join('\r\n');
 
     // BOM (\uFEFF) para que Excel detecte UTF-8 correctamente en Windows
-    // Usar tipo text/tab-separated-values para mejor compatibilidad con Windows Excel
     const blob = new Blob(['\uFEFF' + csvContent], { 
-      type: 'text/tab-separated-values;charset=utf-8;' 
+      type: 'text/csv;charset=utf-8;' 
     });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    // Usar extensión .tsv para Windows Excel, pero también funciona con .csv
-    link.download = `${filename}_${format(new Date(), 'yyyy-MM-dd')}.tsv`;
+    link.download = `${filename}_${format(new Date(), 'yyyy-MM-dd')}.csv`;
     link.click();
     
     toast.success('Reporte descargado correctamente');

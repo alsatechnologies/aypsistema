@@ -130,22 +130,27 @@ const Proveedores = () => {
       p.empresa, p.producto, p.telefono, p.email, p.fechaAlta, p.ubicacion
     ]);
 
-    // Usar TABULACIONES (\t) para compatibilidad universal con Excel (Windows y Mac)
+    // Formatear filas con comillas para todos los valores (estándar CSV)
+    const formattedRows = rows.map(row => row.map(cell => {
+      const cellValue = String(cell || '');
+      // Escapar comillas dobles y envolver en comillas
+      return `"${cellValue.replace(/"/g, '""')}"`;
+    }));
+    
+    // Usar COMA (,) como delimitador - formato CSV estándar universal
     // Usar CRLF (\r\n) para compatibilidad con Windows Excel
     const csvContent = [
-      headers.join('\t'),
-      ...rows.map(row => row.join('\t'))
+      headers.join(','),
+      ...formattedRows.map(row => row.join(','))
     ].join('\r\n');
 
     // BOM (\uFEFF) para que Excel detecte UTF-8 correctamente en Windows
-    // Usar tipo text/tab-separated-values para mejor compatibilidad con Windows Excel
     const blob = new Blob(['\uFEFF' + csvContent], { 
-      type: 'text/tab-separated-values;charset=utf-8;' 
+      type: 'text/csv;charset=utf-8;' 
     });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    // Usar extensión .tsv para Windows Excel, pero también funciona con .csv
-    link.download = `proveedores_${new Date().toISOString().split('T')[0]}.tsv`;
+    link.download = `proveedores_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     toast.success('Archivo descargado');
   };
