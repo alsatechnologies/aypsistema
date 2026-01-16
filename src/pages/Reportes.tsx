@@ -311,18 +311,18 @@ const Reportes = () => {
       margin: { top: 38, left: 10, right: 10 },
       tableWidth: 'auto',
       columnStyles: {
-        0: { cellWidth: 25 }, // Boleta
-        1: { cellWidth: 25 }, // Fecha
-        2: { cellWidth: 40 }, // Producto
-        3: { cellWidth: 45 }, // Cliente
-        4: { cellWidth: 30 }, // Destino
-        5: { cellWidth: 30 }, // Chofer
-        6: { cellWidth: 25 }, // Placas
-        7: { cellWidth: 30 }, // Peso Bruto
-        8: { cellWidth: 30 }, // Peso Tara
-        9: { cellWidth: 30 }, // Peso Neto
-        10: { cellWidth: 35 }, // Lote
-        11: { cellWidth: 25 }  // Estatus
+        0: { cellWidth: 18 }, // Boleta
+        1: { cellWidth: 18 }, // Fecha
+        2: { cellWidth: 35 }, // Producto
+        3: { cellWidth: 40 }, // Cliente
+        4: { cellWidth: 28 }, // Destino
+        5: { cellWidth: 28 }, // Chofer
+        6: { cellWidth: 22 }, // Placas
+        7: { cellWidth: 22 }, // Peso Bruto
+        8: { cellWidth: 22 }, // Peso Tara
+        9: { cellWidth: 25 }, // Peso Neto
+        10: { cellWidth: 40 }, // Lote
+        11: { cellWidth: 22 }  // Estatus
       }
     });
     
