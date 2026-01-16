@@ -1240,44 +1240,42 @@ const Reportes = () => {
         {/* Dialog: Detalle de Producción con Visualización de Tanques */}
         <Dialog open={isDetalleProduccionOpen} onOpenChange={setIsDetalleProduccionOpen}>
           <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+            {selectedReporteProduccion && (
+              <Button 
+                size="sm"
+                onClick={() => {
+                  const r = selectedReporteProduccion;
+                  const headers = ['Tanque', 'Producto', 'Nivel (m)', 'Gomas (m)', 'Aceite (m)'];
+                  const rows = (r.niveles_tanques || []).map(t => {
+                    const goma = (r.niveles_gomas || []).find(g => g.goma === t.tanque);
+                    const nivelGomas = goma?.nivel || 0;
+                    const aceite = Math.max(0, (t.nivel || 0) - nivelGomas);
+                    return [
+                      t.tanque,
+                      t.producto || '-',
+                      (t.nivel || 0).toFixed(2),
+                      nivelGomas.toFixed(2),
+                      aceite.toFixed(2)
+                    ].join(';');
+                  });
+                  const csvContent = [headers.join(';'), ...rows].join('\n');
+                  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                  const link = document.createElement('a');
+                  link.href = URL.createObjectURL(blob);
+                  link.download = `reporte_produccion_${r.id}_${r.fecha}.csv`;
+                  link.click();
+                }}
+                className="absolute right-16 top-4 flex items-center gap-2 bg-white hover:bg-gray-100 text-gray-900 border border-gray-300"
+              >
+                <Download className="h-4 w-4" />
+                Exportar CSV
+              </Button>
+            )}
             <DialogHeader>
-              <div className="flex items-center gap-4">
-                {selectedReporteProduccion && (
-                  <Button 
-                    size="sm"
-                    onClick={() => {
-                      const r = selectedReporteProduccion;
-                      const headers = ['Tanque', 'Producto', 'Nivel (m)', 'Gomas (m)', 'Aceite (m)'];
-                      const rows = (r.niveles_tanques || []).map(t => {
-                        const goma = (r.niveles_gomas || []).find(g => g.goma === t.tanque);
-                        const nivelGomas = goma?.nivel || 0;
-                        const aceite = Math.max(0, (t.nivel || 0) - nivelGomas);
-                        return [
-                          t.tanque,
-                          t.producto || '-',
-                          (t.nivel || 0).toFixed(2),
-                          nivelGomas.toFixed(2),
-                          aceite.toFixed(2)
-                        ].join(';');
-                      });
-                      const csvContent = [headers.join(';'), ...rows].join('\n');
-                      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
-                      const link = document.createElement('a');
-                      link.href = URL.createObjectURL(blob);
-                      link.download = `reporte_produccion_${r.id}_${r.fecha}.csv`;
-                      link.click();
-                    }}
-                    className="flex items-center gap-2 bg-red-800 hover:bg-red-900 text-white"
-                  >
-                    <Download className="h-4 w-4" />
-                    Exportar CSV
-                  </Button>
-                )}
-                <DialogTitle className="flex items-center gap-2">
-                  <Factory className="h-5 w-5" />
-                  Detalle del Reporte {selectedReporteProduccion?.id}
-                </DialogTitle>
-              </div>
+              <DialogTitle className="flex items-center gap-2">
+                <Factory className="h-5 w-5" />
+                Detalle del Reporte {selectedReporteProduccion?.id}
+              </DialogTitle>
             </DialogHeader>
 
             {selectedReporteProduccion && (
