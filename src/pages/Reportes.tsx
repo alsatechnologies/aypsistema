@@ -1160,17 +1160,11 @@ const Reportes = () => {
           <TabsContent value="produccion" className="space-y-4">
             <Card>
               <CardHeader>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <CardTitle>Reporte de Producción</CardTitle>
-                    <CardDescription className="mt-1">
-                      {reportesProduccion.length} reporte(s) de producción
-                    </CardDescription>
-                  </div>
-                  <Button onClick={handleExportProduccion} className="flex items-center gap-2">
-                    <Download className="h-4 w-4" />
-                    Exportar CSV
-                  </Button>
+                <div>
+                  <CardTitle>Reporte de Producción</CardTitle>
+                  <CardDescription className="mt-1">
+                    {reportesProduccion.length} reporte(s) de producción
+                  </CardDescription>
                 </div>
               </CardHeader>
               <CardContent>
@@ -1247,10 +1241,44 @@ const Reportes = () => {
         <Dialog open={isDetalleProduccionOpen} onOpenChange={setIsDetalleProduccionOpen}>
           <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Factory className="h-5 w-5" />
-                Detalle del Reporte {selectedReporteProduccion?.id}
-              </DialogTitle>
+              <div className="flex items-center justify-between">
+                <DialogTitle className="flex items-center gap-2">
+                  <Factory className="h-5 w-5" />
+                  Detalle del Reporte {selectedReporteProduccion?.id}
+                </DialogTitle>
+                {selectedReporteProduccion && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      const r = selectedReporteProduccion;
+                      const headers = ['Tanque', 'Producto', 'Nivel (m)', 'Gomas (m)', 'Aceite (m)'];
+                      const rows = (r.niveles_tanques || []).map(t => {
+                        const goma = (r.niveles_gomas || []).find(g => g.goma === t.tanque);
+                        const nivelGomas = goma?.nivel || 0;
+                        const aceite = Math.max(0, (t.nivel || 0) - nivelGomas);
+                        return [
+                          t.tanque,
+                          t.producto || '-',
+                          (t.nivel || 0).toFixed(2),
+                          nivelGomas.toFixed(2),
+                          aceite.toFixed(2)
+                        ].join(';');
+                      });
+                      const csvContent = [headers.join(';'), ...rows].join('\n');
+                      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                      const link = document.createElement('a');
+                      link.href = URL.createObjectURL(blob);
+                      link.download = `reporte_produccion_${r.id}_${r.fecha}.csv`;
+                      link.click();
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Exportar CSV
+                  </Button>
+                )}
+              </div>
             </DialogHeader>
 
             {selectedReporteProduccion && (
