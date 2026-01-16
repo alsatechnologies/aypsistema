@@ -275,9 +275,17 @@ const Reportes = () => {
     doc.text(`Total de Salidas: ${totalSalidas.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Kg`, 14, 32);
     
     // Preparar datos para la tabla
-    const tableData = filteredEmbarques.map(e => [
+    const tableData = filteredEmbarques.map(e => {
+      // Formatear fecha sin problemas de zona horaria
+      const formatFecha = (fechaStr: string) => {
+        if (!fechaStr) return '';
+        const [año, mes, dia] = fechaStr.split('-');
+        return `${dia}/${mes}/${año}`;
+      };
+      
+      return [
       e.boleta || '',
-      e.fecha ? new Date(e.fecha).toLocaleDateString('es-MX') : '',
+      formatFecha(e.fecha),
       e.producto?.nombre || '',
       e.cliente?.empresa || '',
       e.destino || '',
@@ -288,7 +296,8 @@ const Reportes = () => {
       (e.peso_neto || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
       e.codigo_lote || '',
       e.estatus || ''
-    ]);
+    ];
+    });
     
     // Crear tabla
     autoTable(doc, {
@@ -1097,10 +1106,18 @@ const Reportes = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredEmbarques.map((e) => (
+                        {filteredEmbarques.map((e) => {
+                          // Formatear fecha sin problemas de zona horaria
+                          const formatFecha = (fechaStr: string) => {
+                            if (!fechaStr) return '-';
+                            const [año, mes, dia] = fechaStr.split('-');
+                            return `${dia}/${mes}/${año}`;
+                          };
+                          
+                          return (
                           <TableRow key={e.id}>
                             <TableCell className="font-medium">{e.boleta}</TableCell>
-                            <TableCell>{format(new Date(e.fecha), 'dd/MM/yyyy', { locale: es })}</TableCell>
+                            <TableCell>{formatFecha(e.fecha)}</TableCell>
                             <TableCell>{e.producto?.nombre || '-'}</TableCell>
                             <TableCell>{e.cliente?.empresa || '-'}</TableCell>
                             <TableCell>{e.destino || '-'}</TableCell>
