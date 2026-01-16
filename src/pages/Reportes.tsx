@@ -526,9 +526,8 @@ const Reportes = () => {
                                       {totalKg.toLocaleString('es-MX', { 
                                         minimumFractionDigits: 2, 
                                         maximumFractionDigits: 2 
-                                      })}
+                                      })} <span className="text-base font-medium text-muted-foreground">kg</span>
                                     </p>
-                                    <p className="text-xs text-muted-foreground">kg</p>
                                     <p className="text-sm text-muted-foreground">
                                       ({totalToneladas.toLocaleString('es-MX', { 
                                         minimumFractionDigits: 2, 
