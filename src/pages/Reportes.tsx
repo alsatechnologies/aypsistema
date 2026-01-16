@@ -221,19 +221,20 @@ const Reportes = () => {
         value = value.toString().replace(',', '.');
       }
       
-      // Escapar comillas dobles y envolver en comillas solo si contiene delimitador, comillas o saltos de línea
+      // Escapar comillas dobles y envolver en comillas solo si contiene delimitador (tab), comillas o saltos de línea
       const stringValue = String(value);
-      if (stringValue.includes(';') || stringValue.includes('"') || stringValue.includes('\n') || stringValue.includes('\r')) {
+      if (stringValue.includes('\t') || stringValue.includes('"') || stringValue.includes('\n') || stringValue.includes('\r')) {
         return `"${stringValue.replace(/"/g, '""')}"`;
       }
       
       return stringValue;
     }));
     
+    // Usar TABULACIONES (\t) para compatibilidad universal con Excel (Windows y Mac)
     // Usar CRLF (\r\n) para compatibilidad con Windows Excel
     const csvContent = [
-      headers.join(';'),
-      ...rows.map(row => row.join(';'))
+      headers.join('\t'),
+      ...rows.map(row => row.join('\t'))
     ].join('\r\n');
 
     // BOM (\uFEFF) para que Excel detecte UTF-8 correctamente en Windows

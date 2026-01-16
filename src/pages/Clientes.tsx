@@ -170,10 +170,11 @@ const Clientes = () => {
       c.empresa, c.rfc, c.contacto, c.telefono, c.email, c.ciudad, c.tipoCliente
     ]);
 
+    // Usar TABULACIONES (\t) para compatibilidad universal con Excel (Windows y Mac)
     // Usar CRLF (\r\n) para compatibilidad con Windows Excel
     const csvContent = [
-      headers.join(';'),
-      ...rows.map(row => row.join(';'))
+      headers.join('\t'),
+      ...rows.map(row => row.join('\t'))
     ].join('\r\n');
 
     // BOM (\uFEFF) para que Excel detecte UTF-8 correctamente en Windows
