@@ -209,7 +209,8 @@ const Reportes = () => {
       'ID': 'id',
       'Responsable': 'responsable',
       'Tanques con Nivel': 'tanques_nivel',
-      'Tanques con Gomas': 'tanques_gomas'
+      'Tanques con Gomas': 'tanques_gomas',
+      'Cantidad Total': 'cantidad'
     };
 
     const rows = data.map(item => headers.map(header => {
