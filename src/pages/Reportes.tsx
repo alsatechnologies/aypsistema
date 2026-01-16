@@ -443,6 +443,98 @@ const Reportes = () => {
                   </CardHeader>
                 </Card>
 
+                {/* Resumen de aceite por tipo */}
+                {(() => {
+                  // Función para identificar el tipo de aceite por nombre del producto
+                  const getTipoAceite = (nombreProducto: string | null): string | null => {
+                    if (!nombreProducto) return null;
+                    const nombreNormalizado = nombreProducto.toUpperCase().trim();
+                    
+                    if (nombreNormalizado.includes('CARTAMO') && !nombreNormalizado.includes('SEMILLA')) {
+                      return 'Cártamo';
+                    }
+                    if (nombreNormalizado.includes('GIRASOL') && !nombreNormalizado.includes('SEMILLA')) {
+                      return 'Girasol';
+                    }
+                    if (nombreNormalizado === 'MEZCLAS' || nombreNormalizado.includes('MEZCLA')) {
+                      return 'Mezclas';
+                    }
+                    return null;
+                  };
+
+                  // Agrupar por tipo de aceite y calcular totales en kg
+                  const aceitePorTipo = new Map<string, number>();
+                  
+                  nivelesTanques.forEach(t => {
+                    const tipoAceite = getTipoAceite(t.producto);
+                    if (tipoAceite) {
+                      const goma = nivelesGomas.find(g => g.goma === t.tanque);
+                      const nivel = t.nivel || 0;
+                      const gomas = goma?.nivel || 0;
+                      
+                      // Calcular nivel de aceite: Nivel - Gomas
+                      const aceite = Math.max(0, nivel - gomas);
+                      
+                      // Obtener factor de conversión kg/cm del tanque
+                      const factorKgCm = factoresKgCmMap.get(t.tanque);
+                      
+                      // Calcular peso en kg del aceite: (aceite en m × 100) × factor_kg_cm
+                      if (factorKgCm && aceite > 0) {
+                        const pesoAceiteKg = (aceite * 100) * factorKgCm;
+                        const totalActual = aceitePorTipo.get(tipoAceite) || 0;
+                        aceitePorTipo.set(tipoAceite, totalActual + pesoAceiteKg);
+                      }
+                    }
+                  });
+
+                  // Solo mostrar si hay datos
+                  if (aceitePorTipo.size === 0) return null;
+
+                  return (
+                    <Card className="mt-4">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Droplet className="h-4 w-4" />
+                          Aceite Disponible por Tipo
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {Array.from(aceitePorTipo.entries())
+                            .sort(([tipoA], [tipoB]) => {
+                              // Ordenar: Cártamo, Girasol, Mezclas
+                              const orden: Record<string, number> = { 'Cártamo': 1, 'Girasol': 2, 'Mezclas': 3 };
+                              return (orden[tipoA] || 999) - (orden[tipoB] || 999);
+                            })
+                            .map(([tipo, totalKg]) => {
+                              const totalToneladas = totalKg / 1000;
+                              return (
+                                <Card key={tipo} className="p-4 bg-muted/50">
+                                  <div className="text-center space-y-2">
+                                    <p className="text-sm font-medium text-muted-foreground">{tipo}</p>
+                                    <p className="text-2xl font-bold">
+                                      {totalKg.toLocaleString('es-MX', { 
+                                        minimumFractionDigits: 2, 
+                                        maximumFractionDigits: 2 
+                                      })}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">kg</p>
+                                    <p className="text-sm text-muted-foreground">
+                                      ({totalToneladas.toLocaleString('es-MX', { 
+                                        minimumFractionDigits: 2, 
+                                        maximumFractionDigits: 2 
+                                      })} ton)
+                                    </p>
+                                  </div>
+                                </Card>
+                              );
+                            })}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
+
                 {/* Vista Agrupada por Producto */}
                 <div className="space-y-4">
                   {Array.from(porProducto.entries()).map(([producto, datos]) => {
