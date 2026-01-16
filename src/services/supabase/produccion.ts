@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { registrarAuditoria } from './auditoria';
 
 export interface NivelTanque {
   tanque: string;
@@ -80,6 +81,20 @@ export async function createReporteProduccion(reporte: Omit<ReporteProduccion, '
     .single();
   
   if (error) throw error;
+  
+  // Registrar auditoría
+  await registrarAuditoria({
+    tabla: 'reportes_produccion',
+    registro_id: 0, // Usamos 0 porque el ID es string
+    accion: 'INSERT',
+    datos_nuevos: { 
+      ...data,
+      _reporte_id: data.id,
+      _responsable: data.responsable,
+      _fecha: data.fecha
+    }
+  });
+  
   return data as ReporteProduccion;
 }
 
@@ -89,6 +104,13 @@ export async function updateReporteProduccion(id: string, reporte: Partial<Repor
     throw new Error('Supabase no está configurado');
   }
   
+  // Obtener datos anteriores
+  const { data: anterior } = await supabase
+    .from('reportes_produccion')
+    .select('*')
+    .eq('id', id)
+    .single();
+  
   const { data, error } = await supabase
     .from('reportes_produccion')
     .update({ ...reporte, updated_at: new Date().toISOString() })
@@ -97,6 +119,26 @@ export async function updateReporteProduccion(id: string, reporte: Partial<Repor
     .single();
   
   if (error) throw error;
+  
+  // Registrar auditoría
+  await registrarAuditoria({
+    tabla: 'reportes_produccion',
+    registro_id: 0,
+    accion: 'UPDATE',
+    datos_anteriores: anterior ? { 
+      ...anterior,
+      _reporte_id: anterior.id,
+      _responsable: anterior.responsable,
+      _fecha: anterior.fecha
+    } : null,
+    datos_nuevos: { 
+      ...data,
+      _reporte_id: data.id,
+      _responsable: data.responsable,
+      _fecha: data.fecha
+    }
+  });
+  
   return data as ReporteProduccion;
 }
 
@@ -106,12 +148,32 @@ export async function deleteReporteProduccion(id: string) {
     throw new Error('Supabase no está configurado');
   }
   
+  // Obtener datos anteriores
+  const { data: anterior } = await supabase
+    .from('reportes_produccion')
+    .select('*')
+    .eq('id', id)
+    .single();
+  
   const { error } = await supabase
     .from('reportes_produccion')
     .update({ activo: false, updated_at: new Date().toISOString() })
     .eq('id', id);
   
   if (error) throw error;
+  
+  // Registrar auditoría
+  await registrarAuditoria({
+    tabla: 'reportes_produccion',
+    registro_id: 0,
+    accion: 'DELETE',
+    datos_anteriores: anterior ? { 
+      ...anterior,
+      _reporte_id: anterior.id,
+      _responsable: anterior.responsable,
+      _fecha: anterior.fecha
+    } : null
+  });
 }
 
 // Generar siguiente ID de reporte

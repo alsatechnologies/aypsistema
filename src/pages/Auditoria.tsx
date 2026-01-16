@@ -159,6 +159,10 @@ const Auditoria = () => {
     const boleta = registro.datos_nuevos?.boleta || registro.datos_anteriores?.boleta;
     if (boleta) return boleta;
     
+    // Si es reporte de producción, mostrar ID del reporte (PROD-0001)
+    const reporteId = registro.datos_nuevos?._reporte_id || registro.datos_anteriores?._reporte_id;
+    if (reporteId) return reporteId;
+    
     // Si tiene _producto (nuevo formato con contexto), mostrarlo
     const producto = registro.datos_nuevos?._producto || registro.datos_anteriores?._producto;
     if (producto) return producto;
@@ -252,6 +256,9 @@ const Auditoria = () => {
     'almacen_id': 'ID Almacén',
     '_producto': 'Producto',
     '_almacen': 'Almacén',
+    '_reporte_id': 'Reporte',
+    '_responsable': 'Responsable',
+    '_fecha': 'Fecha',
     'peso_bruto': 'Peso Bruto',
     'peso_tara': 'Peso Tara',
     'peso_neto': 'Peso Neto',
@@ -273,6 +280,15 @@ const Auditoria = () => {
     'hora_peso_bruto': 'Hora Peso Bruto',
     'hora_peso_tara': 'Hora Peso Tara',
     'analisis': 'Análisis',
+    'niveles_tanques': 'Niveles de Tanques',
+    'niveles_gomas': 'Niveles de Gomas',
+    'responsable': 'Responsable',
+    'turno': 'Turno',
+    'fecha': 'Fecha',
+    'expander_litros': 'Expander (litros)',
+    'comb_alterno_porcentaje': 'Comb. Alterno (%)',
+    'combustoleo_porcentaje': 'Combustóleo (%)',
+    'activo': 'Activo',
   };
 
   const getEtiquetaCampo = (key: string) => {
@@ -286,10 +302,10 @@ const Auditoria = () => {
     ]);
 
     // Campos a excluir del diff (técnicos/internos)
-    const excludeKeys = ['created_at', 'updated_at', 'id', 'producto_id', 'almacen_id', 'cliente_id', 'proveedor_id'];
+    const excludeKeys = ['created_at', 'updated_at', 'id', 'producto_id', 'almacen_id', 'cliente_id', 'proveedor_id', 'activo'];
     
     // Campos de contexto que se muestran arriba (no cambian, solo dan contexto)
-    const contextKeys = ['_producto', '_almacen'];
+    const contextKeys = ['_producto', '_almacen', '_reporte_id', '_responsable', '_fecha'];
     
     // Extraer contexto
     const contexto = contextKeys
