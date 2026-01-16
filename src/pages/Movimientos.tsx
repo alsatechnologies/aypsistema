@@ -144,7 +144,7 @@ const Movimientos = () => {
 
     const csvContent = [
       headers.join(';'),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(';'))
+      ...rows.map(row => row.join(';'))
     ].join('\n');
 
     // BOM (\uFEFF) para que Excel detecte UTF-8 correctamente
