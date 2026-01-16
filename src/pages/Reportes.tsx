@@ -39,7 +39,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { getRecepciones } from '@/services/supabase/recepciones';
-import { getEmbarques, getTotalSalidasPasta } from '@/services/supabase/embarques';
+import { getEmbarques, getTotalSalidasPasta, getSalidasPorProducto } from '@/services/supabase/embarques';
 import { useAlmacenes } from '@/services/hooks/useAlmacenes';
 import { useProductos } from '@/services/hooks/useProductos';
 import { useProveedores } from '@/services/hooks/useProveedores';
@@ -76,6 +76,7 @@ const Reportes = () => {
   const [loading, setLoading] = useState(false);
   const [loadingInventario, setLoadingInventario] = useState(false);
   const [totalSalidasPasta, setTotalSalidasPasta] = useState<number>(0);
+  const [salidasPorProducto, setSalidasPorProducto] = useState<Record<number, number>>({});
 
   // Load data
   useEffect(() => {
@@ -108,6 +109,10 @@ const Reportes = () => {
             try {
               const salidasPasta = await getTotalSalidasPasta();
               setTotalSalidasPasta(salidasPasta);
+              
+              // Cargar salidas por producto para ajustar inventario por producto
+              const salidasPorProductoData = await getSalidasPorProducto();
+              setSalidasPorProducto(salidasPorProductoData as Record<number, number>);
             } catch (error) {
               console.error('Error loading salidas de pasta:', error);
               // No bloquear la carga si falla esto
@@ -1199,17 +1204,23 @@ const Reportes = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {inventarioPorProducto.map((item) => (
-                        <TableRow key={item.producto_id}>
-                          <TableCell className="font-medium">
-                            {item.producto?.nombre || `Producto #${item.producto_id}`}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold">
-                            {formatNumber(item.total)}
-                          </TableCell>
-                          <TableCell>{item.unidad || '-'}</TableCell>
-                        </TableRow>
-                      ))}
+                      {inventarioPorProducto.map((item) => {
+                        // Restar salidas históricas del inventario por producto
+                        const salidasProducto = salidasPorProducto[item.producto_id] || 0;
+                        const totalAjustado = Math.max(0, (item.total || 0) - salidasProducto);
+                        
+                        return (
+                          <TableRow key={item.producto_id}>
+                            <TableCell className="font-medium">
+                              {item.producto?.nombre || `Producto #${item.producto_id}`}
+                            </TableCell>
+                            <TableCell className="text-right font-semibold">
+                              {formatNumber(totalAjustado)}
+                            </TableCell>
+                            <TableCell>{item.unidad || '-'}</TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 )}
