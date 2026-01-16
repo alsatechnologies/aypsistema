@@ -73,76 +73,110 @@ export async function generarCodigoLote(
 
   // Consecutivo POR TIPO DE OPERACIÓN + PRODUCTO
   // (cliente, almacén, año NO afectan el consecutivo)
-  const { data: consecutivoData, error: consecutivoError } = await supabase
-    .from('consecutivos_lotes')
-    .select('id, consecutivo')
-    .eq('tipo_operacion_codigo', tipoOperacionCodigo)
-    .eq('producto_codigo', productoCodigo)
-    .single();
+  // Usar función SQL atómica para evitar condiciones de carrera
+  const { data: consecutivoDataArray, error: rpcError } = await supabase
+    .rpc('incrementar_o_crear_consecutivo_lote', {
+      p_tipo_operacion_codigo: tipoOperacionCodigo,
+      p_origen_codigo: origenCodigo,
+      p_producto_codigo: productoCodigo,
+      p_almacen_codigo: almacenCodigo,
+      p_anio_codigo: anioCodigo,
+      p_anio: anio
+    });
 
-  let nuevoConsecutivo: number;
-
-  if (consecutivoError && consecutivoError.code === 'PGRST116') {
-    // No existe consecutivo para esta combinación tipo+producto, crear nuevo con consecutivo 1
-    nuevoConsecutivo = 1;
-    const { error: insertError } = await supabase
+  if (rpcError) {
+    // Si falla la función RPC (por ejemplo, si no existe), intentar método legacy
+    // pero con mejor manejo de condiciones de carrera
+    console.warn('[LOTES] Error al llamar función RPC, usando método legacy:', rpcError);
+    
+    // Método legacy como fallback (pero aún vulnerable a race conditions)
+    const { data: consecutivoData, error: consecutivoError } = await supabase
       .from('consecutivos_lotes')
-      .insert({
-        tipo_operacion_codigo: tipoOperacionCodigo,
-        origen_codigo: origenCodigo,
-        producto_codigo: productoCodigo,
-        almacen_codigo: almacenCodigo,
-        anio_codigo: anioCodigo,
-        anio: anio,
-        consecutivo: 1
-      });
+      .select('id, consecutivo')
+      .eq('tipo_operacion_codigo', tipoOperacionCodigo)
+      .eq('producto_codigo', productoCodigo)
+      .single();
 
-    if (insertError) {
-      // Si es un error de duplicado, otro proceso creó el registro primero
-      if (insertError.code === '23505' || insertError.message?.includes('duplicate') || insertError.message?.includes('unique')) {
-        // Intentar obtener el consecutivo nuevamente
-        const { data: retryData, error: retryError } = await supabase
-          .from('consecutivos_lotes')
-          .select('id, consecutivo')
-          .eq('tipo_operacion_codigo', tipoOperacionCodigo)
-          .eq('producto_codigo', productoCodigo)
-          .single();
-        
-        if (retryError) {
-          throw new Error(`Error al crear consecutivo de lote: ${retryError.message}`);
+    let nuevoConsecutivo: number;
+
+    if (consecutivoError && consecutivoError.code === 'PGRST116') {
+      // No existe consecutivo para esta combinación tipo+producto, crear nuevo con consecutivo 1
+      nuevoConsecutivo = 1;
+      const { error: insertError } = await supabase
+        .from('consecutivos_lotes')
+        .insert({
+          tipo_operacion_codigo: tipoOperacionCodigo,
+          origen_codigo: origenCodigo,
+          producto_codigo: productoCodigo,
+          almacen_codigo: almacenCodigo,
+          anio_codigo: anioCodigo,
+          anio: anio,
+          consecutivo: 1
+        });
+
+      if (insertError) {
+        // Si es un error de duplicado, otro proceso creó el registro primero
+        if (insertError.code === '23505' || insertError.message?.includes('duplicate') || insertError.message?.includes('unique')) {
+          // Intentar obtener el consecutivo nuevamente
+          const { data: retryData, error: retryError } = await supabase
+            .from('consecutivos_lotes')
+            .select('id, consecutivo')
+            .eq('tipo_operacion_codigo', tipoOperacionCodigo)
+            .eq('producto_codigo', productoCodigo)
+            .single();
+          
+          if (retryError) {
+            throw new Error(`Error al crear consecutivo de lote: ${retryError.message}`);
+          }
+          
+          nuevoConsecutivo = (retryData?.consecutivo || 0) + 1;
+          const { error: updateError } = await supabase
+            .from('consecutivos_lotes')
+            .update({ consecutivo: nuevoConsecutivo })
+            .eq('id', retryData.id);
+          
+          if (updateError) {
+            throw new Error(`Error al actualizar consecutivo de lote: ${updateError.message}`);
+          }
+        } else {
+          throw new Error(`Error al crear consecutivo de lote: ${insertError.message}`);
         }
-        
-        nuevoConsecutivo = (retryData?.consecutivo || 0) + 1;
-        const { error: updateError } = await supabase
-          .from('consecutivos_lotes')
-          .update({ consecutivo: nuevoConsecutivo })
-          .eq('id', retryData.id);
-        
-        if (updateError) {
-          throw new Error(`Error al actualizar consecutivo de lote: ${updateError.message}`);
-        }
-      } else {
-        throw new Error(`Error al crear consecutivo de lote: ${insertError.message}`);
+      }
+    } else if (consecutivoError) {
+      // Error 406 u otro error
+      if (consecutivoError.code === 'PGRST406' || consecutivoError.message?.includes('406')) {
+        throw new Error(`Error de formato en la consulta de consecutivos. Verifica los códigos: tipo=${tipoOperacionCodigo}, producto=${productoCodigo}`);
+      }
+      throw new Error(`Error al obtener consecutivo de lote: ${consecutivoError.message}`);
+    } else {
+      // Existe consecutivo para esta combinación, incrementar
+      nuevoConsecutivo = consecutivoData.consecutivo + 1;
+      const { error: updateError } = await supabase
+        .from('consecutivos_lotes')
+        .update({ consecutivo: nuevoConsecutivo })
+        .eq('id', consecutivoData.id);
+
+      if (updateError) {
+        throw new Error(`Error al actualizar consecutivo de lote: ${updateError.message}`);
       }
     }
-  } else if (consecutivoError) {
-    // Error 406 u otro error
-    if (consecutivoError.code === 'PGRST406' || consecutivoError.message?.includes('406')) {
-      throw new Error(`Error de formato en la consulta de consecutivos. Verifica los códigos: tipo=${tipoOperacionCodigo}, producto=${productoCodigo}`);
-    }
-    throw new Error(`Error al obtener consecutivo de lote: ${consecutivoError.message}`);
-  } else {
-    // Existe consecutivo para esta combinación, incrementar
-    nuevoConsecutivo = consecutivoData.consecutivo + 1;
-    const { error: updateError } = await supabase
-      .from('consecutivos_lotes')
-      .update({ consecutivo: nuevoConsecutivo })
-      .eq('id', consecutivoData.id);
 
-    if (updateError) {
-      throw new Error(`Error al actualizar consecutivo de lote: ${updateError.message}`);
-    }
+    // Formatear consecutivo a 3 dígitos
+    const consecutivoStr = String(nuevoConsecutivo).padStart(3, '0');
+
+    // Construir código: AC-17160525-003
+    const codigo = `${tipoOperacionCodigo}${origenCodigo}${productoCodigo}${almacenCodigo}${anioCodigo}-${consecutivoStr}`;
+
+    return { codigo, consecutivo: nuevoConsecutivo };
   }
+
+  // Si la función RPC funcionó, usar los datos retornados
+  if (!consecutivoDataArray || consecutivoDataArray.length === 0) {
+    throw new Error('La función RPC no retornó datos del consecutivo');
+  }
+
+  const consecutivoData = consecutivoDataArray[0];
+  const nuevoConsecutivo = consecutivoData.consecutivo;
 
   // Formatear consecutivo a 3 dígitos
   const consecutivoStr = String(nuevoConsecutivo).padStart(3, '0');

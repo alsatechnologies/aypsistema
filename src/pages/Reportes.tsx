@@ -39,7 +39,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { getRecepciones } from '@/services/supabase/recepciones';
-import { getEmbarques } from '@/services/supabase/embarques';
+import { getEmbarques, getTotalSalidasPasta } from '@/services/supabase/embarques';
 import { useAlmacenes } from '@/services/hooks/useAlmacenes';
 import { useProductos } from '@/services/hooks/useProductos';
 import { useProveedores } from '@/services/hooks/useProveedores';
@@ -75,6 +75,7 @@ const Reportes = () => {
   const [inventarioPorProducto, setInventarioPorProducto] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingInventario, setLoadingInventario] = useState(false);
+  const [totalSalidasPasta, setTotalSalidasPasta] = useState<number>(0);
 
   // Load data
   useEffect(() => {
@@ -102,6 +103,15 @@ const Reportes = () => {
           try {
             const inventarioData = await getTotalInventarioPorProducto();
             setInventarioPorProducto(inventarioData);
+            
+            // Cargar total de salidas de pasta para calcular capacidad real
+            try {
+              const salidasPasta = await getTotalSalidasPasta();
+              setTotalSalidasPasta(salidasPasta);
+            } catch (error) {
+              console.error('Error loading salidas de pasta:', error);
+              // No bloquear la carga si falla esto
+            }
           } catch (error) {
             console.error('Error loading inventario:', error);
             toast.error('Error al cargar inventario por producto');
@@ -1239,6 +1249,12 @@ const Reportes = () => {
                     </TableHeader>
                     <TableBody>
                       {almacenes.map((a) => {
+                        // Para almacenes de pasta, restar las salidas totales desde el inicio del sistema
+                        const esPasta = a.nombre.toLowerCase().includes('pasta');
+                        const capacidadConSalidas = esPasta && a.capacidad_actual
+                          ? Math.max(0, (a.capacidad_actual || 0) - totalSalidasPasta)
+                          : (a.capacidad_actual || 0);
+                        
                         const porcentajeOcupado = a.capacidad_total > 0 
                           ? ((a.capacidad_actual || 0) / a.capacidad_total * 100) 
                           : 0;
@@ -1246,8 +1262,23 @@ const Reportes = () => {
                           <TableRow key={a.id}>
                             <TableCell className="font-medium">{a.nombre}</TableCell>
                             <TableCell className="text-right">{formatNumber(a.capacidad_total)}</TableCell>
-                            <TableCell className="text-right">{formatNumber(a.capacidad_actual || 0)}</TableCell>
-                            <TableCell className="text-right font-semibold">{formatNumber(a.capacidad_actual || 0)}</TableCell>
+                            <TableCell className="text-right">
+                              {esPasta ? (
+                                <div className="space-y-1">
+                                  <div className="line-through text-muted-foreground text-sm">
+                                    {formatNumber(a.capacidad_actual || 0)}
+                                  </div>
+                                  <div className="font-semibold">
+                                    {formatNumber(capacidadConSalidas)}
+                                  </div>
+                                </div>
+                              ) : (
+                                formatNumber(a.capacidad_actual || 0)
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right font-semibold">
+                              {formatNumber(capacidadConSalidas)}
+                            </TableCell>
                             <TableCell className="text-right">
                               <Badge variant={porcentajeOcupado > 80 ? 'destructive' : porcentajeOcupado > 60 ? 'default' : 'secondary'}>
                                 {porcentajeOcupado.toFixed(1)}%

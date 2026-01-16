@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import { generarCodigoLoteParaOperacion } from './lotes';
 import { registrarAuditoria } from './auditoria';
 import { logger } from '@/services/logger';
+import { upsertInventarioAlmacen } from './inventarioAlmacenes';
 
 export interface Embarque {
   id: number;
@@ -252,6 +253,59 @@ export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
   
   if (error) throw error;
   
+  // RESTAR DEL INVENTARIO: Si el embarque está completado y tiene peso_neto y almacen_id
+  // Restar automáticamente del inventario del almacén correspondiente
+  if (estatusFinal === 'Completado' && productoId && almacenId) {
+    const pesoNeto = data.peso_neto || embarque.peso_neto;
+    const pesoNetoAnterior = embarqueAnterior?.peso_neto;
+    
+    // Solo restar si hay peso_neto válido y es mayor a 0
+    if (pesoNeto && pesoNeto > 0) {
+      try {
+        // Obtener inventario actual del almacén para este producto
+        const { data: inventarioActual } = await supabase
+          .from('inventario_almacenes')
+          .select('cantidad')
+          .eq('almacen_id', almacenId)
+          .eq('producto_id', productoId)
+          .single();
+        
+        const cantidadActual = inventarioActual?.cantidad || 0;
+        
+        // Si había un peso_neto anterior, primero sumarlo de vuelta (para correcciones)
+        const cantidadAjustada = pesoNetoAnterior && pesoNetoAnterior > 0
+          ? cantidadActual + pesoNetoAnterior - pesoNeto
+          : cantidadActual - pesoNeto;
+        
+        // Asegurar que no sea negativo
+        const nuevaCantidad = Math.max(0, cantidadAjustada);
+        
+        // Actualizar inventario
+        await upsertInventarioAlmacen(almacenId, productoId, nuevaCantidad);
+        
+        logger.info(`Inventario actualizado para embarque ${id}`, {
+          embarqueId: id,
+          almacenId,
+          productoId,
+          pesoNeto,
+          cantidadAnterior: cantidadActual,
+          cantidadNueva: nuevaCantidad
+        }, 'Embarques');
+      } catch (inventarioError) {
+        // Log el error pero no fallar el guardado del embarque
+        const errorMessage = inventarioError instanceof Error ? inventarioError.message : 'Error desconocido';
+        logger.error('Error al actualizar inventario después de embarque', {
+          error: errorMessage,
+          embarqueId: id,
+          almacenId,
+          productoId,
+          pesoNeto
+        }, 'Embarques');
+        console.error(`[EMBARQUES] Error al actualizar inventario para embarque ${id}:`, errorMessage);
+      }
+    }
+  }
+  
   // Registrar en auditoría
   await registrarAuditoria({
     tabla: 'embarques',
@@ -262,6 +316,38 @@ export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
   });
   
   return data;
+}
+
+// Obtener total de salidas de pasta desde el inicio del sistema
+export async function getTotalSalidasPasta() {
+  if (!supabase) {
+    throw new Error('Supabase no está configurado');
+  }
+  
+  // Buscar todos los embarques de productos de pasta completados
+  // Productos de pasta típicamente contienen "Pasta" en el nombre
+  const { data: embarquesPasta, error } = await supabase
+    .from('embarques')
+    .select(`
+      peso_neto,
+      producto:productos(id, nombre),
+      estatus
+    `)
+    .eq('estatus', 'Completado')
+    .not('peso_neto', 'is', null);
+  
+  if (error) throw error;
+  
+  // Filtrar solo productos de pasta y sumar peso_neto
+  const totalSalidas = (embarquesPasta || [])
+    .filter(e => {
+      const nombreProducto = e.producto?.nombre || '';
+      // Identificar productos de pasta (contiene "pasta" en el nombre, sin importar mayúsculas)
+      return nombreProducto.toLowerCase().includes('pasta');
+    })
+    .reduce((total, e) => total + (e.peso_neto || 0), 0);
+  
+  return totalSalidas;
 }
 
 // Eliminar embarque permanentemente
