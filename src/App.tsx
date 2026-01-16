@@ -27,6 +27,7 @@ const ControlCalidad = lazy(() => import("./pages/ControlCalidad"));
 const Laboratorio = lazy(() => import("./pages/Laboratorio"));
 const Produccion = lazy(() => import("./pages/Produccion"));
 const Configuracion = lazy(() => import("./pages/Configuracion"));
+const Auditoria = lazy(() => import("./pages/Auditoria"));
 const EmergencyReset = lazy(() => import("./pages/EmergencyReset"));
 const FixLogin = lazy(() => import("./pages/FixLogin"));
 
@@ -198,6 +199,14 @@ const App = () => (
               element={
                 <ProtectedRoute requiredModule="configuracion">
                   <Configuracion />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/auditoria" 
+              element={
+                <ProtectedRoute requiredModule="auditoria">
+                  <Auditoria />
                 </ProtectedRoute>
               } 
             />

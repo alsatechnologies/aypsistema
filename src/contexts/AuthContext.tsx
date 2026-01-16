@@ -32,7 +32,7 @@ const permisosPorRol: Record<Rol, string[]> = {
   'Calidad': ['control-calidad'],
   'Laboratorio': ['laboratorio'],
   'Producción': ['produccion'],
-  'Administrador': ['oficina', 'reciba', 'embarque', 'movimientos', 'proveedores', 'clientes', 'reportes', 'ingreso', 'control-calidad', 'laboratorio', 'produccion', 'configuracion']
+  'Administrador': ['oficina', 'reciba', 'embarque', 'movimientos', 'proveedores', 'clientes', 'reportes', 'ingreso', 'control-calidad', 'laboratorio', 'produccion', 'configuracion', 'auditoria']
 };
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {

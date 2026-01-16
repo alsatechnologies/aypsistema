@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Building2, PackageSearch, Truck, ArrowUpDown, Users, FileBarChart, LogIn, ClipboardCheck, FlaskConical, Factory, Settings, LogOut } from 'lucide-react';
+import { Building2, PackageSearch, Truck, ArrowUpDown, Users, FileBarChart, LogIn, ClipboardCheck, FlaskConical, Factory, Settings, LogOut, History } from 'lucide-react';
 import Logo from './Logo';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -104,6 +104,12 @@ const Sidebar = () => {
       label: 'Configuración',
       path: '/configuracion',
       module: 'configuracion'
+    },
+    {
+      icon: History,
+      label: 'Auditoría',
+      path: '/auditoria',
+      module: 'auditoria'
     }
   ];
 

@@ -39,6 +39,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { deleteEmbarque } from '@/services/supabase/embarques';
 import { Trash2, Edit } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import HistorialCambiosButton from '@/components/auditoria/HistorialCambiosButton';
 
 interface Embarque {
   id: number;
@@ -845,6 +846,11 @@ const EmbarquePage = () => {
                     {selectedEmbarque.tipoEmbarque === 'Exportación' && (
                       <Badge className="bg-purple-500 text-white ml-2">Exportación</Badge>
                     )}
+                    <HistorialCambiosButton
+                      tabla="embarques"
+                      registroId={selectedEmbarque.id}
+                      boleta={selectedEmbarque.boleta}
+                    />
                   </DialogTitle>
                 </DialogHeader>
 

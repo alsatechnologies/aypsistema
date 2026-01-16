@@ -40,6 +40,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { deleteRecepcion } from '@/services/supabase/recepciones';
 import { Trash2, Edit } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import HistorialCambiosButton from '@/components/auditoria/HistorialCambiosButton';
 
 interface Recepcion {
   id: number;
@@ -867,6 +868,11 @@ const Reciba = () => {
                       {getTransporteIcon(selectedRecepcion.tipoTransporte)}
                       {selectedRecepcion.tipoTransporte}
                     </span>
+                    <HistorialCambiosButton
+                      tabla="recepciones"
+                      registroId={selectedRecepcion.id}
+                      boleta={selectedRecepcion.boleta}
+                    />
                   </DialogTitle>
                 </DialogHeader>
 
