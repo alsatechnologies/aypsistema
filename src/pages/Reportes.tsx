@@ -146,9 +146,12 @@ const Reportes = () => {
       const matchProveedor = filtroProveedor === 'todos' || 
         (r.proveedor_id && r.proveedor_id.toString() === filtroProveedor);
       
-      return matchSearch && matchProveedor;
+      const matchProducto = filtroProducto === 'todos' || 
+        (r.producto_id && r.producto_id.toString() === filtroProducto);
+      
+      return matchSearch && matchProveedor && matchProducto;
     });
-  }, [recepciones, search, filtroProveedor]);
+  }, [recepciones, search, filtroProveedor, filtroProducto]);
 
   const filteredEmbarques = useMemo(() => {
     return embarques.filter(e => {
