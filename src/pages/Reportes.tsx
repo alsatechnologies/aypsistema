@@ -448,12 +448,22 @@ const Reportes = () => {
                   // Función para identificar el tipo de aceite por nombre del producto
                   const getTipoAceite = (nombreProducto: string | null): string | null => {
                     if (!nombreProducto) return null;
-                    const nombreNormalizado = nombreProducto.toUpperCase().trim();
+                    // Normalizar: mayúsculas, quitar tildes y espacios
+                    const nombreNormalizado = nombreProducto
+                      .toUpperCase()
+                      .normalize('NFD')
+                      .replace(/[\u0300-\u036f]/g, '') // Quitar tildes
+                      .trim();
                     
-                    if (nombreNormalizado.includes('CARTAMO') && !nombreNormalizado.includes('SEMILLA')) {
+                    // Excluir semillas
+                    if (nombreNormalizado.includes('SEMILLA')) {
+                      return null;
+                    }
+                    
+                    if (nombreNormalizado.includes('CARTAMO')) {
                       return 'Cártamo';
                     }
-                    if (nombreNormalizado.includes('GIRASOL') && !nombreNormalizado.includes('SEMILLA')) {
+                    if (nombreNormalizado.includes('GIRASOL')) {
                       return 'Girasol';
                     }
                     if (nombreNormalizado === 'MEZCLAS' || nombreNormalizado.includes('MEZCLA')) {
