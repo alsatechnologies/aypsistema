@@ -67,6 +67,7 @@ const Auditoria = () => {
   const [selectedEntry, setSelectedEntry] = useState<AuditoriaEntry | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [usuariosMap, setUsuariosMap] = useState<Map<string, string>>(new Map());
+  const [inventarioProductosMap, setInventarioProductosMap] = useState<Map<number, string>>(new Map());
 
   // Cargar usuarios para mapear email -> nombre
   const loadUsuarios = async () => {
@@ -88,6 +89,32 @@ const Auditoria = () => {
       setUsuariosMap(map);
     } catch (error) {
       console.error('Error al cargar usuarios:', error);
+    }
+  };
+
+  // Cargar mapeo de inventario_almacenes ID -> nombre producto
+  const loadInventarioProductos = async () => {
+    if (!supabase) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('inventario_almacenes')
+        .select(`
+          id,
+          producto:productos(nombre)
+        `);
+      
+      if (error) throw error;
+      
+      const map = new Map<number, string>();
+      (data || []).forEach((item: any) => {
+        if (item.id && item.producto?.nombre) {
+          map.set(item.id, item.producto.nombre);
+        }
+      });
+      setInventarioProductosMap(map);
+    } catch (error) {
+      console.error('Error al cargar inventario:', error);
     }
   };
 
@@ -116,6 +143,7 @@ const Auditoria = () => {
 
   useEffect(() => {
     loadUsuarios();
+    loadInventarioProductos();
     loadAuditoria();
   }, []);
 
@@ -123,6 +151,26 @@ const Auditoria = () => {
   const getNombreUsuario = (email: string | null) => {
     if (!email) return 'Sistema';
     return usuariosMap.get(email) || email;
+  };
+
+  // Función para obtener el identificador legible del registro
+  const getRegistroIdentificador = (registro: AuditoriaEntry) => {
+    // Si tiene boleta, mostrarla
+    const boleta = registro.datos_nuevos?.boleta || registro.datos_anteriores?.boleta;
+    if (boleta) return boleta;
+    
+    // Si tiene _producto (nuevo formato con contexto), mostrarlo
+    const producto = registro.datos_nuevos?._producto || registro.datos_anteriores?._producto;
+    if (producto) return producto;
+    
+    // Si es inventario_almacenes, buscar el nombre del producto
+    if (registro.tabla === 'inventario_almacenes') {
+      const nombreProducto = inventarioProductosMap.get(registro.registro_id);
+      if (nombreProducto) return nombreProducto;
+    }
+    
+    // Fallback: mostrar ID
+    return `#${registro.registro_id}`;
   };
 
   // Obtener usuarios únicos para filtro (con nombres)
@@ -499,8 +547,8 @@ const Auditoria = () => {
                               {getTablaNombre(registro.tabla)}
                             </Badge>
                           </TableCell>
-                          <TableCell className="font-mono">
-                            {registro.datos_nuevos?.boleta || registro.datos_anteriores?.boleta || `#${registro.registro_id}`}
+                          <TableCell className="text-sm max-w-[200px] truncate" title={getRegistroIdentificador(registro)}>
+                            {getRegistroIdentificador(registro)}
                           </TableCell>
                           <TableCell>
                             {getAccionBadge(registro.accion)}
@@ -557,8 +605,8 @@ const Auditoria = () => {
                   <p className="font-medium">{getTablaNombre(selectedEntry.tabla)}</p>
                 </div>
                 <div>
-                  <Label className="text-xs text-muted-foreground">Registro ID</Label>
-                  <p className="font-medium">{selectedEntry.registro_id}</p>
+                  <Label className="text-xs text-muted-foreground">Registro</Label>
+                  <p className="font-medium">{getRegistroIdentificador(selectedEntry)}</p>
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">Acción</Label>
@@ -568,12 +616,6 @@ const Auditoria = () => {
                   <Label className="text-xs text-muted-foreground">Usuario</Label>
                   <p className="font-medium">{getNombreUsuario(selectedEntry.usuario_email)}</p>
                 </div>
-                {selectedEntry.datos_nuevos?.boleta && (
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Boleta</Label>
-                    <p className="font-medium">{selectedEntry.datos_nuevos.boleta}</p>
-                  </div>
-                )}
               </div>
 
               {/* Cambios */}
