@@ -153,15 +153,16 @@ export async function updateRecepcion(id: number, recepcion: Partial<Recepcion>)
   }
   
   // Usar valores del objeto que se pasa o de la recepción anterior
+  const estatusFinal = recepcion.estatus || recepcionAnterior?.estatus;
   const proveedorId = recepcion.proveedor_id || recepcionAnterior?.proveedor_id;
   const productoId = recepcion.producto_id || recepcionAnterior?.producto_id;
   const almacenId = recepcion.almacen_id || recepcionAnterior?.almacen_id;
   
   // Solo generar lote si:
-  // 1. El estatus es 'Completado'
+  // 1. El estatus final es 'Completado'
   // 2. NO existe lote en la BD (verificación directa)
   // 3. Tenemos todos los datos requeridos
-  if (recepcion.estatus === 'Completado' && !loteExistenteEnBD && proveedorId && productoId && almacenId) {
+  if (estatusFinal === 'Completado' && !loteExistenteEnBD && proveedorId && productoId && almacenId) {
     try {
       const { codigo } = await generarCodigoLoteParaOperacion(
         'Reciba',
@@ -175,6 +176,14 @@ export async function updateRecepcion(id: number, recepcion: Partial<Recepcion>)
     } catch (error) {
       logger.error('Error al generar código de lote', error, 'Recepciones');
     }
+  } else if (estatusFinal === 'Completado' && !loteExistenteEnBD) {
+    // Log cuando faltan datos requeridos
+    logger.warn(`No se puede generar lote para recepción ${id}: faltan datos requeridos`, {
+      recepcionId: id,
+      tieneProveedorId: !!proveedorId,
+      tieneProductoId: !!productoId,
+      tieneAlmacenId: !!almacenId
+    }, 'Recepciones');
   }
   
   const { data, error } = await supabase
