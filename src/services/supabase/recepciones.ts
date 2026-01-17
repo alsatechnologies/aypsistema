@@ -201,7 +201,7 @@ export async function updateRecepcion(id: number, recepcion: Partial<Recepcion>)
   
   // SUMAR AL INVENTARIO: Si la recepción está completada y tiene peso_neto y almacen_id
   // Sumar automáticamente al inventario del almacén correspondiente
-  const estatusFinal = recepcion.estatus || recepcionAnterior?.estatus;
+  // (estatusFinal ya fue definido arriba para la generación de lote)
   if (estatusFinal === 'Completado' && productoId && almacenId) {
     const pesoNeto = data.peso_neto || recepcion.peso_neto;
     const pesoNetoAnterior = recepcionAnterior?.peso_neto;
