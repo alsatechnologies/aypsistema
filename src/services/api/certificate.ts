@@ -236,10 +236,14 @@ export async function generateBoletaRecibaPDF(data: BoletaRecibaRequest): Promis
       message: 'Boleta de entrada generada correctamente',
     };
   } catch (error) {
-    console.error('[CERTIFICATE] Error al generar boleta de entrada PDF:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[CERTIFICATE] Error al generar boleta de entrada PDF:', errorMessage);
+    if (error instanceof Error && error.stack) {
+      console.error('[CERTIFICATE] Stack trace:', error.stack);
+    }
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Error desconocido al generar PDF de entrada',
+      error: errorMessage || 'Error desconocido al generar PDF de entrada',
     };
   }
 }

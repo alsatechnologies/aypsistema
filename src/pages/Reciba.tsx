@@ -663,9 +663,11 @@ const Reciba = () => {
         toast.error(result.error || 'Error al generar boleta PDF', { id: 'generating-pdf', duration: 5000 });
       }
     } catch (error) {
-      console.error('❌ [RECIBA] Error en handleImprimir:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('❌ [RECIBA] Error al generar PDF:', errorMessage);
+      console.error('❌ [RECIBA] Error completo:', error);
       handleError(error, { module: 'Reciba', action: 'imprimirBoleta' });
-      toast.error('Error al imprimir boleta. Revisa la consola para más detalles.', { id: 'generating-pdf', duration: 5000 });
+      toast.error(`Error al imprimir boleta: ${errorMessage}`, { id: 'generating-pdf', duration: 5000 });
     }
   };
 
