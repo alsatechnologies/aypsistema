@@ -222,9 +222,15 @@ const Reportes = () => {
         value = '';
       }
       
-      // Si es un número, convertir a string con punto como separador decimal
+      // Si es un número, convertir a string con COMA como separador decimal para Excel en español
       if (typeof value === 'number') {
-        value = value.toString().replace(',', '.');
+        value = value.toFixed(2).replace('.', ',');
+      } else if (typeof value === 'string') {
+        // Si es un string que parece un número con punto, convertirlo a coma decimal
+        const numValue = parseFloat(value.replace(',', '.'));
+        if (!isNaN(numValue) && isFinite(numValue)) {
+          value = numValue.toFixed(2).replace('.', ',');
+        }
       }
       
       // Convertir a string y manejar valores vacíos
@@ -240,11 +246,12 @@ const Reportes = () => {
       return `"${stringValue.replace(/"/g, '""')}"`;
     }));
     
-    // Usar COMA (,) como delimitador - formato CSV estándar universal
+    // Usar PUNTO Y COMA (;) como delimitador para compatibilidad con Excel en configuraciones regionales de español
+    // Excel en español usa punto y coma como separador de columnas y coma para decimales
     // Usar CRLF (\r\n) para compatibilidad con Windows Excel
     const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.join(','))
+      headers.join(';'),
+      ...rows.map(row => row.join(';'))
     ].join('\r\n');
 
     // BOM (\uFEFF) para que Excel detecte UTF-8 correctamente en Windows
@@ -1426,14 +1433,14 @@ const Reportes = () => {
                     const nivelGomas = goma?.nivel || 0;
                     const aceite = Math.max(0, (t.nivel || 0) - nivelGomas);
                     return [
-                      t.tanque,
-                      t.producto || '-',
-                      (t.nivel || 0).toFixed(2),
-                      nivelGomas.toFixed(2),
-                      aceite.toFixed(2)
+                      `"${String(t.tanque).replace(/"/g, '""')}"`,
+                      `"${String(t.producto || '-').replace(/"/g, '""')}"`,
+                      `"${(t.nivel || 0).toFixed(2).replace('.', ',')}"`,
+                      `"${nivelGomas.toFixed(2).replace('.', ',')}"`,
+                      `"${aceite.toFixed(2).replace('.', ',')}"`
                     ].join(';');
                   });
-                  const csvContent = [headers.join(';'), ...rows].join('\n');
+                  const csvContent = [headers.join(';'), ...rows].join('\r\n');
                   const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
                   const link = document.createElement('a');
                   link.href = URL.createObjectURL(blob);
