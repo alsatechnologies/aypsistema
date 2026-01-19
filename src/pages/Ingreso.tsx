@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import Header from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -47,6 +47,10 @@ const Ingreso = () => {
   const [fechaHasta, setFechaHasta] = useState('');
   const [ingresoAEliminar, setIngresoAEliminar] = useState<number | null>(null);
   
+  // Refs para el scrollbar superior y la tabla
+  const topScrollbarRef = useRef<HTMLDivElement>(null);
+  const bottomScrollAreaRef = useRef<HTMLDivElement>(null);
+  
   // Mapear ingresos de DB a formato local (DEBE estar antes de filteredIngresos)
   const ingresos: Ingreso[] = ingresosDB.map(i => ({
     id: i.id,
@@ -81,6 +85,66 @@ const Ingreso = () => {
     
     return matchesSearch && matchesDate;
   });
+
+  // Efecto para sincronizar el scroll horizontal entre el scrollbar superior y la tabla
+  useEffect(() => {
+    const topScrollbar = topScrollbarRef.current;
+    const bottomScrollArea = bottomScrollAreaRef.current;
+    
+    if (!topScrollbar || !bottomScrollArea) return;
+
+    // Crear un div dummy dentro del scrollbar superior que tenga el mismo ancho que la tabla
+    const updateTopScrollbarWidth = () => {
+      if (!topScrollbar || !bottomScrollArea) return;
+      
+      // Limpiar contenido existente
+      while (topScrollbar.firstChild) {
+        topScrollbar.removeChild(topScrollbar.firstChild);
+      }
+      
+      // Crear un div con el mismo ancho que el scrollWidth del contenedor
+      const dummyDiv = document.createElement('div');
+      dummyDiv.style.width = `${bottomScrollArea.scrollWidth}px`;
+      dummyDiv.style.height = '1px';
+      dummyDiv.style.pointerEvents = 'none';
+      topScrollbar.appendChild(dummyDiv);
+    };
+
+    // Sincronizar scroll: cuando se mueve el scrollbar superior, mover la tabla
+    const handleTopScroll = () => {
+      if (bottomScrollArea) {
+        bottomScrollArea.scrollLeft = topScrollbar.scrollLeft;
+      }
+    };
+
+    // Sincronizar scroll: cuando se mueve la tabla, mover el scrollbar superior
+    const handleBottomScroll = () => {
+      if (topScrollbar && bottomScrollArea) {
+        topScrollbar.scrollLeft = bottomScrollArea.scrollLeft;
+      }
+    };
+
+    // Actualizar el ancho del contenido del scrollbar superior
+    updateTopScrollbarWidth();
+    
+    // Observar cambios en el contenedor para actualizar el ancho del scrollbar superior
+    const resizeObserver = new ResizeObserver(() => {
+      updateTopScrollbarWidth();
+    });
+
+    resizeObserver.observe(bottomScrollArea);
+
+    // Agregar event listeners
+    topScrollbar.addEventListener('scroll', handleTopScroll);
+    bottomScrollArea.addEventListener('scroll', handleBottomScroll);
+
+    // Cleanup
+    return () => {
+      topScrollbar.removeEventListener('scroll', handleTopScroll);
+      bottomScrollArea.removeEventListener('scroll', handleBottomScroll);
+      resizeObserver.disconnect();
+    };
+  }, [filteredIngresos]); // Re-ejecutar cuando cambian los ingresos filtrados
 
 
   const getMotivoBadge = (motivo: string) => {
@@ -308,7 +372,18 @@ const Ingreso = () => {
             <CardDescription>Control de entrada y salida de vehículos</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            {/* Scrollbar horizontal superior siempre visible */}
+            <div 
+              ref={topScrollbarRef}
+              className="overflow-x-auto overflow-y-hidden h-4 mb-2 w-full"
+              style={{ minWidth: '100%' }}
+            />
+            
+            {/* Contenedor de la tabla con scroll */}
+            <div 
+              ref={bottomScrollAreaRef}
+              className="overflow-x-auto"
+            >
               <Table>
                     <TableHeader>
                       <TableRow>
@@ -379,6 +454,7 @@ const Ingreso = () => {
                       ))}
                     </TableBody>
                   </Table>
+            </div>
             </div>
             {hasMore && (
               <div className="flex justify-center mt-4 pb-4">
