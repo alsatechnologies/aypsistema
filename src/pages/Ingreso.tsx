@@ -455,7 +455,6 @@ const Ingreso = () => {
                     </TableBody>
                   </Table>
             </div>
-            </div>
             {hasMore && (
               <div className="flex justify-center mt-4 pb-4">
                 <Button 
