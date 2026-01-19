@@ -226,10 +226,13 @@ const Reportes = () => {
       if (typeof value === 'number') {
         value = value.toFixed(2).replace('.', ',');
       } else if (typeof value === 'string') {
-        // Si es un string que parece un número con punto, convertirlo a coma decimal
-        const numValue = parseFloat(value.replace(',', '.'));
-        if (!isNaN(numValue) && isFinite(numValue)) {
-          value = numValue.toFixed(2).replace('.', ',');
+        // Solo convertir a número si el string parece un valor numérico válido
+        // Rechazar strings que contienen letras (como placas: "41BH5Z")
+        if (/^[\d.,\s-]+$/.test(value.trim())) {
+          const numValue = parseFloat(value.replace(',', '.'));
+          if (!isNaN(numValue) && isFinite(numValue)) {
+            value = numValue.toFixed(2).replace('.', ',');
+          }
         }
       }
       
