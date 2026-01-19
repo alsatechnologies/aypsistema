@@ -172,16 +172,30 @@ const Clientes = () => {
 
     // Formatear filas con comillas para todos los valores (estándar CSV)
     const formattedRows = rows.map(row => row.map(cell => {
-      const cellValue = String(cell || '');
+      let cellValue = cell || '';
+      
+      // Solo convertir a número si el string parece un valor numérico válido
+      // Rechazar strings que contienen letras
+      if (typeof cellValue === 'number') {
+        cellValue = cellValue.toFixed(2).replace('.', ',');
+      } else if (typeof cellValue === 'string' && /^[\d.,\s-]+$/.test(cellValue.trim())) {
+        const numValue = parseFloat(cellValue.replace(',', '.'));
+        if (!isNaN(numValue) && isFinite(numValue)) {
+          cellValue = numValue.toFixed(2).replace('.', ',');
+        }
+      }
+      
+      const stringValue = String(cellValue || '');
       // Escapar comillas dobles y envolver en comillas
-      return `"${cellValue.replace(/"/g, '""')}"`;
+      return stringValue === '' ? '""' : `"${stringValue.replace(/"/g, '""')}"`;
     }));
     
-    // Usar COMA (,) como delimitador - formato CSV estándar universal
+    // Usar PUNTO Y COMA (;) como delimitador para compatibilidad con Excel en español
+    // Excel en español usa punto y coma como separador de columnas y coma para decimales
     // Usar CRLF (\r\n) para compatibilidad con Windows Excel
     const csvContent = [
-      headers.join(','),
-      ...formattedRows.map(row => row.join(','))
+      headers.join(';'),
+      ...formattedRows.map(row => row.join(';'))
     ].join('\r\n');
 
     // BOM (\uFEFF) para que Excel detecte UTF-8 correctamente en Windows
