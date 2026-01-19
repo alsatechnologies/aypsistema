@@ -151,6 +151,16 @@ export async function generarCodigoLote(
     } else {
       // Existe consecutivo para esta combinación, incrementar
       nuevoConsecutivo = consecutivoData.consecutivo + 1;
+      
+      // Log para debugging
+      console.log('[LOTES] Incrementando consecutivo (método legacy):', {
+        tipoOperacionCodigo,
+        productoCodigo,
+        consecutivoAnterior: consecutivoData.consecutivo,
+        nuevoConsecutivo,
+        consecutivoId: consecutivoData.id
+      });
+      
       const { error: updateError } = await supabase
         .from('consecutivos_lotes')
         .update({ consecutivo: nuevoConsecutivo })
@@ -177,6 +187,14 @@ export async function generarCodigoLote(
 
   const consecutivoData = consecutivoDataArray[0];
   const nuevoConsecutivo = consecutivoData.consecutivo;
+
+  // Log para debugging
+  console.log('[LOTES] Consecutivo generado:', {
+    tipoOperacionCodigo,
+    productoCodigo,
+    nuevoConsecutivo,
+    consecutivoId: consecutivoData.id
+  });
 
   // Formatear consecutivo a 3 dígitos
   const consecutivoStr = String(nuevoConsecutivo).padStart(3, '0');
