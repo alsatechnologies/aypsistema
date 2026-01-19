@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import Header from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -46,6 +46,31 @@ const Ingreso = () => {
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
   const [ingresoAEliminar, setIngresoAEliminar] = useState<number | null>(null);
+  
+  // Refs para sincronizar scrollbars
+  const topScrollbarRef = useRef<HTMLDivElement>(null);
+  const bottomScrollbarRef = useRef<HTMLDivElement>(null);
+  const tableContentRef = useRef<HTMLDivElement>(null);
+  
+  // Sincronizar el ancho del scrollbar superior con el contenido
+  useEffect(() => {
+    const updateScrollbarWidth = () => {
+      if (tableContentRef.current && topScrollbarRef.current) {
+        const scrollWidth = tableContentRef.current.scrollWidth;
+        const scrollbarContent = topScrollbarRef.current.querySelector('div') as HTMLElement;
+        if (scrollbarContent) {
+          scrollbarContent.style.minWidth = `${scrollWidth}px`;
+        }
+      }
+    };
+    
+    updateScrollbarWidth();
+    window.addEventListener('resize', updateScrollbarWidth);
+    
+    return () => {
+      window.removeEventListener('resize', updateScrollbarWidth);
+    };
+  }, [filteredIngresos]);
   
   // Mapear ingresos de DB a formato local
   const ingresos: Ingreso[] = ingresosDB.map(i => ({
@@ -310,103 +335,108 @@ const Ingreso = () => {
             <div className="relative">
               {/* Scrollbar superior sincronizado */}
               <div 
-                className="overflow-x-auto overflow-y-hidden mb-0 scrollbar-thin"
+                ref={topScrollbarRef}
+                className="overflow-x-auto overflow-y-hidden mb-0"
                 style={{ 
+                  height: '17px',
                   scrollbarWidth: 'thin',
                   scrollbarColor: 'rgb(156 163 175) transparent'
                 }}
                 onScroll={(e) => {
-                  const target = e.target as HTMLElement;
-                  const contentDiv = target.nextElementSibling as HTMLElement;
-                  if (contentDiv) {
-                    contentDiv.scrollLeft = target.scrollLeft;
+                  if (bottomScrollbarRef.current && !bottomScrollbarRef.current.dataset.scrolling) {
+                    bottomScrollbarRef.current.dataset.scrolling = 'true';
+                    bottomScrollbarRef.current.scrollLeft = (e.target as HTMLElement).scrollLeft;
+                    delete bottomScrollbarRef.current.dataset.scrolling;
                   }
                 }}
               >
-                <div style={{ height: '1px', minWidth: '1500px' }}></div>
+                <div style={{ minWidth: '1500px', height: '1px' }}></div>
               </div>
               
               {/* Contenido de la tabla con scrollbar inferior */}
               <div 
+                ref={bottomScrollbarRef}
                 className="overflow-x-auto"
                 onScroll={(e) => {
-                  const target = e.target as HTMLElement;
-                  const topScrollbar = target.previousElementSibling as HTMLElement;
-                  if (topScrollbar) {
-                    topScrollbar.scrollLeft = target.scrollLeft;
+                  if (topScrollbarRef.current && !topScrollbarRef.current.dataset.scrolling) {
+                    topScrollbarRef.current.dataset.scrolling = 'true';
+                    topScrollbarRef.current.scrollLeft = (e.target as HTMLElement).scrollLeft;
+                    delete topScrollbarRef.current.dataset.scrolling;
                   }
                 }}
               >
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[200px]">Nombre Chofer</TableHead>
-                      <TableHead className="min-w-[220px]">Empresa</TableHead>
-                      <TableHead className="min-w-[140px]">Vehículo</TableHead>
-                      <TableHead className="min-w-[130px]">Placas</TableHead>
-                      <TableHead className="min-w-[200px]">Procedencia/Destino</TableHead>
-                      <TableHead className="min-w-[180px]">Motivo</TableHead>
-                      <TableHead className="min-w-[160px]">Ingreso</TableHead>
-                      <TableHead className="min-w-[160px]">Salida</TableHead>
-                      <TableHead className="text-right min-w-[160px]">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredIngresos.map((ingreso) => (
-                      <TableRow key={ingreso.id} className="cursor-pointer hover:bg-muted/50">
-                        <TableCell className="font-medium min-w-[200px]">{ingreso.nombreChofer}</TableCell>
-                        <TableCell className="min-w-[220px]">{ingreso.empresa || '-'}</TableCell>
-                        <TableCell className="min-w-[140px]">{ingreso.vehiculo || '-'}</TableCell>
-                        <TableCell className="font-mono text-sm min-w-[130px]">{ingreso.placas || '-'}</TableCell>
-                        <TableCell className="min-w-[200px]">
-                          <div className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3 text-muted-foreground" />
-                            {ingreso.procedenciaDestino || '-'}
-                          </div>
-                        </TableCell>
-                        <TableCell className="min-w-[180px]">
-                          {getMotivoBadge(ingreso.motivo)}
-                        </TableCell>
-                        <TableCell className="min-w-[160px]">{formatDateTimeMST(ingreso.fechaHoraIngreso)}</TableCell>
-                        <TableCell className="min-w-[160px]">
-                          {ingreso.fechaHoraSalida ? (
-                            <span className="text-muted-foreground">{formatDateTimeMST(ingreso.fechaHoraSalida)}</span>
-                          ) : (
-                            <Badge variant="outline" className="text-orange-600 border-orange-300">En planta</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right min-w-[160px]">
-                          <div className="flex items-center justify-end gap-2">
-                            {!ingreso.fechaHoraSalida && (
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                className="text-primary border-primary hover:bg-primary hover:text-primary-foreground"
-                                onClick={() => handleMarcarSalida(ingreso.id)}
-                              >
-                                <LogOut className="h-3 w-3 mr-1" />
-                                Marcar Salida
-                              </Button>
-                            )}
-                            {esAdministrador() && (
-                              <Button 
-                                size="sm" 
-                                variant="ghost"
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setIngresoAEliminar(ingreso.id);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
+                <div ref={tableContentRef} className="inline-block min-w-full">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[200px]">Nombre Chofer</TableHead>
+                        <TableHead className="min-w-[220px]">Empresa</TableHead>
+                        <TableHead className="min-w-[140px]">Vehículo</TableHead>
+                        <TableHead className="min-w-[130px]">Placas</TableHead>
+                        <TableHead className="min-w-[200px]">Procedencia/Destino</TableHead>
+                        <TableHead className="min-w-[180px]">Motivo</TableHead>
+                        <TableHead className="min-w-[160px]">Ingreso</TableHead>
+                        <TableHead className="min-w-[160px]">Salida</TableHead>
+                        <TableHead className="text-right min-w-[160px]">Acciones</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredIngresos.map((ingreso) => (
+                        <TableRow key={ingreso.id} className="cursor-pointer hover:bg-muted/50">
+                          <TableCell className="font-medium min-w-[200px]">{ingreso.nombreChofer}</TableCell>
+                          <TableCell className="min-w-[220px]">{ingreso.empresa || '-'}</TableCell>
+                          <TableCell className="min-w-[140px]">{ingreso.vehiculo || '-'}</TableCell>
+                          <TableCell className="font-mono text-sm min-w-[130px]">{ingreso.placas || '-'}</TableCell>
+                          <TableCell className="min-w-[200px]">
+                            <div className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3 text-muted-foreground" />
+                              {ingreso.procedenciaDestino || '-'}
+                            </div>
+                          </TableCell>
+                          <TableCell className="min-w-[180px]">
+                            {getMotivoBadge(ingreso.motivo)}
+                          </TableCell>
+                          <TableCell className="min-w-[160px]">{formatDateTimeMST(ingreso.fechaHoraIngreso)}</TableCell>
+                          <TableCell className="min-w-[160px]">
+                            {ingreso.fechaHoraSalida ? (
+                              <span className="text-muted-foreground">{formatDateTimeMST(ingreso.fechaHoraSalida)}</span>
+                            ) : (
+                              <Badge variant="outline" className="text-orange-600 border-orange-300">En planta</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right min-w-[160px]">
+                            <div className="flex items-center justify-end gap-2">
+                              {!ingreso.fechaHoraSalida && (
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  className="text-primary border-primary hover:bg-primary hover:text-primary-foreground"
+                                  onClick={() => handleMarcarSalida(ingreso.id)}
+                                >
+                                  <LogOut className="h-3 w-3 mr-1" />
+                                  Marcar Salida
+                                </Button>
+                              )}
+                              {esAdministrador() && (
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost"
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIngresoAEliminar(ingreso.id);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             </div>
             {hasMore && (
