@@ -7,27 +7,73 @@
 
 DO $$
 DECLARE
-  v_embarque_2250042_id INTEGER;
-  v_embarque_2250043_id INTEGER;
+  v_embarque_2250042 RECORD;
+  v_embarque_2250043 RECORD;
   v_consecutivo_id INTEGER;
   v_consecutivo_actual INTEGER;
+  v_consecutivo_nuevo INTEGER;
 BEGIN
-  -- Obtener IDs de los embarques
-  SELECT id INTO v_embarque_2250042_id
+  -- Obtener datos completos de los embarques (incluyendo peso_neto para revertir inventario)
+  SELECT * INTO v_embarque_2250042
   FROM embarques
   WHERE boleta = '2250042';
   
-  SELECT id INTO v_embarque_2250043_id
+  SELECT * INTO v_embarque_2250043
   FROM embarques
   WHERE boleta = '2250043';
   
   -- Verificar que existen
-  IF v_embarque_2250042_id IS NULL THEN
+  IF v_embarque_2250042.id IS NULL THEN
     RAISE NOTICE 'Embarque 2250042 no encontrado';
   END IF;
   
-  IF v_embarque_2250043_id IS NULL THEN
+  IF v_embarque_2250043.id IS NULL THEN
     RAISE NOTICE 'Embarque 2250043 no encontrado';
+  END IF;
+  
+  -- REVERTIR INVENTARIO: Si los embarques estaban completados, sumar de vuelta el peso_neto
+  IF v_embarque_2250042.id IS NOT NULL AND v_embarque_2250042.estatus = 'Completado' 
+     AND v_embarque_2250042.peso_neto IS NOT NULL AND v_embarque_2250042.peso_neto > 0
+     AND v_embarque_2250042.producto_id IS NOT NULL AND v_embarque_2250042.almacen_id IS NOT NULL THEN
+    
+    -- Sumar de vuelta al inventario
+    UPDATE inventario_almacenes
+    SET cantidad = cantidad + v_embarque_2250042.peso_neto
+    WHERE producto_id = v_embarque_2250042.producto_id
+      AND almacen_id = v_embarque_2250042.almacen_id;
+    
+    -- Actualizar capacidad_actual del almacén
+    UPDATE almacenes
+    SET capacidad_actual = (
+      SELECT COALESCE(SUM(cantidad), 0)
+      FROM inventario_almacenes
+      WHERE almacen_id = v_embarque_2250042.almacen_id
+    )
+    WHERE id = v_embarque_2250042.almacen_id;
+    
+    RAISE NOTICE 'Inventario revertido para boleta 2250042: +% kg', v_embarque_2250042.peso_neto;
+  END IF;
+  
+  IF v_embarque_2250043.id IS NOT NULL AND v_embarque_2250043.estatus = 'Completado'
+     AND v_embarque_2250043.peso_neto IS NOT NULL AND v_embarque_2250043.peso_neto > 0
+     AND v_embarque_2250043.producto_id IS NOT NULL AND v_embarque_2250043.almacen_id IS NOT NULL THEN
+    
+    -- Sumar de vuelta al inventario
+    UPDATE inventario_almacenes
+    SET cantidad = cantidad + v_embarque_2250043.peso_neto
+    WHERE producto_id = v_embarque_2250043.producto_id
+      AND almacen_id = v_embarque_2250043.almacen_id;
+    
+    -- Actualizar capacidad_actual del almacén
+    UPDATE almacenes
+    SET capacidad_actual = (
+      SELECT COALESCE(SUM(cantidad), 0)
+      FROM inventario_almacenes
+      WHERE almacen_id = v_embarque_2250043.almacen_id
+    )
+    WHERE id = v_embarque_2250043.almacen_id;
+    
+    RAISE NOTICE 'Inventario revertido para boleta 2250043: +% kg', v_embarque_2250043.peso_neto;
   END IF;
   
   -- Eliminar movimientos asociados primero (si existen)
@@ -37,15 +83,15 @@ BEGIN
   RAISE NOTICE 'Movimientos eliminados para boletas 2250042 y 2250043';
   
   -- Eliminar los embarques
-  IF v_embarque_2250042_id IS NOT NULL THEN
+  IF v_embarque_2250042.id IS NOT NULL THEN
     DELETE FROM embarques
-    WHERE id = v_embarque_2250042_id;
+    WHERE id = v_embarque_2250042.id;
     RAISE NOTICE 'Embarque 2250042 eliminado';
   END IF;
   
-  IF v_embarque_2250043_id IS NOT NULL THEN
+  IF v_embarque_2250043.id IS NOT NULL THEN
     DELETE FROM embarques
-    WHERE id = v_embarque_2250043_id;
+    WHERE id = v_embarque_2250043.id;
     RAISE NOTICE 'Embarque 2250043 eliminado';
   END IF;
   
@@ -59,11 +105,13 @@ BEGIN
   
   IF v_consecutivo_id IS NOT NULL THEN
     -- Decrementar el consecutivo en 2 (porque eliminamos 2 embarques)
+    v_consecutivo_nuevo := GREATEST(0, v_consecutivo_actual - 2);
+    
     UPDATE consecutivos_lotes
-    SET consecutivo = GREATEST(0, consecutivo - 2)
+    SET consecutivo = v_consecutivo_nuevo
     WHERE id = v_consecutivo_id;
     
-    RAISE NOTICE 'Consecutivo ajustado de % a %', v_consecutivo_actual, GREATEST(0, consecutivo - 2);
+    RAISE NOTICE 'Consecutivo ajustado de % a %', v_consecutivo_actual, v_consecutivo_nuevo;
   END IF;
   
   RAISE NOTICE 'Proceso completado';
