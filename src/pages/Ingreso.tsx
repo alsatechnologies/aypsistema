@@ -307,77 +307,107 @@ const Ingreso = () => {
             <CardDescription>Control de entrada y salida de vehículos</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-[200px]">Nombre Chofer</TableHead>
-                    <TableHead className="min-w-[220px]">Empresa</TableHead>
-                    <TableHead className="min-w-[140px]">Vehículo</TableHead>
-                    <TableHead className="min-w-[130px]">Placas</TableHead>
-                    <TableHead className="min-w-[200px]">Procedencia/Destino</TableHead>
-                    <TableHead className="min-w-[180px]">Motivo</TableHead>
-                    <TableHead className="min-w-[160px]">Ingreso</TableHead>
-                    <TableHead className="min-w-[160px]">Salida</TableHead>
-                    <TableHead className="text-right min-w-[160px]">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredIngresos.map((ingreso) => (
-                    <TableRow key={ingreso.id} className="cursor-pointer hover:bg-muted/50">
-                      <TableCell className="font-medium min-w-[200px]">{ingreso.nombreChofer}</TableCell>
-                      <TableCell className="min-w-[220px]">{ingreso.empresa || '-'}</TableCell>
-                      <TableCell className="min-w-[140px]">{ingreso.vehiculo || '-'}</TableCell>
-                      <TableCell className="font-mono text-sm min-w-[130px]">{ingreso.placas || '-'}</TableCell>
-                      <TableCell className="min-w-[200px]">
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3 text-muted-foreground" />
-                          {ingreso.procedenciaDestino || '-'}
-                        </div>
-                      </TableCell>
-                      <TableCell className="min-w-[180px]">
-                        {getMotivoBadge(ingreso.motivo)}
-                      </TableCell>
-                      <TableCell className="min-w-[160px]">{formatDateTimeMST(ingreso.fechaHoraIngreso)}</TableCell>
-                      <TableCell className="min-w-[160px]">
-                        {ingreso.fechaHoraSalida ? (
-                          <span className="text-muted-foreground">{formatDateTimeMST(ingreso.fechaHoraSalida)}</span>
-                        ) : (
-                          <Badge variant="outline" className="text-orange-600 border-orange-300">En planta</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right min-w-[160px]">
-                        <div className="flex items-center justify-end gap-2">
-                          {!ingreso.fechaHoraSalida && (
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              className="text-primary border-primary hover:bg-primary hover:text-primary-foreground"
-                              onClick={() => handleMarcarSalida(ingreso.id)}
-                            >
-                              <LogOut className="h-3 w-3 mr-1" />
-                              Marcar Salida
-                            </Button>
-                          )}
-                          {esAdministrador() && (
-                            <Button 
-                              size="sm" 
-                              variant="ghost"
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setIngresoAEliminar(ingreso.id);
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
+            <div className="relative">
+              {/* Scrollbar superior sincronizado */}
+              <div 
+                className="overflow-x-auto overflow-y-hidden mb-0 scrollbar-thin"
+                style={{ 
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'rgb(156 163 175) transparent'
+                }}
+                onScroll={(e) => {
+                  const target = e.target as HTMLElement;
+                  const contentDiv = target.nextElementSibling as HTMLElement;
+                  if (contentDiv) {
+                    contentDiv.scrollLeft = target.scrollLeft;
+                  }
+                }}
+              >
+                <div style={{ height: '1px', minWidth: '1500px' }}></div>
+              </div>
+              
+              {/* Contenido de la tabla con scrollbar inferior */}
+              <div 
+                className="overflow-x-auto"
+                onScroll={(e) => {
+                  const target = e.target as HTMLElement;
+                  const topScrollbar = target.previousElementSibling as HTMLElement;
+                  if (topScrollbar) {
+                    topScrollbar.scrollLeft = target.scrollLeft;
+                  }
+                }}
+              >
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[200px]">Nombre Chofer</TableHead>
+                      <TableHead className="min-w-[220px]">Empresa</TableHead>
+                      <TableHead className="min-w-[140px]">Vehículo</TableHead>
+                      <TableHead className="min-w-[130px]">Placas</TableHead>
+                      <TableHead className="min-w-[200px]">Procedencia/Destino</TableHead>
+                      <TableHead className="min-w-[180px]">Motivo</TableHead>
+                      <TableHead className="min-w-[160px]">Ingreso</TableHead>
+                      <TableHead className="min-w-[160px]">Salida</TableHead>
+                      <TableHead className="text-right min-w-[160px]">Acciones</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredIngresos.map((ingreso) => (
+                      <TableRow key={ingreso.id} className="cursor-pointer hover:bg-muted/50">
+                        <TableCell className="font-medium min-w-[200px]">{ingreso.nombreChofer}</TableCell>
+                        <TableCell className="min-w-[220px]">{ingreso.empresa || '-'}</TableCell>
+                        <TableCell className="min-w-[140px]">{ingreso.vehiculo || '-'}</TableCell>
+                        <TableCell className="font-mono text-sm min-w-[130px]">{ingreso.placas || '-'}</TableCell>
+                        <TableCell className="min-w-[200px]">
+                          <div className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3 text-muted-foreground" />
+                            {ingreso.procedenciaDestino || '-'}
+                          </div>
+                        </TableCell>
+                        <TableCell className="min-w-[180px]">
+                          {getMotivoBadge(ingreso.motivo)}
+                        </TableCell>
+                        <TableCell className="min-w-[160px]">{formatDateTimeMST(ingreso.fechaHoraIngreso)}</TableCell>
+                        <TableCell className="min-w-[160px]">
+                          {ingreso.fechaHoraSalida ? (
+                            <span className="text-muted-foreground">{formatDateTimeMST(ingreso.fechaHoraSalida)}</span>
+                          ) : (
+                            <Badge variant="outline" className="text-orange-600 border-orange-300">En planta</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right min-w-[160px]">
+                          <div className="flex items-center justify-end gap-2">
+                            {!ingreso.fechaHoraSalida && (
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="text-primary border-primary hover:bg-primary hover:text-primary-foreground"
+                                onClick={() => handleMarcarSalida(ingreso.id)}
+                              >
+                                <LogOut className="h-3 w-3 mr-1" />
+                                Marcar Salida
+                              </Button>
+                            )}
+                            {esAdministrador() && (
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setIngresoAEliminar(ingreso.id);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
             {hasMore && (
               <div className="flex justify-center mt-4 pb-4">
