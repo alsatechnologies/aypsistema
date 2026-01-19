@@ -32,7 +32,7 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
       </div>
       <div className="flex items-center gap-4">
         <div className="text-sm text-muted-foreground">
-          {formattedDate} {formattedTime}
+        {formattedDate} {formattedTime}
         </div>
         <Button
           variant="ghost"
