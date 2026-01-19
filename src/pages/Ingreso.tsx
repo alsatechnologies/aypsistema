@@ -93,19 +93,12 @@ const Ingreso = () => {
       if (bottomScrollbarRef.current && topScrollbarRef.current) {
         // Obtener el ancho del scroll del contenedor inferior (el que realmente tiene el scroll)
         const scrollWidth = bottomScrollbarRef.current.scrollWidth;
-        const clientWidth = bottomScrollbarRef.current.clientWidth;
         
-        // Solo mostrar el scrollbar si hay contenido que se desborda
-        if (scrollWidth > clientWidth) {
-          const scrollbarContent = topScrollbarRef.current.querySelector('div') as HTMLElement;
-          if (scrollbarContent) {
-            scrollbarContent.style.minWidth = `${scrollWidth}px`;
-            // Asegurar que el scrollbar superior sea visible
-            topScrollbarRef.current.style.display = 'block';
-          }
-        } else {
-          // Ocultar el scrollbar si no hay scroll
-          topScrollbarRef.current.style.display = 'none';
+        // Siempre actualizar el ancho del scrollbar superior para que coincida
+        const scrollbarContent = topScrollbarRef.current.querySelector('div') as HTMLElement;
+        if (scrollbarContent) {
+          scrollbarContent.style.minWidth = `${scrollWidth}px`;
+          scrollbarContent.style.width = `${scrollWidth}px`;
         }
       }
     };
@@ -119,6 +112,11 @@ const Ingreso = () => {
     requestAnimationFrame(() => {
       updateScrollbarWidth();
     });
+    
+    // Actualizar después de otro frame para asegurar que el DOM está completamente renderizado
+    setTimeout(() => {
+      updateScrollbarWidth();
+    }, 200);
     
     window.addEventListener('resize', updateScrollbarWidth);
     
@@ -364,15 +362,16 @@ const Ingreso = () => {
           </CardHeader>
           <CardContent>
             <div className="relative">
-              {/* Scrollbar superior sincronizado */}
+              {/* Scrollbar superior sincronizado - Siempre visible */}
               <div 
                 ref={topScrollbarRef}
-                className="overflow-x-auto overflow-y-hidden mb-0"
+                className="overflow-x-auto overflow-y-hidden mb-1"
                 style={{ 
                   height: '17px',
                   scrollbarWidth: 'thin',
                   scrollbarColor: 'rgb(156 163 175) transparent',
-                  display: 'none' // Se mostrará cuando haya scroll
+                  display: 'block',
+                  visibility: 'visible'
                 }}
                 onScroll={(e) => {
                   if (bottomScrollbarRef.current && !bottomScrollbarRef.current.dataset.scrolling) {
@@ -382,7 +381,7 @@ const Ingreso = () => {
                   }
                 }}
               >
-                <div style={{ minWidth: '1500px', height: '1px' }}></div>
+                <div style={{ minWidth: '100%', height: '1px', width: '100%' }}></div>
               </div>
               
               {/* Contenido de la tabla con scrollbar inferior */}
