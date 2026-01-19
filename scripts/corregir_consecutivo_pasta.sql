@@ -62,8 +62,7 @@ BEGIN
       v_nuevo_consecutivo := v_consecutivo_maximo + 1;
       
       UPDATE consecutivos_lotes
-      SET consecutivo = v_nuevo_consecutivo,
-          updated_at = CURRENT_TIMESTAMP
+      SET consecutivo = v_nuevo_consecutivo
       WHERE id = v_consecutivo_id;
       
       RAISE NOTICE 'Actualizado consecutivo para NL- + 25: de % a %', v_consecutivo_actual, v_nuevo_consecutivo;
