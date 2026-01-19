@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import Layout from '@/components/Layout';
 import Header from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -47,11 +47,6 @@ const Ingreso = () => {
   const [fechaHasta, setFechaHasta] = useState('');
   const [ingresoAEliminar, setIngresoAEliminar] = useState<number | null>(null);
   
-  // Refs para sincronizar scrollbars
-  const topScrollbarRef = useRef<HTMLDivElement>(null);
-  const bottomScrollbarRef = useRef<HTMLDivElement>(null);
-  const tableContentRef = useRef<HTMLDivElement>(null);
-  
   // Mapear ingresos de DB a formato local (DEBE estar antes de filteredIngresos)
   const ingresos: Ingreso[] = ingresosDB.map(i => ({
     id: i.id,
@@ -87,90 +82,6 @@ const Ingreso = () => {
     return matchesSearch && matchesDate;
   });
 
-  // Sincronizar el ancho del scrollbar superior con el contenido
-  useEffect(() => {
-    const updateScrollbarWidth = () => {
-      if (bottomScrollbarRef.current && topScrollbarRef.current) {
-        // Obtener el ancho del scroll del contenedor inferior (el que realmente tiene el scroll)
-        const scrollWidth = bottomScrollbarRef.current.scrollWidth;
-        
-        // Siempre actualizar el ancho del scrollbar superior para que coincida exactamente
-        const scrollbarContent = topScrollbarRef.current.querySelector('#top-scrollbar-content') as HTMLElement;
-        if (scrollbarContent) {
-          // Establecer el ancho exacto para que el scrollbar aparezca
-          scrollbarContent.style.width = `${scrollWidth}px`;
-          scrollbarContent.style.minWidth = `${scrollWidth}px`;
-          scrollbarContent.style.display = 'block';
-        }
-        
-        // Asegurar que el scrollbar superior sea visible
-        topScrollbarRef.current.style.display = 'block';
-        topScrollbarRef.current.style.visibility = 'visible';
-        topScrollbarRef.current.style.opacity = '1';
-      }
-    };
-    
-    // Función para intentar actualizar varias veces hasta que funcione
-    const tryUpdate = (attempts = 0) => {
-      updateScrollbarWidth();
-      
-      // Verificar si se estableció correctamente
-      const scrollbarContent = topScrollbarRef.current?.querySelector('#top-scrollbar-content') as HTMLElement;
-      if (scrollbarContent && scrollbarContent.style.width === '0px' && attempts < 5) {
-        setTimeout(() => tryUpdate(attempts + 1), 100 * (attempts + 1));
-      }
-    };
-    
-    // Múltiples intentos para asegurar que se actualice correctamente
-    tryUpdate();
-    
-    // También actualizar después de diferentes momentos
-    requestAnimationFrame(tryUpdate);
-    
-    const timeout1 = setTimeout(tryUpdate, 100);
-    const timeout2 = setTimeout(tryUpdate, 300);
-    const timeout3 = setTimeout(tryUpdate, 500);
-    
-    window.addEventListener('resize', updateScrollbarWidth);
-    
-    // Observar cambios en el tamaño del contenedor
-    let resizeObserver: ResizeObserver | null = null;
-    if (bottomScrollbarRef.current && window.ResizeObserver) {
-      resizeObserver = new ResizeObserver(updateScrollbarWidth);
-      resizeObserver.observe(bottomScrollbarRef.current);
-    }
-    
-    // Observar cuando cambia el contenido de la tabla
-    if (tableContentRef.current) {
-      const mutationObserver = new MutationObserver(updateScrollbarWidth);
-      mutationObserver.observe(tableContentRef.current, {
-        childList: true,
-        subtree: true,
-        attributes: true
-      });
-      
-      return () => {
-        clearTimeout(timeout1);
-        clearTimeout(timeout2);
-        clearTimeout(timeout3);
-        window.removeEventListener('resize', updateScrollbarWidth);
-        if (resizeObserver) {
-          resizeObserver.disconnect();
-        }
-        mutationObserver.disconnect();
-      };
-    }
-    
-    return () => {
-      clearTimeout(timeout1);
-      clearTimeout(timeout2);
-      clearTimeout(timeout3);
-      window.removeEventListener('resize', updateScrollbarWidth);
-      if (resizeObserver) {
-        resizeObserver.disconnect();
-      }
-    };
-  }, [filteredIngresos.length]);
 
   const getMotivoBadge = (motivo: string) => {
     const colors: Record<string, string> = {
@@ -397,45 +308,8 @@ const Ingreso = () => {
             <CardDescription>Control de entrada y salida de vehículos</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="relative">
-              {/* Scrollbar superior sincronizado - Siempre visible */}
-              <div 
-                ref={topScrollbarRef}
-                className="overflow-x-auto overflow-y-hidden mb-1 border-b"
-                style={{ 
-                  height: '17px',
-                  scrollbarWidth: 'thin',
-                  scrollbarColor: 'rgb(156 163 175) transparent',
-                  display: 'block',
-                  visibility: 'visible',
-                  opacity: 1
-                }}
-                onScroll={(e) => {
-                  if (bottomScrollbarRef.current && !bottomScrollbarRef.current.dataset.scrolling) {
-                    bottomScrollbarRef.current.dataset.scrolling = 'true';
-                    bottomScrollbarRef.current.scrollLeft = (e.target as HTMLElement).scrollLeft;
-                    delete bottomScrollbarRef.current.dataset.scrolling;
-                  }
-                }}
-              >
-                {/* Este div tendrá el ancho dinámico igual al contenido de la tabla */}
-                <div id="top-scrollbar-content" style={{ height: '1px' }}></div>
-              </div>
-              
-              {/* Contenido de la tabla con scrollbar inferior */}
-              <div 
-                ref={bottomScrollbarRef}
-                className="overflow-x-auto"
-                onScroll={(e) => {
-                  if (topScrollbarRef.current && !topScrollbarRef.current.dataset.scrolling) {
-                    topScrollbarRef.current.dataset.scrolling = 'true';
-                    topScrollbarRef.current.scrollLeft = (e.target as HTMLElement).scrollLeft;
-                    delete topScrollbarRef.current.dataset.scrolling;
-                  }
-                }}
-              >
-                <div ref={tableContentRef} style={{ display: 'inline-block', minWidth: '100%' }}>
-                  <Table>
+            <div className="overflow-x-auto">
+              <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead className="min-w-[200px]">Nombre Chofer</TableHead>
@@ -505,8 +379,6 @@ const Ingreso = () => {
                       ))}
                     </TableBody>
                   </Table>
-                </div>
-              </div>
             </div>
             {hasMore && (
               <div className="flex justify-center mt-4 pb-4">
