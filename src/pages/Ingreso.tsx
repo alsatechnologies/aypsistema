@@ -52,6 +52,22 @@ const Ingreso = () => {
   const bottomScrollbarRef = useRef<HTMLDivElement>(null);
   const tableContentRef = useRef<HTMLDivElement>(null);
   
+  const filteredIngresos = ingresos.filter(ing => {
+    const matchesSearch = 
+      ing.nombreChofer.toLowerCase().includes(search.toLowerCase()) ||
+      ing.empresa?.toLowerCase().includes(search.toLowerCase()) ||
+      ing.placas?.toLowerCase().includes(search.toLowerCase());
+    
+    let matchesDate = true;
+    if (fechaDesde || fechaHasta) {
+      const ingresoFecha = ing.fechaHoraIngreso ? ing.fechaHoraIngreso.split('T')[0] : '';
+      if (fechaDesde && ingresoFecha < fechaDesde) matchesDate = false;
+      if (fechaHasta && ingresoFecha > fechaHasta) matchesDate = false;
+    }
+    
+    return matchesSearch && matchesDate;
+  });
+
   // Sincronizar el ancho del scrollbar superior con el contenido
   useEffect(() => {
     const updateScrollbarWidth = () => {
@@ -64,13 +80,17 @@ const Ingreso = () => {
       }
     };
     
-    updateScrollbarWidth();
+    // Esperar un frame para que el DOM se actualice
+    requestAnimationFrame(() => {
+      updateScrollbarWidth();
+    });
+    
     window.addEventListener('resize', updateScrollbarWidth);
     
     return () => {
       window.removeEventListener('resize', updateScrollbarWidth);
     };
-  }, [filteredIngresos]);
+  }, [filteredIngresos.length]);
   
   // Mapear ingresos de DB a formato local
   const ingresos: Ingreso[] = ingresosDB.map(i => ({
@@ -251,22 +271,6 @@ const Ingreso = () => {
       }
     }
   };
-
-  const filteredIngresos = ingresos.filter(ing => {
-    const matchesSearch = 
-      ing.nombreChofer.toLowerCase().includes(search.toLowerCase()) ||
-      ing.empresa.toLowerCase().includes(search.toLowerCase()) ||
-      ing.placas.toLowerCase().includes(search.toLowerCase());
-    
-    let matchesDate = true;
-    if (fechaDesde || fechaHasta) {
-      const ingresoFecha = ing.fechaHoraIngreso ? ing.fechaHoraIngreso.split('T')[0] : '';
-      if (fechaDesde && ingresoFecha < fechaDesde) matchesDate = false;
-      if (fechaHasta && ingresoFecha > fechaHasta) matchesDate = false;
-    }
-    
-    return matchesSearch && matchesDate;
-  });
 
   const vehiculosEnPlanta = ingresos.filter(ing => !ing.fechaHoraSalida).length;
 
