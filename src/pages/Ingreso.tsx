@@ -52,6 +52,25 @@ const Ingreso = () => {
   const bottomScrollbarRef = useRef<HTMLDivElement>(null);
   const tableContentRef = useRef<HTMLDivElement>(null);
   
+  // Mapear ingresos de DB a formato local (DEBE estar antes de filteredIngresos)
+  const ingresos: Ingreso[] = ingresosDB.map(i => ({
+    id: i.id,
+    nombreChofer: i.nombre_chofer,
+    empresa: i.empresa,
+    procedenciaDestino: i.procedencia_destino,
+    motivo: i.motivo as MotivoVisita,
+    placas: i.placas,
+    vehiculo: i.vehiculo,
+    fechaHoraIngreso: i.fecha_hora_ingreso,
+    fechaHoraSalida: i.fecha_hora_salida,
+    ubicacion: i.ubicacion,
+    producto: i.producto,
+    cliente: i.cliente,
+    proveedor: i.proveedor,
+    tipoTransporte: i.tipo_transporte,
+    enviadoAOficina: i.enviado_a_oficina
+  }));
+  
   const filteredIngresos = ingresos.filter(ing => {
     const matchesSearch = 
       ing.nombreChofer.toLowerCase().includes(search.toLowerCase()) ||
@@ -91,25 +110,6 @@ const Ingreso = () => {
       window.removeEventListener('resize', updateScrollbarWidth);
     };
   }, [filteredIngresos.length]);
-  
-  // Mapear ingresos de DB a formato local
-  const ingresos: Ingreso[] = ingresosDB.map(i => ({
-    id: i.id,
-    nombreChofer: i.nombre_chofer,
-    empresa: i.empresa,
-    procedenciaDestino: i.procedencia_destino,
-    motivo: i.motivo as MotivoVisita,
-    placas: i.placas,
-    vehiculo: i.vehiculo,
-    fechaHoraIngreso: i.fecha_hora_ingreso,
-    fechaHoraSalida: i.fecha_hora_salida,
-    ubicacion: i.ubicacion,
-    producto: i.producto,
-    cliente: i.cliente,
-    proveedor: i.proveedor,
-    tipoTransporte: i.tipo_transporte,
-    enviadoAOficina: i.enviado_a_oficina
-  }));
 
   const getMotivoBadge = (motivo: string) => {
     const colors: Record<string, string> = {
