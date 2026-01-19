@@ -90,24 +90,51 @@ const Ingreso = () => {
   // Sincronizar el ancho del scrollbar superior con el contenido
   useEffect(() => {
     const updateScrollbarWidth = () => {
-      if (tableContentRef.current && topScrollbarRef.current) {
-        const scrollWidth = tableContentRef.current.scrollWidth;
-        const scrollbarContent = topScrollbarRef.current.querySelector('div') as HTMLElement;
-        if (scrollbarContent) {
-          scrollbarContent.style.minWidth = `${scrollWidth}px`;
+      if (bottomScrollbarRef.current && topScrollbarRef.current) {
+        // Obtener el ancho del scroll del contenedor inferior (el que realmente tiene el scroll)
+        const scrollWidth = bottomScrollbarRef.current.scrollWidth;
+        const clientWidth = bottomScrollbarRef.current.clientWidth;
+        
+        // Solo mostrar el scrollbar si hay contenido que se desborda
+        if (scrollWidth > clientWidth) {
+          const scrollbarContent = topScrollbarRef.current.querySelector('div') as HTMLElement;
+          if (scrollbarContent) {
+            scrollbarContent.style.minWidth = `${scrollWidth}px`;
+            // Asegurar que el scrollbar superior sea visible
+            topScrollbarRef.current.style.display = 'block';
+          }
+        } else {
+          // Ocultar el scrollbar si no hay scroll
+          topScrollbarRef.current.style.display = 'none';
         }
       }
     };
     
-    // Esperar un frame para que el DOM se actualice
+    // Esperar a que el DOM se actualice completamente
+    const timeoutId = setTimeout(() => {
+      updateScrollbarWidth();
+    }, 100);
+    
+    // También actualizar después de un frame de animación
     requestAnimationFrame(() => {
       updateScrollbarWidth();
     });
     
     window.addEventListener('resize', updateScrollbarWidth);
     
+    // Observar cambios en el tamaño del contenedor
+    let resizeObserver: ResizeObserver | null = null;
+    if (bottomScrollbarRef.current && window.ResizeObserver) {
+      resizeObserver = new ResizeObserver(updateScrollbarWidth);
+      resizeObserver.observe(bottomScrollbarRef.current);
+    }
+    
     return () => {
+      clearTimeout(timeoutId);
       window.removeEventListener('resize', updateScrollbarWidth);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
     };
   }, [filteredIngresos.length]);
 
@@ -344,7 +371,8 @@ const Ingreso = () => {
                 style={{ 
                   height: '17px',
                   scrollbarWidth: 'thin',
-                  scrollbarColor: 'rgb(156 163 175) transparent'
+                  scrollbarColor: 'rgb(156 163 175) transparent',
+                  display: 'none' // Se mostrará cuando haya scroll
                 }}
                 onScroll={(e) => {
                   if (bottomScrollbarRef.current && !bottomScrollbarRef.current.dataset.scrolling) {
@@ -369,7 +397,7 @@ const Ingreso = () => {
                   }
                 }}
               >
-                <div ref={tableContentRef} className="inline-block min-w-full">
+                <div ref={tableContentRef} style={{ display: 'inline-block', minWidth: '100%' }}>
                   <Table>
                     <TableHeader>
                       <TableRow>
