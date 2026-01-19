@@ -94,29 +94,42 @@ const Ingreso = () => {
         // Obtener el ancho del scroll del contenedor inferior (el que realmente tiene el scroll)
         const scrollWidth = bottomScrollbarRef.current.scrollWidth;
         
-        // Siempre actualizar el ancho del scrollbar superior para que coincida
-        const scrollbarContent = topScrollbarRef.current.querySelector('div') as HTMLElement;
+        // Siempre actualizar el ancho del scrollbar superior para que coincida exactamente
+        const scrollbarContent = topScrollbarRef.current.querySelector('#top-scrollbar-content') as HTMLElement;
         if (scrollbarContent) {
-          scrollbarContent.style.minWidth = `${scrollWidth}px`;
+          // Establecer el ancho exacto para que el scrollbar aparezca
           scrollbarContent.style.width = `${scrollWidth}px`;
+          scrollbarContent.style.minWidth = `${scrollWidth}px`;
+          scrollbarContent.style.display = 'block';
         }
+        
+        // Asegurar que el scrollbar superior sea visible
+        topScrollbarRef.current.style.display = 'block';
+        topScrollbarRef.current.style.visibility = 'visible';
+        topScrollbarRef.current.style.opacity = '1';
       }
     };
     
-    // Esperar a que el DOM se actualice completamente
-    const timeoutId = setTimeout(() => {
+    // Función para intentar actualizar varias veces hasta que funcione
+    const tryUpdate = (attempts = 0) => {
       updateScrollbarWidth();
-    }, 100);
+      
+      // Verificar si se estableció correctamente
+      const scrollbarContent = topScrollbarRef.current?.querySelector('#top-scrollbar-content') as HTMLElement;
+      if (scrollbarContent && scrollbarContent.style.width === '0px' && attempts < 5) {
+        setTimeout(() => tryUpdate(attempts + 1), 100 * (attempts + 1));
+      }
+    };
     
-    // También actualizar después de un frame de animación
-    requestAnimationFrame(() => {
-      updateScrollbarWidth();
-    });
+    // Múltiples intentos para asegurar que se actualice correctamente
+    tryUpdate();
     
-    // Actualizar después de otro frame para asegurar que el DOM está completamente renderizado
-    setTimeout(() => {
-      updateScrollbarWidth();
-    }, 200);
+    // También actualizar después de diferentes momentos
+    requestAnimationFrame(tryUpdate);
+    
+    const timeout1 = setTimeout(tryUpdate, 100);
+    const timeout2 = setTimeout(tryUpdate, 300);
+    const timeout3 = setTimeout(tryUpdate, 500);
     
     window.addEventListener('resize', updateScrollbarWidth);
     
@@ -127,8 +140,31 @@ const Ingreso = () => {
       resizeObserver.observe(bottomScrollbarRef.current);
     }
     
+    // Observar cuando cambia el contenido de la tabla
+    if (tableContentRef.current) {
+      const mutationObserver = new MutationObserver(updateScrollbarWidth);
+      mutationObserver.observe(tableContentRef.current, {
+        childList: true,
+        subtree: true,
+        attributes: true
+      });
+      
+      return () => {
+        clearTimeout(timeout1);
+        clearTimeout(timeout2);
+        clearTimeout(timeout3);
+        window.removeEventListener('resize', updateScrollbarWidth);
+        if (resizeObserver) {
+          resizeObserver.disconnect();
+        }
+        mutationObserver.disconnect();
+      };
+    }
+    
     return () => {
-      clearTimeout(timeoutId);
+      clearTimeout(timeout1);
+      clearTimeout(timeout2);
+      clearTimeout(timeout3);
       window.removeEventListener('resize', updateScrollbarWidth);
       if (resizeObserver) {
         resizeObserver.disconnect();
@@ -365,13 +401,14 @@ const Ingreso = () => {
               {/* Scrollbar superior sincronizado - Siempre visible */}
               <div 
                 ref={topScrollbarRef}
-                className="overflow-x-auto overflow-y-hidden mb-1"
+                className="overflow-x-auto overflow-y-hidden mb-1 border-b"
                 style={{ 
                   height: '17px',
                   scrollbarWidth: 'thin',
                   scrollbarColor: 'rgb(156 163 175) transparent',
                   display: 'block',
-                  visibility: 'visible'
+                  visibility: 'visible',
+                  opacity: 1
                 }}
                 onScroll={(e) => {
                   if (bottomScrollbarRef.current && !bottomScrollbarRef.current.dataset.scrolling) {
@@ -381,7 +418,8 @@ const Ingreso = () => {
                   }
                 }}
               >
-                <div style={{ minWidth: '100%', height: '1px', width: '100%' }}></div>
+                {/* Este div tendrá el ancho dinámico igual al contenido de la tabla */}
+                <div id="top-scrollbar-content" style={{ height: '1px' }}></div>
               </div>
               
               {/* Contenido de la tabla con scrollbar inferior */}
