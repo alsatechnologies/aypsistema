@@ -14,9 +14,7 @@ SELECT
   origen_codigo,
   almacen_codigo,
   anio_codigo,
-  anio,
-  created_at,
-  updated_at
+  anio
 FROM consecutivos_lotes
 WHERE tipo_operacion_codigo = 'NL-'
   AND producto_codigo = '25'
