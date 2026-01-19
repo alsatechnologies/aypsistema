@@ -210,12 +210,12 @@ export async function updateRecepcion(id: number, recepcion: Partial<Recepcion>)
     if (pesoNeto && pesoNeto > 0) {
       try {
         // Obtener inventario actual del almacén para este producto
-        const { data: inventarioActual } = await supabase
+        const { data: inventarioActual, error: inventarioError } = await supabase
           .from('inventario_almacenes')
           .select('cantidad')
           .eq('almacen_id', almacenId)
           .eq('producto_id', productoId)
-          .single();
+          .maybeSingle(); // Usar maybeSingle en lugar de single para evitar error si no existe
         
         const cantidadActual = inventarioActual?.cantidad || 0;
         
