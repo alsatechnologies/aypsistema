@@ -37,18 +37,18 @@ ORDER BY e.created_at ASC;
 -- 3. Ver si hay lotes con consecutivos duplicados (mismo consecutivo, diferentes boletas)
 SELECT 
   'LOTES CON CONSECUTIVOS DUPLICADOS' as seccion,
-  CAST(SUBSTRING(codigo_lote FROM '([0-9]{3})$') AS INTEGER) as consecutivo_numero,
+  CAST(SUBSTRING(e.codigo_lote FROM '([0-9]{3})$') AS INTEGER) as consecutivo_numero,
   COUNT(*) as cantidad_duplicados,
-  STRING_AGG(boleta || ' (' || codigo_lote || ')', ', ') as boletas_duplicadas,
-  MIN(created_at) as primera_fecha,
-  MAX(created_at) as ultima_fecha
+  STRING_AGG(e.boleta || ' (' || e.codigo_lote || ')', ', ') as boletas_duplicadas,
+  MIN(e.created_at) as primera_fecha,
+  MAX(e.created_at) as ultima_fecha
 FROM embarques e
 LEFT JOIN productos p ON e.producto_id = p.id
 WHERE p.codigo_lote = '25'
   AND e.codigo_lote LIKE 'NL-%'
   AND e.codigo_lote IS NOT NULL
   AND e.codigo_lote ~ '^NL-[0-9]+-([0-9]{3})$'
-GROUP BY CAST(SUBSTRING(codigo_lote FROM '([0-9]{3})$') AS INTEGER)
+GROUP BY CAST(SUBSTRING(e.codigo_lote FROM '([0-9]{3})$') AS INTEGER)
 HAVING COUNT(*) > 1
 ORDER BY consecutivo_numero DESC;
 
