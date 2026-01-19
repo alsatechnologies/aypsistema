@@ -104,23 +104,21 @@ BEGIN
   -- Obtener año código (últimos 2 dígitos)
   v_anio_codigo := RIGHT(v_anio::TEXT, 2);
   
-  -- Obtener el consecutivo actual y incrementarlo
+  -- Obtener el consecutivo actual (debería estar en 44)
+  -- NO incrementarlo porque este lote debería usar el consecutivo 44
   SELECT id, consecutivo
   INTO v_consecutivo_data
   FROM consecutivos_lotes
   WHERE tipo_operacion_codigo = v_tipo_operacion_codigo
-    AND producto_codigo = v_producto_codigo
-  FOR UPDATE;
+    AND producto_codigo = v_producto_codigo;
   
   IF NOT FOUND THEN
     RAISE EXCEPTION 'No se encontró consecutivo para tipo_operacion_codigo=% y producto_codigo=%', v_tipo_operacion_codigo, v_producto_codigo;
   END IF;
   
-  -- Incrementar el consecutivo
-  UPDATE consecutivos_lotes
-  SET consecutivo = consecutivo + 1
-  WHERE id = v_consecutivo_data.id
-  RETURNING consecutivo INTO v_nuevo_consecutivo;
+  -- Usar el consecutivo actual (44) sin incrementarlo
+  -- porque este embarque debería haber usado el 44 cuando se creó
+  v_nuevo_consecutivo := v_consecutivo_data.consecutivo;
   
   -- Formatear consecutivo a 3 dígitos
   v_codigo_lote := v_tipo_operacion_codigo || 
