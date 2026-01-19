@@ -283,6 +283,15 @@ export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
         // Actualizar inventario
         await upsertInventarioAlmacen(almacenId, productoId, nuevaCantidad);
         
+        // Actualizar capacidad_actual del almacén sumando todas las cantidades de inventario_almacenes
+        try {
+          const { actualizarCapacidadActualAlmacen } = await import('./inventarioAlmacenes');
+          await actualizarCapacidadActualAlmacen(almacenId);
+        } catch (errorCapacidad) {
+          // Log el error pero no fallar el proceso
+          console.error(`[EMBARQUES] Error al actualizar capacidad_actual del almacén ${almacenId}:`, errorCapacidad);
+        }
+        
         logger.info(`Inventario actualizado para embarque ${id}`, {
           embarqueId: id,
           almacenId,

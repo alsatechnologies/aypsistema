@@ -236,6 +236,15 @@ export async function updateRecepcion(id: number, recepcion: Partial<Recepcion>)
         // Actualizar inventario
         await upsertInventarioAlmacen(almacenId, productoId, nuevaCantidad);
         
+        // Actualizar capacidad_actual del almacén sumando todas las cantidades de inventario_almacenes
+        try {
+          const { actualizarCapacidadActualAlmacen } = await import('./inventarioAlmacenes');
+          await actualizarCapacidadActualAlmacen(almacenId);
+        } catch (errorCapacidad) {
+          // Log el error pero no fallar el proceso
+          console.error(`[RECEPCIONES] Error al actualizar capacidad_actual del almacén ${almacenId}:`, errorCapacidad);
+        }
+        
         logger.info(`Inventario actualizado para recepción ${id}`, {
           recepcionId: id,
           almacenId,
