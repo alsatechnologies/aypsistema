@@ -217,6 +217,11 @@ export async function updateRecepcion(id: number, recepcion: Partial<Recepcion>)
           .eq('producto_id', productoId)
           .maybeSingle(); // Usar maybeSingle en lugar de single para evitar error si no existe
         
+        // Si hay error y no es "no rows", lanzarlo
+        if (inventarioError && inventarioError.code !== 'PGRST116') {
+          throw inventarioError;
+        }
+        
         const cantidadActual = inventarioActual?.cantidad || 0;
         
         // Si había un peso_neto anterior, primero restarlo (para correcciones)
