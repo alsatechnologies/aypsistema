@@ -102,11 +102,16 @@ const Ingreso = () => {
         topScrollbar.removeChild(topScrollbar.firstChild);
       }
       
+      // Obtener el ancho del contenido de la tabla
+      // Usamos un pequeño retraso para asegurar que el DOM se ha actualizado
+      const scrollWidth = bottomScrollArea.scrollWidth;
+      
       // Crear un div con el mismo ancho que el scrollWidth del contenedor
       const dummyDiv = document.createElement('div');
-      dummyDiv.style.width = `${bottomScrollArea.scrollWidth}px`;
-      dummyDiv.style.height = '1px';
+      dummyDiv.style.width = `${scrollWidth}px`;
+      dummyDiv.style.height = '4px';
       dummyDiv.style.pointerEvents = 'none';
+      dummyDiv.style.background = 'transparent';
       topScrollbar.appendChild(dummyDiv);
     };
 
@@ -124,12 +129,16 @@ const Ingreso = () => {
       }
     };
 
-    // Actualizar el ancho del contenido del scrollbar superior
-    updateTopScrollbarWidth();
-    
+    // Esperar un poco y luego actualizar el ancho para asegurar que el DOM esté listo
+    requestAnimationFrame(() => {
+      updateTopScrollbarWidth();
+    });
+
     // Observar cambios en el contenedor para actualizar el ancho del scrollbar superior
     const resizeObserver = new ResizeObserver(() => {
-      updateTopScrollbarWidth();
+      requestAnimationFrame(() => {
+        updateTopScrollbarWidth();
+      });
     });
 
     resizeObserver.observe(bottomScrollArea);
@@ -375,7 +384,7 @@ const Ingreso = () => {
             {/* Scrollbar horizontal superior siempre visible */}
             <div 
               ref={topScrollbarRef}
-              className="overflow-x-auto overflow-y-hidden h-4 mb-2 w-full"
+              className="overflow-x-auto overflow-y-hidden h-4 mb-2 w-full border-b border-muted"
               style={{ minWidth: '100%' }}
             />
             
