@@ -452,6 +452,7 @@ const EmbarquePage = () => {
     const validacion = validarEmbarque({
       producto_id: selectedEmbarque.productoId,
       cliente_id: selectedEmbarque.clienteId,
+      almacen_id: formData.almacenId,
       peso_bruto: formData.pesoBruto,
       peso_tara: formData.pesoTara,
       peso_neto: pesoNeto,

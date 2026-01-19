@@ -13,6 +13,7 @@ export interface ValidationResult {
 export function validarRecepcion(data: {
   producto_id?: number | null;
   proveedor_id?: number | null;
+  almacen_id?: number | null;
   peso_bruto?: number | null;
   peso_tara?: number | null;
   peso_neto?: number | null;
@@ -25,6 +26,10 @@ export function validarRecepcion(data: {
 
   if (!data.proveedor_id) {
     errors.push('El proveedor es requerido');
+  }
+
+  if (!data.almacen_id) {
+    errors.push('El almacén (destino de la mercancía) es requerido');
   }
 
   if (data.peso_bruto !== null && data.peso_bruto !== undefined) {
@@ -70,6 +75,7 @@ export function validarRecepcion(data: {
 export function validarEmbarque(data: {
   producto_id?: number | null;
   cliente_id?: number | null;
+  almacen_id?: number | null;
   peso_bruto?: number | null;
   peso_tara?: number | null;
   peso_neto?: number | null;
@@ -82,6 +88,10 @@ export function validarEmbarque(data: {
 
   if (!data.cliente_id) {
     errors.push('El cliente es requerido');
+  }
+
+  if (!data.almacen_id) {
+    errors.push('El almacén (origen de la mercancía) es requerido');
   }
 
   if (data.peso_bruto !== null && data.peso_bruto !== undefined) {

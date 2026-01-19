@@ -373,6 +373,7 @@ const Reciba = () => {
     const validacion = validarRecepcion({
       producto_id: productoSeleccionado,
       proveedor_id: proveedorSeleccionado,
+      almacen_id: almacenSeleccionado,
       peso_bruto: pesoBruto,
       peso_tara: pesoTara,
       peso_neto: pesoNeto,
