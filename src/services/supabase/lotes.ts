@@ -87,7 +87,16 @@ export async function generarCodigoLote(
   if (rpcError) {
     // Si falla la función RPC (por ejemplo, si no existe), intentar método legacy
     // pero con mejor manejo de condiciones de carrera
-    console.warn('[LOTES] Error al llamar función RPC, usando método legacy:', rpcError);
+    console.error('[LOTES] Error crítico al llamar función RPC:', {
+      error: rpcError,
+      message: rpcError.message,
+      code: rpcError.code,
+      details: rpcError.details,
+      hint: rpcError.hint,
+      tipoOperacionCodigo,
+      productoCodigo
+    });
+    console.warn('[LOTES] Usando método legacy (NO ATÓMICO - puede causar condiciones de carrera):', rpcError);
     
     // Método legacy como fallback (pero aún vulnerable a race conditions)
     const { data: consecutivoData, error: consecutivoError } = await supabase

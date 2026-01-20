@@ -8,10 +8,12 @@ interface SellosData {
   selloEntrada2: string;
   selloEntrada3: string;
   selloEntrada4: string;
+  selloEntrada5: string;
   selloSalida1: string;
   selloSalida2: string;
   selloSalida3: string;
   selloSalida4: string;
+  selloSalida5: string;
 }
 
 interface SellosSectionProps {
@@ -26,11 +28,11 @@ const SellosSection: React.FC<SellosSectionProps> = ({ sellos, onChange, readOnl
     onChange({ ...sellos, [field]: value.toUpperCase() });
   };
 
-  // Modo simple: 8 campos numerados en 2 filas de 4
+  // Modo simple: 10 campos numerados en 2 filas de 5
   if (simple) {
     return (
       <div className="space-y-4">
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-5 gap-4">
           <div className="space-y-1">
             <Label className="text-xs">Sello 1</Label>
             <Input 
@@ -63,10 +65,18 @@ const SellosSection: React.FC<SellosSectionProps> = ({ sellos, onChange, readOnl
               onChange={(e) => handleChange('selloEntrada4', e.target.value)}
             />
           </div>
-        </div>
-        <div className="grid grid-cols-4 gap-4">
           <div className="space-y-1">
             <Label className="text-xs">Sello 5</Label>
+            <Input 
+              placeholder="XXX-000" 
+              value={sellos.selloEntrada5}
+              onChange={(e) => handleChange('selloEntrada5', e.target.value)}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-5 gap-4">
+          <div className="space-y-1">
+            <Label className="text-xs">Sello 6</Label>
             <Input 
               placeholder="XXX-000" 
               value={sellos.selloSalida1}
@@ -74,7 +84,7 @@ const SellosSection: React.FC<SellosSectionProps> = ({ sellos, onChange, readOnl
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Sello 6</Label>
+            <Label className="text-xs">Sello 7</Label>
             <Input 
               placeholder="XXX-000" 
               value={sellos.selloSalida2}
@@ -82,7 +92,7 @@ const SellosSection: React.FC<SellosSectionProps> = ({ sellos, onChange, readOnl
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Sello 7</Label>
+            <Label className="text-xs">Sello 8</Label>
             <Input 
               placeholder="XXX-000" 
               value={sellos.selloSalida3}
@@ -90,11 +100,19 @@ const SellosSection: React.FC<SellosSectionProps> = ({ sellos, onChange, readOnl
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Sello 8</Label>
+            <Label className="text-xs">Sello 9</Label>
             <Input 
               placeholder="XXX-000" 
               value={sellos.selloSalida4}
               onChange={(e) => handleChange('selloSalida4', e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Sello 10</Label>
+            <Input 
+              placeholder="XXX-000" 
+              value={sellos.selloSalida5}
+              onChange={(e) => handleChange('selloSalida5', e.target.value)}
             />
           </div>
         </div>
