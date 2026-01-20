@@ -171,10 +171,62 @@ export async function updateRecepcion(id: number, recepcion: Partial<Recepcion>)
         productoId,
         almacenId
       );
+      
+      // Validar que el código de lote no esté duplicado
+      const { data: loteExistente, error: validacionError } = await supabase
+        .from('recepciones')
+        .select('id, boleta')
+        .eq('codigo_lote', codigo)
+        .neq('id', id)
+        .maybeSingle();
+      
+      if (validacionError && validacionError.code !== 'PGRST116') {
+        logger.error('Error al validar duplicado de código de lote', {
+          error: validacionError,
+          codigo,
+          recepcionId: id
+        }, 'Recepciones');
+        throw new Error(`Error al validar código de lote: ${validacionError.message}`);
+      }
+      
+      if (loteExistente) {
+        logger.error('Código de lote duplicado detectado', {
+          codigo,
+          recepcionId: id,
+          boletaExistente: loteExistente.boleta,
+          recepcionIdExistente: loteExistente.id
+        }, 'Recepciones');
+        throw new Error(
+          `❌ Código de lote duplicado detectado: ${codigo}\n\n` +
+          `Este código ya está siendo usado por la boleta ${loteExistente.boleta}.\n` +
+          `Esto indica un problema con el sistema de consecutivos.\n\n` +
+          `Por favor, contacta al administrador del sistema para resolver este problema.`
+        );
+      }
+      
       recepcion.codigo_lote = codigo;
-      logger.info(`Código de lote generado para recepción ${id}: ${codigo}`, { recepcionId: id, codigo }, 'Recepciones');
+      logger.info(`Código de lote generado y validado para recepción ${id}: ${codigo}`, { recepcionId: id, codigo }, 'Recepciones');
     } catch (error) {
-      logger.error('Error al generar código de lote', error, 'Recepciones');
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      const errorDetails = error instanceof Error ? error.stack : String(error);
+      
+      logger.error('Error crítico al generar código de lote', {
+        error: errorMessage,
+        details: errorDetails,
+        recepcionId: id,
+        proveedorId,
+        productoId,
+        almacenId
+      }, 'Recepciones');
+      
+      // Lanzar el error - NO permitir guardar recepción sin lote
+      // El problema debe resolverse antes de continuar
+      throw new Error(
+        `No se pudo generar el código de lote para la boleta ${recepcion.boleta}.\n\n` +
+        `${errorMessage}\n\n` +
+        `La recepción NO se guardará hasta que se resuelva este problema.\n` +
+        `Por favor, verifica la conexión a la base de datos e intenta nuevamente.`
+      );
     }
   } else if (estatusFinal === 'Completado' && !loteExistenteEnBD) {
     // Log cuando faltan datos requeridos

@@ -212,13 +212,45 @@ export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
         almacenId
       );
       
+      // Validar que el código de lote no esté duplicado
+      const { data: loteExistente, error: validacionError } = await supabase
+        .from('embarques')
+        .select('id, boleta')
+        .eq('codigo_lote', codigo)
+        .neq('id', id)
+        .maybeSingle();
+      
+      if (validacionError && validacionError.code !== 'PGRST116') {
+        logger.error('Error al validar duplicado de código de lote', {
+          error: validacionError,
+          codigo,
+          embarqueId: id
+        }, 'Embarques');
+        throw new Error(`Error al validar código de lote: ${validacionError.message}`);
+      }
+      
+      if (loteExistente) {
+        logger.error('Código de lote duplicado detectado', {
+          codigo,
+          embarqueId: id,
+          boletaExistente: loteExistente.boleta,
+          embarqueIdExistente: loteExistente.id
+        }, 'Embarques');
+        throw new Error(
+          `❌ Código de lote duplicado detectado: ${codigo}\n\n` +
+          `Este código ya está siendo usado por la boleta ${loteExistente.boleta}.\n` +
+          `Esto indica un problema con el sistema de consecutivos.\n\n` +
+          `Por favor, contacta al administrador del sistema para resolver este problema.`
+        );
+      }
+      
       embarque.codigo_lote = codigo;
-      logger.info(`Código de lote generado para embarque ${id}: ${codigo}`, { embarqueId: id, codigo }, 'Embarques');
+      logger.info(`Código de lote generado y validado para embarque ${id}: ${codigo}`, { embarqueId: id, codigo }, 'Embarques');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       const errorDetails = error instanceof Error ? error.stack : String(error);
       
-      logger.error('Error al generar código de lote', {
+      logger.error('Error crítico al generar código de lote', {
         error: errorMessage,
         details: errorDetails,
         embarqueId: id,
@@ -228,9 +260,14 @@ export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
         tipoEmbarque
       }, 'Embarques');
       
-      // No lanzar el error para que el embarque se pueda guardar sin lote
-      // El usuario puede regenerar el lote después
-      console.error(`[EMBARQUES] Error al generar lote para embarque ${id}:`, errorMessage);
+      // Lanzar el error - NO permitir guardar embarque sin lote
+      // El problema debe resolverse antes de continuar
+      throw new Error(
+        `No se pudo generar el código de lote para la boleta ${embarque.boleta}.\n\n` +
+        `${errorMessage}\n\n` +
+        `El embarque NO se guardará hasta que se resuelva este problema.\n` +
+        `Por favor, verifica la conexión a la base de datos e intenta nuevamente.`
+      );
     }
   } else if (estatusFinal === 'Completado' && !loteExistenteEnBD) {
     // Log cuando faltan datos requeridos
