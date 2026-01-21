@@ -47,7 +47,7 @@ export interface BoletaRecibaRequest {
   vehiculo: string;
   placas: string;
   chofer: string;
-  analisis: AnalisisItem[];
+  analisis: AnalisisSalidaItem[]; // Mismo formato que salidas: { tipo, porcentaje, castigo }
   pesos_info1: PesosInfo1;
   pesos_info2: PesosInfo2;
   observaciones?: string;
@@ -88,6 +88,8 @@ export async function generateBoletaRecibaPDF(data: BoletaRecibaRequest): Promis
   try {
     console.log('[CERTIFICATE] Generando boleta de ENTRADA (Reciba):', data.boleta_no);
     console.log('🔧 [CERTIFICATE] Rol usuario:', data.rol_usuario);
+    console.log('🔧 [CERTIFICATE] Análisis enviado:', JSON.stringify(data.analisis, null, 2));
+    console.log('🔧 [CERTIFICATE] Total análisis:', data.analisis?.length || 0);
     console.log('[CERTIFICATE] Datos:', JSON.stringify(data, null, 2));
     
     // Timeout de 35 segundos en frontend (el servidor tiene 30s)

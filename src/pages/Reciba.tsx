@@ -601,12 +601,38 @@ const Reciba = () => {
       const fechaHoraTara = formatearFechaHora(horaPesoTara);
       const fechaHoraNeto = formatearFechaHora(horaPesoNeto);
       
-      // Convertir análisis a formato esperado por la API
-      const analisisArray = Object.entries(valoresAnalisis || {}).map(([nombre, valor]) => ({
-        nombre,
-        valor,
-        unidad: 'kg'
-      }));
+      // Convertir análisis a formato esperado por la API de entrada
+      // Formato requerido: { tipo: string, porcentaje: number | null, castigo: number | null }
+      // Para entradas, castigo es el descuento en kg por tonelada (kgDescuentoTon)
+      const { totalDescuentoKg } = calcularDescuentos();
+      
+      // Calcular castigo (descuento en kg por tonelada) por análisis individual
+      const castigosPorAnalisis: Record<string, number> = {};
+      if (productoSeleccionado && analisisProducto.length > 0) {
+        const descuentosActivos = analisisProducto.filter(a => a.generaDescuento);
+        
+        descuentosActivos.forEach(item => {
+          const valor = valoresAnalisis[item.nombre] || 0;
+          if (!item.rangosDescuento || item.rangosDescuento.length === 0 || !valor) return;
+          
+          // Ordenar rangos por porcentaje descendente
+          const rangosOrdenados = [...item.rangosDescuento].sort((a, b) => b.porcentaje - a.porcentaje);
+          const rangoAplicable = rangosOrdenados.find(rango => valor >= rango.porcentaje);
+          
+          if (rangoAplicable) {
+            // Castigo es el descuento en kg por tonelada (no el total en kg)
+            castigosPorAnalisis[item.nombre] = rangoAplicable.kgDescuentoTon;
+          }
+        });
+      }
+      
+      const analisisArray = valoresAnalisis && Object.keys(valoresAnalisis).length > 0
+        ? Object.entries(valoresAnalisis).map(([tipo, porcentaje]) => ({
+            tipo: tipo.toUpperCase(), // Asegurar mayúsculas
+            porcentaje: porcentaje != null && porcentaje !== undefined ? porcentaje : null,
+            castigo: castigosPorAnalisis[tipo] != null ? castigosPorAnalisis[tipo] : null
+          }))
+        : [];
 
       // Obtener la orden asociada para obtener el nombre del vehículo
       let nombreVehiculo = selectedRecepcion.tipoTransporte || 'Camión';
@@ -620,6 +646,11 @@ const Reciba = () => {
         console.warn('No se encontró orden para obtener nombre del vehículo:', error);
       }
 
+      // Log para debugging del formato de análisis
+      console.log('🔧 [RECIBA] Análisis formateado:', JSON.stringify(analisisArray, null, 2));
+      console.log('🔧 [RECIBA] Total análisis:', analisisArray.length);
+      console.log('🔧 [RECIBA] Castigos calculados:', castigosPorAnalisis);
+      
       const boletaData = {
         boleta_no: selectedRecepcion.boleta.startsWith('TEMP-') ? 'PENDIENTE' : selectedRecepcion.boleta,
         fecha: fechaActual,
