@@ -655,19 +655,20 @@ const EmbarquePage = () => {
           peso_neto_analizado: pesoNeto
         },
         observaciones: observaciones || '',
-        // La API espera sellos como array de 10 elementos (5 entrada + 5 salida)
+        // La API espera sellos como array de strings (sin null)
+        // Filtrar solo los sellos que tienen valor
         sellos: formData.sellos ? [
-          formData.sellos.selloEntrada1 || null,
-          formData.sellos.selloEntrada2 || null,
-          formData.sellos.selloEntrada3 || null,
-          formData.sellos.selloEntrada4 || null,
-          formData.sellos.selloEntrada5 || null,
-          formData.sellos.selloSalida1 || null,
-          formData.sellos.selloSalida2 || null,
-          formData.sellos.selloSalida3 || null,
-          formData.sellos.selloSalida4 || null,
-          formData.sellos.selloSalida5 || null
-        ] : []
+          formData.sellos.selloEntrada1,
+          formData.sellos.selloEntrada2,
+          formData.sellos.selloEntrada3,
+          formData.sellos.selloEntrada4,
+          formData.sellos.selloEntrada5,
+          formData.sellos.selloSalida1,
+          formData.sellos.selloSalida2,
+          formData.sellos.selloSalida3,
+          formData.sellos.selloSalida4,
+          formData.sellos.selloSalida5
+        ].filter(sello => sello && sello.trim() !== '') : []
       };
 
       // Log para debugging del formato de análisis y sellos
