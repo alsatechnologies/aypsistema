@@ -604,7 +604,7 @@ const Reciba = () => {
       // Convertir análisis a formato esperado por la API de entrada
       // Formato requerido: { tipo: string, porcentaje: number | null, castigo: number | null }
       // Para entradas, castigo es el descuento en kg por tonelada (kgDescuentoTon)
-      const { totalDescuentoKg } = calcularDescuentos();
+      // Nota: totalDescuentoKg ya está declarado arriba (línea 594)
       
       // Calcular castigo (descuento en kg por tonelada) por análisis individual
       const castigosPorAnalisis: Record<string, number> = {};
