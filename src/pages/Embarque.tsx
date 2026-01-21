@@ -219,10 +219,12 @@ const EmbarquePage = () => {
         selloEntrada2: '', 
         selloEntrada3: '', 
         selloEntrada4: '', 
+        selloEntrada5: '',
         selloSalida1: '', 
         selloSalida2: '', 
         selloSalida3: '', 
-        selloSalida4: '' 
+        selloSalida4: '',
+        selloSalida5: ''
       },
       valoresAnalisis: embarque.valoresAnalisis || {},
       pesoBruto: embarque.pesoBruto || 0,
@@ -652,12 +654,25 @@ const EmbarquePage = () => {
           deduccion: 0,
           peso_neto_analizado: pesoNeto
         },
-        observaciones: observaciones || ''
+        observaciones: observaciones || '',
+        sellos: formData.sellos ? {
+          entrada1: formData.sellos.selloEntrada1 || null,
+          entrada2: formData.sellos.selloEntrada2 || null,
+          entrada3: formData.sellos.selloEntrada3 || null,
+          entrada4: formData.sellos.selloEntrada4 || null,
+          entrada5: formData.sellos.selloEntrada5 || null,
+          salida1: formData.sellos.selloSalida1 || null,
+          salida2: formData.sellos.selloSalida2 || null,
+          salida3: formData.sellos.selloSalida3 || null,
+          salida4: formData.sellos.selloSalida4 || null,
+          salida5: formData.sellos.selloSalida5 || null
+        } : undefined
       };
 
-      // Log para debugging del formato de análisis
+      // Log para debugging del formato de análisis y sellos
       console.log('🔧 [EMBARQUE] Análisis formateado:', JSON.stringify(analisisArray, null, 2));
       console.log('🔧 [EMBARQUE] Total análisis:', analisisArray.length);
+      console.log('🔧 [EMBARQUE] Sellos enviados:', JSON.stringify(boletaData.sellos, null, 2));
       
       toast.loading('Generando boleta PDF...', { id: 'generating-pdf' });
       

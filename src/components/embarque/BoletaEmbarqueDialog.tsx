@@ -31,10 +31,12 @@ interface Embarque {
     selloEntrada2?: string;
     selloEntrada3?: string;
     selloEntrada4?: string;
+    selloEntrada5?: string;
     selloSalida1?: string;
     selloSalida2?: string;
     selloSalida3?: string;
     selloSalida4?: string;
+    selloSalida5?: string;
   };
 }
 
@@ -98,14 +100,16 @@ const BoletaEmbarqueDialog: React.FC<BoletaEmbarqueDialogProps> = ({ open, onOpe
         },
         observaciones: '',
         sellos: embarque.sellos ? {
-          entrada1: embarque.sellos.selloEntrada1,
-          entrada2: embarque.sellos.selloEntrada2,
-          entrada3: embarque.sellos.selloEntrada3,
-          entrada4: embarque.sellos.selloEntrada4,
-          salida1: embarque.sellos.selloSalida1,
-          salida2: embarque.sellos.selloSalida2,
-          salida3: embarque.sellos.selloSalida3,
-          salida4: embarque.sellos.selloSalida4,
+          entrada1: embarque.sellos.selloEntrada1 || null,
+          entrada2: embarque.sellos.selloEntrada2 || null,
+          entrada3: embarque.sellos.selloEntrada3 || null,
+          entrada4: embarque.sellos.selloEntrada4 || null,
+          entrada5: embarque.sellos.selloEntrada5 || null,
+          salida1: embarque.sellos.selloSalida1 || null,
+          salida2: embarque.sellos.selloSalida2 || null,
+          salida3: embarque.sellos.selloSalida3 || null,
+          salida4: embarque.sellos.selloSalida4 || null,
+          salida5: embarque.sellos.selloSalida5 || null
         } : undefined,
       };
 
