@@ -99,18 +99,19 @@ const BoletaEmbarqueDialog: React.FC<BoletaEmbarqueDialogProps> = ({ open, onOpe
           peso_neto_analizado: embarque.pesoNeto || 0
         },
         observaciones: '',
-        sellos: embarque.sellos ? {
-          entrada1: embarque.sellos.selloEntrada1 || null,
-          entrada2: embarque.sellos.selloEntrada2 || null,
-          entrada3: embarque.sellos.selloEntrada3 || null,
-          entrada4: embarque.sellos.selloEntrada4 || null,
-          entrada5: embarque.sellos.selloEntrada5 || null,
-          salida1: embarque.sellos.selloSalida1 || null,
-          salida2: embarque.sellos.selloSalida2 || null,
-          salida3: embarque.sellos.selloSalida3 || null,
-          salida4: embarque.sellos.selloSalida4 || null,
-          salida5: embarque.sellos.selloSalida5 || null
-        } : undefined,
+        // La API espera sellos como array de 10 elementos (5 entrada + 5 salida)
+        sellos: embarque.sellos ? [
+          embarque.sellos.selloEntrada1 || null,
+          embarque.sellos.selloEntrada2 || null,
+          embarque.sellos.selloEntrada3 || null,
+          embarque.sellos.selloEntrada4 || null,
+          embarque.sellos.selloEntrada5 || null,
+          embarque.sellos.selloSalida1 || null,
+          embarque.sellos.selloSalida2 || null,
+          embarque.sellos.selloSalida3 || null,
+          embarque.sellos.selloSalida4 || null,
+          embarque.sellos.selloSalida5 || null
+        ] : [],
       };
 
       // Log para debugging del formato de análisis

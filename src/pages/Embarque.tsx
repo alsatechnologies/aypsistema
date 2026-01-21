@@ -655,18 +655,19 @@ const EmbarquePage = () => {
           peso_neto_analizado: pesoNeto
         },
         observaciones: observaciones || '',
-        sellos: formData.sellos ? {
-          entrada1: formData.sellos.selloEntrada1 || null,
-          entrada2: formData.sellos.selloEntrada2 || null,
-          entrada3: formData.sellos.selloEntrada3 || null,
-          entrada4: formData.sellos.selloEntrada4 || null,
-          entrada5: formData.sellos.selloEntrada5 || null,
-          salida1: formData.sellos.selloSalida1 || null,
-          salida2: formData.sellos.selloSalida2 || null,
-          salida3: formData.sellos.selloSalida3 || null,
-          salida4: formData.sellos.selloSalida4 || null,
-          salida5: formData.sellos.selloSalida5 || null
-        } : undefined
+        // La API espera sellos como array de 10 elementos (5 entrada + 5 salida)
+        sellos: formData.sellos ? [
+          formData.sellos.selloEntrada1 || null,
+          formData.sellos.selloEntrada2 || null,
+          formData.sellos.selloEntrada3 || null,
+          formData.sellos.selloEntrada4 || null,
+          formData.sellos.selloEntrada5 || null,
+          formData.sellos.selloSalida1 || null,
+          formData.sellos.selloSalida2 || null,
+          formData.sellos.selloSalida3 || null,
+          formData.sellos.selloSalida4 || null,
+          formData.sellos.selloSalida5 || null
+        ] : []
       };
 
       // Log para debugging del formato de análisis y sellos
