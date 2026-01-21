@@ -602,12 +602,16 @@ const EmbarquePage = () => {
       const fechaHoraTara = formatearFechaHora(horaPesoTara);
       const fechaHoraNeto = formatearFechaHora(horaPesoNeto);
       
-      // Convertir análisis a formato esperado por la API
-      const analisisArray = Object.entries(formData.valoresAnalisis).map(([nombre, valor]) => ({
-        nombre,
-        valor,
-        unidad: '%'
-      }));
+      // Convertir análisis a formato esperado por la API de salidas
+      // Formato requerido: { tipo: string, porcentaje: number | null, castigo: number | null }
+      // Para salidas, castigo siempre es null (no hay descuentos)
+      const analisisArray = formData.valoresAnalisis && Object.keys(formData.valoresAnalisis).length > 0
+        ? Object.entries(formData.valoresAnalisis).map(([tipo, porcentaje]) => ({
+            tipo: tipo.toUpperCase(), // Asegurar mayúsculas
+            porcentaje: porcentaje != null && porcentaje !== undefined ? porcentaje : null,
+            castigo: null // Salidas no tienen descuentos/castigos
+          }))
+        : [];
 
       // Obtener la orden asociada para obtener el nombre del vehículo
       let nombreVehiculo = selectedEmbarque.tipoTransporte || 'Camión';
@@ -651,6 +655,10 @@ const EmbarquePage = () => {
         observaciones: observaciones || ''
       };
 
+      // Log para debugging del formato de análisis
+      console.log('🔧 [EMBARQUE] Análisis formateado:', JSON.stringify(analisisArray, null, 2));
+      console.log('🔧 [EMBARQUE] Total análisis:', analisisArray.length);
+      
       toast.loading('Generando boleta PDF...', { id: 'generating-pdf' });
       
       const result = await generateBoletaEmbarquePDF({ ...boletaData, rol_usuario: usuario?.rol });

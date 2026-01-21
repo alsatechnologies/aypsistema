@@ -56,12 +56,14 @@ const BoletaEmbarqueDialog: React.FC<BoletaEmbarqueDialogProps> = ({ open, onOpe
     try {
       setIsGeneratingPDF(true);
       
-      // Convertir análisis a formato esperado por la API
-      const analisisArray = embarque.valoresAnalisis 
-        ? Object.entries(embarque.valoresAnalisis).map(([nombre, valor]) => ({
-            nombre,
-            valor,
-            unidad: 'kg'
+      // Convertir análisis a formato esperado por la API de salidas
+      // Formato requerido: { tipo: string, porcentaje: number | null, castigo: number | null }
+      // Para salidas, castigo siempre es null (no hay descuentos)
+      const analisisArray = embarque.valoresAnalisis && Object.keys(embarque.valoresAnalisis).length > 0
+        ? Object.entries(embarque.valoresAnalisis).map(([tipo, porcentaje]) => ({
+            tipo: tipo.toUpperCase(), // Asegurar mayúsculas
+            porcentaje: porcentaje != null && porcentaje !== undefined ? porcentaje : null,
+            castigo: null // Salidas no tienen descuentos/castigos
           }))
         : [];
 
@@ -107,6 +109,10 @@ const BoletaEmbarqueDialog: React.FC<BoletaEmbarqueDialogProps> = ({ open, onOpe
         } : undefined,
       };
 
+      // Log para debugging del formato de análisis
+      console.log('🔧 [BOLETA EMBARQUE] Análisis formateado:', JSON.stringify(analisisArray, null, 2));
+      console.log('🔧 [BOLETA EMBARQUE] Total análisis:', analisisArray.length);
+      
       toast.loading('Generando boleta PDF...', { id: 'generating-pdf-embarque' });
       
       const result = await generateBoletaEmbarquePDF({ ...boletaData, rol_usuario: usuario?.rol });

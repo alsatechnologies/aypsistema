@@ -7,10 +7,18 @@
 // Usar las funciones serverless de Vercel como proxy para evitar problemas de CORS
 const CERTIFICATE_API_URL = '/api/generate-certificate';
 
+// Formato antiguo (mantener para compatibilidad con entrada)
 export interface AnalisisItem {
   nombre: string;
   valor: number;
   unidad?: string;
+}
+
+// Formato nuevo para salidas (embarques) - según especificación de API
+export interface AnalisisSalidaItem {
+  tipo: string;           // OBLIGATORIO - Nombre del tipo de análisis
+  porcentaje: number | null;  // OPCIONAL - Número decimal o null
+  castigo: number | null;     // OPCIONAL - Número decimal o null (siempre null para salidas)
 }
 
 export interface PesosInfo1 {
@@ -46,7 +54,7 @@ export interface BoletaRecibaRequest {
   rol_usuario?: string; // Rol del usuario para determinar qué API usar
 }
 
-// La API de salida usa el MISMO formato que la de entrada
+// La API de salida usa formato diferente para análisis
 // (productor, procedencia en lugar de cliente, destino)
 export interface BoletaEmbarqueRequest {
   boleta_no: string;
@@ -58,7 +66,7 @@ export interface BoletaEmbarqueRequest {
   vehiculo: string;
   placas: string;
   chofer: string;
-  analisis: AnalisisItem[];
+  analisis: AnalisisSalidaItem[]; // Formato: { tipo, porcentaje, castigo }
   pesos_info1: PesosInfo1;
   pesos_info2: PesosInfo2;
   observaciones?: string;
@@ -255,6 +263,8 @@ export async function generateBoletaEmbarquePDF(data: BoletaEmbarqueRequest): Pr
   try {
     console.log('Generando boleta de SALIDA (Embarque):', data.boleta_no);
     console.log('🔧 [CERTIFICATE] Rol usuario:', data.rol_usuario);
+    console.log('🔧 [CERTIFICATE] Análisis enviado:', JSON.stringify(data.analisis, null, 2));
+    console.log('🔧 [CERTIFICATE] Total análisis:', data.analisis?.length || 0);
     
     // Timeout de 35 segundos en frontend (el servidor tiene 30s)
     const controller = new AbortController();
