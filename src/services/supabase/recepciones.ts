@@ -152,11 +152,36 @@ export async function updateRecepcion(id: number, recepcion: Partial<Recepcion>)
     delete recepcion.codigo_lote;
   }
   
-  // Usar valores del objeto que se pasa o de la recepción anterior
-  const estatusFinal = recepcion.estatus || recepcionAnterior?.estatus;
-  const proveedorId = recepcion.proveedor_id || recepcionAnterior?.proveedor_id;
-  const productoId = recepcion.producto_id || recepcionAnterior?.producto_id;
-  const almacenId = recepcion.almacen_id || recepcionAnterior?.almacen_id;
+  // ⚠️ IMPORTANTE: Guardar PRIMERO la boleta (sin lote si no existe)
+  // Luego generar el consecutivo DESPUÉS de confirmar que se guardó exitosamente
+  // Esto previene que se incrementen consecutivos si falla el guardado
+  
+  // Preparar datos para guardar (sin codigo_lote si no existe en BD)
+  const recepcionParaGuardar = { ...recepcion };
+  if (!loteExistenteEnBD) {
+    // No incluir codigo_lote si no existe - se generará después
+    delete recepcionParaGuardar.codigo_lote;
+  }
+  
+  // PASO 1: Guardar la boleta primero (sin lote si no existe)
+  const { data: dataGuardada, error: errorGuardado } = await supabase
+    .from('recepciones')
+    .update({ ...recepcionParaGuardar, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select(`
+      *,
+      producto:productos(id, nombre),
+      proveedor:proveedores(id, empresa)
+    `)
+    .single();
+  
+  if (errorGuardado) throw errorGuardado;
+  
+  // PASO 2: Si se guardó exitosamente Y necesita lote, generarlo AHORA
+  const estatusFinal = dataGuardada.estatus || recepcion.estatus || recepcionAnterior?.estatus;
+  const proveedorId = dataGuardada.proveedor_id || recepcion.proveedor_id || recepcionAnterior?.proveedor_id;
+  const productoId = dataGuardada.producto_id || recepcion.producto_id || recepcionAnterior?.producto_id;
+  const almacenId = dataGuardada.almacen_id || recepcion.almacen_id || recepcionAnterior?.almacen_id;
   
   // Solo generar lote si:
   // 1. El estatus final es 'Completado'
@@ -164,6 +189,14 @@ export async function updateRecepcion(id: number, recepcion: Partial<Recepcion>)
   // 3. Tenemos todos los datos requeridos
   if (estatusFinal === 'Completado' && !loteExistenteEnBD && proveedorId && productoId && almacenId) {
     try {
+      logger.info(`Generando código de lote para recepción ${id} (después de guardar)`, {
+        recepcionId: id,
+        proveedorId,
+        productoId,
+        almacenId
+      }, 'Recepciones');
+      
+      // AHORA generar el consecutivo (después de confirmar que se guardó)
       const { codigo } = await generarCodigoLoteParaOperacion(
         'Reciba',
         null,
@@ -204,13 +237,36 @@ export async function updateRecepcion(id: number, recepcion: Partial<Recepcion>)
         );
       }
       
-      recepcion.codigo_lote = codigo;
-      logger.info(`Código de lote generado y validado para recepción ${id}: ${codigo}`, { recepcionId: id, codigo }, 'Recepciones');
+      // PASO 3: Actualizar la boleta con el código de lote generado
+      const { data: dataActualizada, error: errorActualizacion } = await supabase
+        .from('recepciones')
+        .update({ codigo_lote: codigo, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select(`
+          *,
+          producto:productos(id, nombre),
+          proveedor:proveedores(id, empresa)
+        `)
+        .single();
+      
+      if (errorActualizacion) {
+        logger.error('Error al actualizar boleta con código de lote', {
+          error: errorActualizacion,
+          codigo,
+          recepcionId: id
+        }, 'Recepciones');
+        throw new Error(`Error al actualizar boleta con código de lote: ${errorActualizacion.message}`);
+      }
+      
+      logger.info(`Código de lote generado y asignado para recepción ${id}: ${codigo}`, { recepcionId: id, codigo }, 'Recepciones');
+      
+      // Retornar la boleta actualizada con el lote
+      const data = dataActualizada;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       const errorDetails = error instanceof Error ? error.stack : String(error);
       
-      logger.error('Error crítico al generar código de lote', {
+      logger.error('Error crítico al generar código de lote (después de guardar)', {
         error: errorMessage,
         details: errorDetails,
         recepcionId: id,
@@ -219,13 +275,13 @@ export async function updateRecepcion(id: number, recepcion: Partial<Recepcion>)
         almacenId
       }, 'Recepciones');
       
-      // Lanzar el error - NO permitir guardar recepción sin lote
-      // El problema debe resolverse antes de continuar
+      // ⚠️ IMPORTANTE: La boleta ya se guardó, pero no tiene lote
+      // Lanzar error para que el usuario sepa que necesita reintentar
       throw new Error(
-        `No se pudo generar el código de lote para la boleta ${recepcion.boleta}.\n\n` +
+        `⚠️ La boleta se guardó, pero no se pudo generar el código de lote.\n\n` +
         `${errorMessage}\n\n` +
-        `La recepción NO se guardará hasta que se resuelva este problema.\n` +
-        `Por favor, verifica la conexión a la base de datos e intenta nuevamente.`
+        `La boleta quedó sin código de lote. Por favor, intenta guardar nuevamente.\n` +
+        `Si el problema persiste, contacta al administrador del sistema.`
       );
     }
   } else if (estatusFinal === 'Completado' && !loteExistenteEnBD) {
@@ -238,18 +294,8 @@ export async function updateRecepcion(id: number, recepcion: Partial<Recepcion>)
     }, 'Recepciones');
   }
   
-  const { data, error } = await supabase
-    .from('recepciones')
-    .update({ ...recepcion, updated_at: new Date().toISOString() })
-    .eq('id', id)
-    .select(`
-      *,
-      producto:productos(id, nombre),
-      proveedor:proveedores(id, empresa)
-    `)
-    .single();
-  
-  if (error) throw error;
+  // Retornar la boleta guardada (con o sin lote)
+  const data = dataGuardada;
   
   // SUMAR AL INVENTARIO: Si la recepción está completada y tiene peso_neto y almacen_id
   // Sumar automáticamente al inventario del almacén correspondiente

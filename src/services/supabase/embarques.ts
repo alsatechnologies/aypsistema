@@ -176,12 +176,37 @@ export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
     delete embarque.codigo_lote;
   }
   
-  // Si se está completando y NO tiene lote en BD, intentar generarlo
-  const estatusFinal = embarque.estatus || embarqueAnterior?.estatus;
-  const clienteId = embarque.cliente_id || embarqueAnterior?.cliente_id;
-  const productoId = embarque.producto_id || embarqueAnterior?.producto_id;
-  const almacenId = embarque.almacen_id || embarqueAnterior?.almacen_id;
-  const tipoEmbarque = embarque.tipo_embarque || embarqueAnterior?.tipo_embarque;
+  // ⚠️ IMPORTANTE: Guardar PRIMERO la boleta (sin lote si no existe)
+  // Luego generar el consecutivo DESPUÉS de confirmar que se guardó exitosamente
+  // Esto previene que se incrementen consecutivos si falla el guardado
+  
+  // Preparar datos para guardar (sin codigo_lote si no existe en BD)
+  const embarqueParaGuardar = { ...embarque };
+  if (!loteExistenteEnBD) {
+    // No incluir codigo_lote si no existe - se generará después
+    delete embarqueParaGuardar.codigo_lote;
+  }
+  
+  // PASO 1: Guardar la boleta primero (sin lote si no existe)
+  const { data: dataGuardada, error: errorGuardado } = await supabase
+    .from('embarques')
+    .update({ ...embarqueParaGuardar, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select(`
+      *,
+      producto:productos(id, nombre),
+      cliente:clientes(id, empresa)
+    `)
+    .single();
+  
+  if (errorGuardado) throw errorGuardado;
+  
+  // PASO 2: Si se guardó exitosamente Y necesita lote, generarlo AHORA
+  const estatusFinal = dataGuardada.estatus || embarque.estatus || embarqueAnterior?.estatus;
+  const clienteId = dataGuardada.cliente_id || embarque.cliente_id || embarqueAnterior?.cliente_id;
+  const productoId = dataGuardada.producto_id || embarque.producto_id || embarqueAnterior?.producto_id;
+  const almacenId = dataGuardada.almacen_id || embarque.almacen_id || embarqueAnterior?.almacen_id;
+  const tipoEmbarque = dataGuardada.tipo_embarque || embarque.tipo_embarque || embarqueAnterior?.tipo_embarque;
   
   // Solo generar lote si:
   // 1. El estatus final es 'Completado'
@@ -196,7 +221,7 @@ export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
       
       const tipoOperacion = tipoEmbarque === 'Nacional' ? 'Embarque Nacional' : 'Embarque Exportación';
       
-      logger.info(`Generando código de lote para embarque ${id}`, {
+      logger.info(`Generando código de lote para embarque ${id} (después de guardar)`, {
         embarqueId: id,
         tipoOperacion,
         clienteId,
@@ -204,6 +229,7 @@ export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
         almacenId
       }, 'Embarques');
       
+      // AHORA generar el consecutivo (después de confirmar que se guardó)
       const { codigo } = await generarCodigoLoteParaOperacion(
         tipoOperacion,
         clienteId,
@@ -244,13 +270,36 @@ export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
         );
       }
       
-      embarque.codigo_lote = codigo;
-      logger.info(`Código de lote generado y validado para embarque ${id}: ${codigo}`, { embarqueId: id, codigo }, 'Embarques');
+      // PASO 3: Actualizar la boleta con el código de lote generado
+      const { data: dataActualizada, error: errorActualizacion } = await supabase
+        .from('embarques')
+        .update({ codigo_lote: codigo, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select(`
+          *,
+          producto:productos(id, nombre),
+          cliente:clientes(id, empresa)
+        `)
+        .single();
+      
+      if (errorActualizacion) {
+        logger.error('Error al actualizar boleta con código de lote', {
+          error: errorActualizacion,
+          codigo,
+          embarqueId: id
+        }, 'Embarques');
+        throw new Error(`Error al actualizar boleta con código de lote: ${errorActualizacion.message}`);
+      }
+      
+      logger.info(`Código de lote generado y asignado para embarque ${id}: ${codigo}`, { embarqueId: id, codigo }, 'Embarques');
+      
+      // Retornar la boleta actualizada con el lote
+      return dataActualizada;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       const errorDetails = error instanceof Error ? error.stack : String(error);
       
-      logger.error('Error crítico al generar código de lote', {
+      logger.error('Error crítico al generar código de lote (después de guardar)', {
         error: errorMessage,
         details: errorDetails,
         embarqueId: id,
@@ -260,13 +309,13 @@ export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
         tipoEmbarque
       }, 'Embarques');
       
-      // Lanzar el error - NO permitir guardar embarque sin lote
-      // El problema debe resolverse antes de continuar
+      // ⚠️ IMPORTANTE: La boleta ya se guardó, pero no tiene lote
+      // Lanzar error para que el usuario sepa que necesita reintentar
       throw new Error(
-        `No se pudo generar el código de lote para la boleta ${embarque.boleta}.\n\n` +
+        `⚠️ La boleta se guardó, pero no se pudo generar el código de lote.\n\n` +
         `${errorMessage}\n\n` +
-        `El embarque NO se guardará hasta que se resuelva este problema.\n` +
-        `Por favor, verifica la conexión a la base de datos e intenta nuevamente.`
+        `La boleta quedó sin código de lote. Por favor, intenta guardar nuevamente.\n` +
+        `Si el problema persiste, contacta al administrador del sistema.`
       );
     }
   } else if (estatusFinal === 'Completado' && !loteExistenteEnBD) {
@@ -279,18 +328,8 @@ export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
     }, 'Embarques');
   }
   
-  const { data, error } = await supabase
-    .from('embarques')
-    .update({ ...embarque, updated_at: new Date().toISOString() })
-    .eq('id', id)
-    .select(`
-      *,
-      producto:productos(id, nombre),
-      cliente:clientes(id, empresa)
-    `)
-    .single();
-  
-  if (error) throw error;
+  // Retornar la boleta guardada (con o sin lote)
+  const data = dataGuardada;
   
   // RESTAR DEL INVENTARIO: Si el embarque está completado y tiene peso_neto y almacen_id
   // Restar automáticamente del inventario del almacén correspondiente
