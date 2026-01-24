@@ -131,53 +131,63 @@ const Movimientos = () => {
 
   const handleDownload = () => {
     const headers = ['Boleta', 'Producto', 'Cliente/Proveedor', 'Tipo', 'Transporte', 'Fecha', 'Ubicación', 'Peso Neto (Kg)'];
-    const rows = filteredMovimientos.map(m => [
-      m.boleta,
-      m.producto,
-      m.clienteProveedor,
-      m.tipo,
-      m.transporte,
-      m.fecha,
-      m.ubicacion,
-      m.pesoNeto
-    ]);
+    const data = filteredMovimientos.map(m => ({
+      boleta: m.boleta,
+      producto: m.producto,
+      'Cliente/Proveedor': m.clienteProveedor,
+      tipo: m.tipo,
+      transporte: m.transporte,
+      fecha: m.fecha,
+      ubicacion: m.ubicacion,
+      'Peso Neto (Kg)': m.pesoNeto
+    }));
 
-    // Formatear filas con comillas para todos los valores (estándar CSV)
-    const formattedRows = rows.map(row => row.map(cell => {
-      let cellValue = cell || '';
+    // Usar la misma lógica que exportToCSV en Reportes.tsx
+    const rows = data.map(item => headers.map(header => {
+      const key = header === 'Cliente/Proveedor' ? 'Cliente/Proveedor' : header.toLowerCase().replace(/\s+/g, '_');
+      let value = item[key];
       
-      // Solo convertir a número si el string parece un valor numérico válido
-      // Rechazar strings que contienen letras
-      if (typeof cellValue === 'number') {
-        cellValue = cellValue.toFixed(2).replace('.', ',');
-      } else if (typeof cellValue === 'string' && /^[\d.,\s-]+$/.test(cellValue.trim())) {
-        const numValue = parseFloat(cellValue.replace(',', '.'));
-        if (!isNaN(numValue) && isFinite(numValue)) {
-          cellValue = numValue.toFixed(2).replace('.', ',');
-        }
+      // Manejar valores undefined o null
+      if (value === undefined || value === null) {
+        return '';
       }
       
-      const stringValue = String(cellValue || '');
-      // Escapar comillas dobles y envolver en comillas
-      return stringValue === '' ? '""' : `"${stringValue.replace(/"/g, '""')}"`;
+      // Formatear números
+      if (typeof value === 'number') {
+        value = value.toFixed(2);
+      }
+      
+      // Convertir a string
+      const stringValue = String(value);
+      
+      // Escapar comillas dobles
+      const escapedValue = stringValue.replace(/"/g, '""');
+      
+      // Envolver en comillas si contiene: coma, comillas, saltos de línea
+      if (escapedValue.includes(',') || escapedValue.includes('"') || escapedValue.includes('\n') || escapedValue.includes('\r')) {
+        return `"${escapedValue}"`;
+      }
+      
+      return escapedValue;
     }));
-    
-    // Usar PUNTO Y COMA (;) como delimitador para compatibilidad con Excel en español
-    // Excel en español usa punto y coma como separador de columnas y coma para decimales
-    // Usar CRLF (\r\n) para compatibilidad con Windows Excel
+
+    // USAR COMA (,) como delimitador - esto es clave para Excel Windows en español de México
     const csvContent = [
-      headers.join(';'),
-      ...formattedRows.map(row => row.join(';'))
+      headers.join(','),
+      ...rows.map(row => row.join(','))
     ].join('\r\n');
 
-    // BOM (\uFEFF) para que Excel detecte UTF-8 correctamente en Windows
+    // BOM UTF-8 para caracteres especiales
     const blob = new Blob(['\uFEFF' + csvContent], { 
       type: 'text/csv;charset=utf-8;' 
     });
+    
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `movimientos_${format(new Date(), 'yyyy-MM-dd')}.csv`;
     link.click();
+    
+    setTimeout(() => URL.revokeObjectURL(link.href), 100);
     
     toast.success('Reporte descargado correctamente');
   };

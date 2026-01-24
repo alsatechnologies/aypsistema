@@ -126,46 +126,62 @@ const Proveedores = () => {
 
   const handleDownload = () => {
     const headers = ['Empresa', 'Producto', 'Teléfono', 'Email', 'Fecha de Alta', 'Ubicación'];
-    const rows = filteredProveedores.map(p => [
-      p.empresa, p.producto, p.telefono, p.email, p.fechaAlta, p.ubicacion
-    ]);
+    const data = filteredProveedores.map(p => ({
+      empresa: p.empresa,
+      producto: p.producto,
+      teléfono: p.telefono,
+      email: p.email,
+      'Fecha de Alta': p.fechaAlta,
+      ubicación: p.ubicacion
+    }));
 
-    // Formatear filas con comillas para todos los valores (estándar CSV)
-    const formattedRows = rows.map(row => row.map(cell => {
-      let cellValue = cell || '';
+    // Usar la misma lógica que exportToCSV en Reportes.tsx
+    const rows = data.map(item => headers.map(header => {
+      const key = header === 'Fecha de Alta' ? 'Fecha de Alta' : header.toLowerCase().replace(/\s+/g, '_');
+      let value = item[key];
       
-      // Solo convertir a número si el string parece un valor numérico válido
-      // Rechazar strings que contienen letras
-      if (typeof cellValue === 'number') {
-        cellValue = cellValue.toFixed(2).replace('.', ',');
-      } else if (typeof cellValue === 'string' && /^[\d.,\s-]+$/.test(cellValue.trim())) {
-        const numValue = parseFloat(cellValue.replace(',', '.'));
-        if (!isNaN(numValue) && isFinite(numValue)) {
-          cellValue = numValue.toFixed(2).replace('.', ',');
-        }
+      // Manejar valores undefined o null
+      if (value === undefined || value === null) {
+        return '';
       }
       
-      const stringValue = String(cellValue || '');
-      // Escapar comillas dobles y envolver en comillas
-      return stringValue === '' ? '""' : `"${stringValue.replace(/"/g, '""')}"`;
+      // Formatear números
+      if (typeof value === 'number') {
+        value = value.toFixed(2);
+      }
+      
+      // Convertir a string
+      const stringValue = String(value);
+      
+      // Escapar comillas dobles
+      const escapedValue = stringValue.replace(/"/g, '""');
+      
+      // Envolver en comillas si contiene: coma, comillas, saltos de línea
+      if (escapedValue.includes(',') || escapedValue.includes('"') || escapedValue.includes('\n') || escapedValue.includes('\r')) {
+        return `"${escapedValue}"`;
+      }
+      
+      return escapedValue;
     }));
-    
-    // Usar PUNTO Y COMA (;) como delimitador para compatibilidad con Excel en español
-    // Excel en español usa punto y coma como separador de columnas y coma para decimales
-    // Usar CRLF (\r\n) para compatibilidad con Windows Excel
+
+    // USAR COMA (,) como delimitador - esto es clave para Excel Windows en español de México
     const csvContent = [
-      headers.join(';'),
-      ...formattedRows.map(row => row.join(';'))
+      headers.join(','),
+      ...rows.map(row => row.join(','))
     ].join('\r\n');
 
-    // BOM (\uFEFF) para que Excel detecte UTF-8 correctamente en Windows
+    // BOM UTF-8 para caracteres especiales
     const blob = new Blob(['\uFEFF' + csvContent], { 
       type: 'text/csv;charset=utf-8;' 
     });
+    
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `proveedores_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
+    
+    setTimeout(() => URL.revokeObjectURL(link.href), 100);
+    
     toast.success('Archivo descargado');
   };
 

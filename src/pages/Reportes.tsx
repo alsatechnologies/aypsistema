@@ -1424,24 +1424,68 @@ const Reportes = () => {
                 onClick={() => {
                   const r = selectedReporteProduccion;
                   const headers = ['Tanque', 'Producto', 'Nivel (m)', 'Gomas (m)', 'Aceite (m)'];
-                  const rows = (r.niveles_tanques || []).map(t => {
+                  const data = (r.niveles_tanques || []).map(t => {
                     const goma = (r.niveles_gomas || []).find(g => g.goma === t.tanque);
                     const nivelGomas = goma?.nivel || 0;
                     const aceite = Math.max(0, (t.nivel || 0) - nivelGomas);
-                    return [
-                      `"${String(t.tanque).replace(/"/g, '""')}"`,
-                      `"${String(t.producto || '-').replace(/"/g, '""')}"`,
-                      `"${(t.nivel || 0).toFixed(2).replace('.', ',')}"`,
-                      `"${nivelGomas.toFixed(2).replace('.', ',')}"`,
-                      `"${aceite.toFixed(2).replace('.', ',')}"`
-                    ].join(';');
+                    return {
+                      tanque: t.tanque,
+                      producto: t.producto || '-',
+                      'Nivel (m)': t.nivel || 0,
+                      'Gomas (m)': nivelGomas,
+                      'Aceite (m)': aceite
+                    };
                   });
-                  const csvContent = [headers.join(';'), ...rows].join('\r\n');
-                  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+
+                  // Usar la misma lógica que exportToCSV
+                  const rows = data.map(item => headers.map(header => {
+                    const key = header === 'Nivel (m)' ? 'Nivel (m)' : 
+                               header === 'Gomas (m)' ? 'Gomas (m)' : 
+                               header === 'Aceite (m)' ? 'Aceite (m)' : 
+                               header.toLowerCase().replace(/\s+/g, '_');
+                    let value = item[key];
+                    
+                    // Manejar valores undefined o null
+                    if (value === undefined || value === null) {
+                      return '';
+                    }
+                    
+                    // Formatear números
+                    if (typeof value === 'number') {
+                      value = value.toFixed(2);
+                    }
+                    
+                    // Convertir a string
+                    const stringValue = String(value);
+                    
+                    // Escapar comillas dobles
+                    const escapedValue = stringValue.replace(/"/g, '""');
+                    
+                    // Envolver en comillas si contiene: coma, comillas, saltos de línea
+                    if (escapedValue.includes(',') || escapedValue.includes('"') || escapedValue.includes('\n') || escapedValue.includes('\r')) {
+                      return `"${escapedValue}"`;
+                    }
+                    
+                    return escapedValue;
+                  }));
+
+                  // USAR COMA (,) como delimitador - esto es clave para Excel Windows en español de México
+                  const csvContent = [
+                    headers.join(','),
+                    ...rows.map(row => row.join(','))
+                  ].join('\r\n');
+
+                  // BOM UTF-8 para caracteres especiales
+                  const blob = new Blob(['\uFEFF' + csvContent], { 
+                    type: 'text/csv;charset=utf-8;' 
+                  });
+                  
                   const link = document.createElement('a');
                   link.href = URL.createObjectURL(blob);
                   link.download = `reporte_produccion_${r.id}_${r.fecha}.csv`;
                   link.click();
+                  
+                  setTimeout(() => URL.revokeObjectURL(link.href), 100);
                 }}
                 className="absolute right-16 top-4 flex items-center gap-2 bg-white hover:bg-gray-100 text-gray-900 border border-gray-300"
               >
