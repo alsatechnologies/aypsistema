@@ -182,7 +182,6 @@ const Reportes = () => {
       return;
     }
 
-    // Map headers to data keys
     const headerToKey: Record<string, string> = {
       'Boleta': 'boleta',
       'Fecha': 'fecha',
@@ -218,37 +217,23 @@ const Reportes = () => {
       const key = headerToKey[header] || header.toLowerCase().replace(/\s+/g, '_');
       let value = item[key];
       
-      // Manejar valores undefined o null
       if (value === undefined || value === null) {
         return '';
       }
       
-      // Formatear números manteniendo el punto decimal (Excel lo convertirá según configuración regional)
       if (typeof value === 'number') {
-        value = value.toFixed(2);
+        return value.toFixed(2);
       }
       
-      // Convertir a string
-      const stringValue = String(value);
-      
-      // Escapar comillas dobles duplicándolas
-      const escapedValue = stringValue.replace(/"/g, '""');
-      
-      // Envolver en comillas si contiene: punto y coma, comillas, saltos de línea o comas
-      if (escapedValue.includes(';') || escapedValue.includes('"') || escapedValue.includes('\n') || escapedValue.includes(',')) {
-        return `"${escapedValue}"`;
-      }
-      
-      return escapedValue;
+      return String(value).replace(/\t/g, ' '); // Eliminar tabs de los datos
     }));
 
-    // Crear CSV con punto y coma como separador y CRLF para Windows
+    // Usar TAB como delimitador (más universal)
     const csvContent = [
-      headers.join(';'),
-      ...rows.map(row => row.join(';'))
+      headers.join('\t'),
+      ...rows.map(row => row.join('\t'))
     ].join('\r\n');
 
-    // BOM UTF-8 para que Excel Windows detecte la codificación correctamente
     const blob = new Blob(['\uFEFF' + csvContent], { 
       type: 'text/csv;charset=utf-8;' 
     });
@@ -258,7 +243,6 @@ const Reportes = () => {
     link.download = `${filename}_${format(new Date(), 'yyyy-MM-dd')}.csv`;
     link.click();
     
-    // Limpiar el objeto URL
     setTimeout(() => URL.revokeObjectURL(link.href), 100);
     
     toast.success('Reporte descargado correctamente');
