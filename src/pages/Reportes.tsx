@@ -217,23 +217,37 @@ const Reportes = () => {
       const key = headerToKey[header] || header.toLowerCase().replace(/\s+/g, '_');
       let value = item[key];
       
+      // Manejar valores undefined o null
       if (value === undefined || value === null) {
         return '';
       }
       
+      // Formatear números
       if (typeof value === 'number') {
-        return value.toFixed(2);
+        value = value.toFixed(2);
       }
       
-      return String(value).replace(/\t/g, ' '); // Eliminar tabs de los datos
+      // Convertir a string
+      const stringValue = String(value);
+      
+      // Escapar comillas dobles
+      const escapedValue = stringValue.replace(/"/g, '""');
+      
+      // Envolver en comillas si contiene: coma, comillas, saltos de línea
+      if (escapedValue.includes(',') || escapedValue.includes('"') || escapedValue.includes('\n') || escapedValue.includes('\r')) {
+        return `"${escapedValue}"`;
+      }
+      
+      return escapedValue;
     }));
 
-    // Usar TAB como delimitador (más universal)
+    // USAR COMA (,) como delimitador - esto es clave para Excel Windows en español de México
     const csvContent = [
-      headers.join('\t'),
-      ...rows.map(row => row.join('\t'))
+      headers.join(','),
+      ...rows.map(row => row.join(','))
     ].join('\r\n');
 
+    // BOM UTF-8 para caracteres especiales
     const blob = new Blob(['\uFEFF' + csvContent], { 
       type: 'text/csv;charset=utf-8;' 
     });
