@@ -46,6 +46,7 @@ import { useProveedores } from '@/services/hooks/useProveedores';
 import { useClientes } from '@/services/hooks/useClientes';
 import { useProduccion } from '@/services/hooks/useProduccion';
 import { getTotalInventarioPorProducto } from '@/services/supabase/inventarioAlmacenes';
+import { getProductoConAnalisis } from '@/services/supabase/productos';
 import type { Recepcion } from '@/services/supabase/recepciones';
 import type { Embarque } from '@/services/supabase/embarques';
 
@@ -219,52 +220,46 @@ const Reportes = () => {
       
       // Manejar valores undefined o null
       if (value === undefined || value === null) {
-        value = '';
+        return '';
       }
       
-      // Si es un número, convertir a string con COMA como separador decimal para Excel en español
+      // Formatear números manteniendo el punto decimal (Excel lo convertirá según configuración regional)
       if (typeof value === 'number') {
-        value = value.toFixed(2).replace('.', ',');
-      } else if (typeof value === 'string') {
-        // Solo convertir a número si el string parece un valor numérico válido
-        // Rechazar strings que contienen letras (como placas: "41BH5Z")
-        if (/^[\d.,\s-]+$/.test(value.trim())) {
-          const numValue = parseFloat(value.replace(',', '.'));
-          if (!isNaN(numValue) && isFinite(numValue)) {
-            value = numValue.toFixed(2).replace('.', ',');
-          }
-        }
+        value = value.toFixed(2);
       }
       
-      // Convertir a string y manejar valores vacíos
+      // Convertir a string
       const stringValue = String(value);
       
-      // Escapar comillas dobles y envolver TODOS los valores en comillas para máxima compatibilidad con Excel
-      // Esto evita problemas cuando los valores contienen comas, punto y coma, o saltos de línea
-      // Incluso los valores vacíos se envuelven en comillas para mantener consistencia
-      if (stringValue === '' || stringValue === 'undefined' || stringValue === 'null') {
-        return '""';
+      // Escapar comillas dobles duplicándolas
+      const escapedValue = stringValue.replace(/"/g, '""');
+      
+      // Envolver en comillas si contiene: punto y coma, comillas, saltos de línea o comas
+      if (escapedValue.includes(';') || escapedValue.includes('"') || escapedValue.includes('\n') || escapedValue.includes(',')) {
+        return `"${escapedValue}"`;
       }
       
-      return `"${stringValue.replace(/"/g, '""')}"`;
+      return escapedValue;
     }));
-    
-    // Usar PUNTO Y COMA (;) como delimitador para compatibilidad con Excel en configuraciones regionales de español
-    // Excel en español usa punto y coma como separador de columnas y coma para decimales
-    // Usar CRLF (\r\n) para compatibilidad con Windows Excel
+
+    // Crear CSV con punto y coma como separador y CRLF para Windows
     const csvContent = [
       headers.join(';'),
       ...rows.map(row => row.join(';'))
     ].join('\r\n');
 
-    // BOM (\uFEFF) para que Excel detecte UTF-8 correctamente en Windows
+    // BOM UTF-8 para que Excel Windows detecte la codificación correctamente
     const blob = new Blob(['\uFEFF' + csvContent], { 
       type: 'text/csv;charset=utf-8;' 
     });
+    
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `${filename}_${format(new Date(), 'yyyy-MM-dd')}.csv`;
     link.click();
+    
+    // Limpiar el objeto URL
+    setTimeout(() => URL.revokeObjectURL(link.href), 100);
     
     toast.success('Reporte descargado correctamente');
   };
