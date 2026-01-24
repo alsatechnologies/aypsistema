@@ -78,11 +78,6 @@ const AnalisisDinamico: React.FC<AnalisisDinamicoProps> = ({ analisis, valores, 
               />
               <span className="text-sm text-muted-foreground w-12">%</span>
             </div>
-            {item.rangosDescuento && item.rangosDescuento.length > 0 && (
-              <p className="text-xs text-muted-foreground">
-                Rangos: {item.rangosDescuento.map(r => `${r.porcentaje}%`).join(', ')}
-              </p>
-            )}
           </div>
         );
       })}
