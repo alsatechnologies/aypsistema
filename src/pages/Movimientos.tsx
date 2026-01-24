@@ -138,13 +138,17 @@ const Movimientos = () => {
       tipo: m.tipo,
       transporte: m.transporte,
       fecha: m.fecha,
-      ubicacion: m.ubicacion,
+      'Ubicación': m.ubicacion,
       'Peso Neto (Kg)': m.pesoNeto
     }));
 
     // Usar la misma lógica que exportToCSV en Reportes.tsx
     const rows = data.map(item => headers.map(header => {
-      const key = header === 'Cliente/Proveedor' ? 'Cliente/Proveedor' : header.toLowerCase().replace(/\s+/g, '_');
+      // Mapear headers a claves del objeto
+      const key = header === 'Cliente/Proveedor' ? 'Cliente/Proveedor' :
+                  header === 'Ubicación' ? 'Ubicación' :
+                  header === 'Peso Neto (Kg)' ? 'Peso Neto (Kg)' :
+                  header.toLowerCase().replace(/\s+/g, '_');
       let value = item[key];
       
       // Manejar valores undefined o null
