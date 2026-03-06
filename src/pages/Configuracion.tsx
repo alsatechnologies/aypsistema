@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Layout from '@/components/Layout';
 import Header from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit, Trash2, Package, Warehouse, Users, FlaskConical, ChevronDown, ChevronUp, Eye, EyeOff } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Package, Warehouse, Users, FlaskConical, ChevronDown, ChevronUp, Eye, EyeOff, Upload } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -708,6 +708,61 @@ const Configuracion = () => {
       console.error('Error toggling descuento:', error);
       toast.error('Error al actualizar descuento');
     }
+  };
+
+  // Ref para input file oculto (importar CSV)
+  const csvInputRef = useRef<HTMLInputElement>(null);
+
+  // Importar rangos desde CSV (agrega a los existentes, no reemplaza)
+  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !editingAnalisis) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+
+      const nuevosRangos: { porcentaje: number; kgDescuentoTon: number }[] = [];
+      let errores = 0;
+
+      lines.forEach((line, idx) => {
+        // Ignorar encabezado si contiene letras
+        if (idx === 0 && /[a-zA-Z]/.test(line)) return;
+
+        const partes = line.split(',');
+        if (partes.length < 2) { errores++; return; }
+
+        const porcentaje = parseFloat(partes[0].trim());
+        const kgDescuentoTon = parseFloat(partes[1].trim());
+
+        if (isNaN(porcentaje) || isNaN(kgDescuentoTon)) { errores++; return; }
+
+        nuevosRangos.push({ porcentaje, kgDescuentoTon });
+      });
+
+      if (nuevosRangos.length === 0) {
+        toast.error('No se encontraron rangos válidos en el archivo CSV');
+        return;
+      }
+
+      setEditingAnalisis({
+        ...editingAnalisis,
+        analisis: {
+          ...editingAnalisis.analisis,
+          rangosDescuento: [
+            ...(editingAnalisis.analisis.rangosDescuento || []),
+            ...nuevosRangos
+          ]
+        }
+      });
+
+      toast.success(`${nuevosRangos.length} rangos importados${errores > 0 ? ` (${errores} filas ignoradas)` : ''}`);
+    };
+
+    reader.readAsText(file);
+    // Limpiar el input para permitir volver a subir el mismo archivo
+    e.target.value = '';
   };
 
   // Editar rangos de descuento
@@ -1436,6 +1491,17 @@ const Configuracion = () => {
             </div>
           </div>
           <DialogFooter className="flex-shrink-0">
+            <input
+              ref={csvInputRef}
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={handleImportCSV}
+            />
+            <Button variant="outline" onClick={() => csvInputRef.current?.click()}>
+              <Upload className="h-4 w-4 mr-2" />
+              Importar CSV
+            </Button>
             <Button variant="outline" onClick={() => setEditingAnalisis(null)}>Cancelar</Button>
             <Button className="bg-primary hover:bg-primary/90" onClick={handleSaveRangos}>Guardar Rangos</Button>
           </DialogFooter>
