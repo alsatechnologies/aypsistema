@@ -262,21 +262,60 @@ const Reportes = () => {
     toast.success('Reporte descargado correctamente');
   };
 
-  const handleExportEntradas = () => {
-    const headers = ['Boleta', 'Fecha', 'Producto', 'Proveedor', 'Chofer', 'Placas', 'Peso Bruto (Kg)', 'Peso Tara (Kg)', 'Peso Neto (Kg)', 'Lote', 'Estatus'];
-    const data = filteredRecepciones.map(r => ({
-      boleta: r.boleta,
-      fecha: r.fecha,
-      producto: r.producto?.nombre || '',
-      proveedor: r.proveedor?.empresa || '',
-      chofer: r.chofer || '',
-      placas: r.placas || '',
-      peso_bruto: r.peso_bruto || 0,
-      peso_tara: r.peso_tara || 0,
-      peso_neto: r.peso_neto || 0,
-      lote: r.codigo_lote || '',
-      estatus: r.estatus
-    }));
+  const handleExportEntradas = async () => {
+    // Cargar rangos de descuento para los productos únicos presentes en las recepciones
+    const productosIds = [...new Set(filteredRecepciones.map(r => r.producto_id).filter(Boolean))] as number[];
+    const productosAnalisisMap = new Map<number, any[]>();
+
+    for (const id of productosIds) {
+      try {
+        const producto = await getProductoConAnalisis(id);
+        if (producto?.analisis) productosAnalisisMap.set(id, producto.analisis);
+      } catch {
+        // Si falla, ese producto no tendrá descuentos calculados
+      }
+    }
+
+    const calcularDeduccion = (recepcion: Recepcion): number => {
+      const analisisProducto = productosAnalisisMap.get(recepcion.producto_id!) || [];
+      const valoresAnalisis = recepcion.analisis || {};
+      const pesoNeto = recepcion.peso_neto || 0;
+      let totalDescuentoKg = 0;
+
+      analisisProducto
+        .filter((a: any) => a.generaDescuento)
+        .forEach((item: any) => {
+          const valor = valoresAnalisis[item.nombre] || 0;
+          const rangos = [...(item.rangosDescuento || [])].sort((a: any, b: any) => b.porcentaje - a.porcentaje);
+          const rangoAplicable = rangos.find((r: any) => valor >= r.porcentaje);
+          if (rangoAplicable) {
+            totalDescuentoKg += (rangoAplicable.kgDescuentoTon * pesoNeto) / 1000;
+          }
+        });
+
+      return totalDescuentoKg;
+    };
+
+    const headers = ['Boleta', 'Fecha', 'Producto', 'Proveedor', 'Chofer', 'Placas', 'Peso Bruto (Kg)', 'Peso Tara (Kg)', 'Peso Neto (Kg)', 'Deducción (Kg)', 'A Liquidar (Kg)', 'Lote', 'Estatus'];
+    const data = filteredRecepciones.map(r => {
+      const deduccion = calcularDeduccion(r);
+      const pesoNeto = r.peso_neto || 0;
+      return {
+        boleta: r.boleta,
+        fecha: r.fecha,
+        producto: r.producto?.nombre || '',
+        proveedor: r.proveedor?.empresa || '',
+        chofer: r.chofer || '',
+        placas: r.placas || '',
+        peso_bruto: r.peso_bruto || 0,
+        peso_tara: r.peso_tara || 0,
+        peso_neto: pesoNeto,
+        deduccion: deduccion > 0 ? -Math.round(deduccion * 1000) / 1000 : '',
+        a_liquidar: deduccion > 0 ? Math.round((pesoNeto - deduccion) * 1000) / 1000 : pesoNeto,
+        lote: r.codigo_lote || '',
+        estatus: r.estatus
+      };
+    });
     exportToCSV(data, headers, 'reporte_entradas');
   };
 
@@ -1209,13 +1248,10 @@ const Reportes = () => {
                     onClick={() => {
                       const headers = ['Producto', 'Cantidad Total'];
                       const data = inventarioPorProducto.map(item => {
-                        // Calcular el total ajustado (restando salidas históricas) igual que en la tabla
-                        const salidasProducto = salidasPorProducto[item.producto_id] || 0;
-                        const totalAjustado = Math.max(0, (item.total || 0) - salidasProducto);
-                        
+                        // Mostrar el inventario tal cual está en la base de datos
                         return {
                           producto: item.producto?.nombre || `Producto #${item.producto_id}`,
-                          cantidad: totalAjustado
+                          cantidad: item.total || 0
                         };
                       });
                       exportToCSV(data, headers, 'inventario_por_producto');
@@ -1246,9 +1282,9 @@ const Reportes = () => {
                     </TableHeader>
                     <TableBody>
                       {inventarioPorProducto.map((item) => {
-                        // Restar salidas históricas del inventario por producto
-                        const salidasProducto = salidasPorProducto[item.producto_id] || 0;
-                        const totalAjustado = Math.max(0, (item.total || 0) - salidasProducto);
+                        // Mostrar el inventario tal cual está en la base de datos
+                        // El inventario ya tiene las salidas restadas automáticamente
+                        const totalInventario = item.total || 0;
                         
                         return (
                           <TableRow key={item.producto_id}>
@@ -1256,7 +1292,7 @@ const Reportes = () => {
                               {item.producto?.nombre || `Producto #${item.producto_id}`}
                             </TableCell>
                             <TableCell className="text-right font-semibold">
-                              {formatNumber(totalAjustado)}
+                              {formatNumber(totalInventario)}
                             </TableCell>
                             <TableCell>{item.unidad || '-'}</TableCell>
                           </TableRow>
