@@ -263,60 +263,72 @@ const Reportes = () => {
   };
 
   const handleExportEntradas = async () => {
-    // Cargar rangos de descuento para los productos únicos presentes en las recepciones
-    const productosIds = [...new Set(filteredRecepciones.map(r => r.producto_id).filter(Boolean))] as number[];
-    const productosAnalisisMap = new Map<number, any[]>();
+    const toastId = toast.loading('Preparando reporte con descuentos...');
 
-    for (const id of productosIds) {
-      try {
-        const producto = await getProductoConAnalisis(id);
-        if (producto?.analisis) productosAnalisisMap.set(id, producto.analisis);
-      } catch {
-        // Si falla, ese producto no tendrá descuentos calculados
+    try {
+      // Cargar rangos de descuento para los productos únicos presentes en las recepciones
+      const productosIds = [...new Set(filteredRecepciones.map(r => r.producto_id).filter(Boolean))] as number[];
+      const productosAnalisisMap = new Map<number, any[]>();
+
+      for (const id of productosIds) {
+        try {
+          const producto = await getProductoConAnalisis(id);
+          if (producto?.analisis) productosAnalisisMap.set(id, producto.analisis);
+        } catch (err) {
+          console.error(`Error cargando análisis para producto ${id}:`, err);
+        }
       }
-    }
 
-    const calcularDeduccion = (recepcion: Recepcion): number => {
-      const analisisProducto = productosAnalisisMap.get(recepcion.producto_id!) || [];
-      const valoresAnalisis = recepcion.analisis || {};
-      const pesoNeto = recepcion.peso_neto || 0;
-      let totalDescuentoKg = 0;
+      const calcularDeduccion = (recepcion: Recepcion): number => {
+        if (!recepcion.producto_id) return 0;
+        const analisisProducto = productosAnalisisMap.get(recepcion.producto_id) || [];
+        const valoresAnalisis = recepcion.analisis || {};
+        const pesoNeto = recepcion.peso_neto || 0;
+        let totalDescuentoKg = 0;
 
-      analisisProducto
-        .filter((a: any) => a.generaDescuento)
-        .forEach((item: any) => {
-          const valor = valoresAnalisis[item.nombre] || 0;
-          const rangos = [...(item.rangosDescuento || [])].sort((a: any, b: any) => b.porcentaje - a.porcentaje);
-          const rangoAplicable = rangos.find((r: any) => valor >= r.porcentaje);
-          if (rangoAplicable) {
-            totalDescuentoKg += (rangoAplicable.kgDescuentoTon * pesoNeto) / 1000;
-          }
-        });
+        analisisProducto
+          .filter((a: any) => a.generaDescuento && a.rangosDescuento?.length > 0)
+          .forEach((item: any) => {
+            const valor = valoresAnalisis[item.nombre] ?? 0;
+            if (!valor) return;
+            const rangos = [...item.rangosDescuento].sort((a: any, b: any) => b.porcentaje - a.porcentaje);
+            const rangoAplicable = rangos.find((r: any) => valor >= r.porcentaje);
+            if (rangoAplicable) {
+              totalDescuentoKg += (rangoAplicable.kgDescuentoTon * pesoNeto) / 1000;
+            }
+          });
 
-      return totalDescuentoKg;
-    };
-
-    const headers = ['Boleta', 'Fecha', 'Producto', 'Proveedor', 'Chofer', 'Placas', 'Peso Bruto (Kg)', 'Peso Tara (Kg)', 'Peso Neto (Kg)', 'Deducción (Kg)', 'A Liquidar (Kg)', 'Lote', 'Estatus'];
-    const data = filteredRecepciones.map(r => {
-      const deduccion = calcularDeduccion(r);
-      const pesoNeto = r.peso_neto || 0;
-      return {
-        boleta: r.boleta,
-        fecha: r.fecha,
-        producto: r.producto?.nombre || '',
-        proveedor: r.proveedor?.empresa || '',
-        chofer: r.chofer || '',
-        placas: r.placas || '',
-        peso_bruto: r.peso_bruto || 0,
-        peso_tara: r.peso_tara || 0,
-        peso_neto: pesoNeto,
-        deduccion: deduccion > 0 ? -Math.round(deduccion * 1000) / 1000 : '',
-        a_liquidar: deduccion > 0 ? Math.round((pesoNeto - deduccion) * 1000) / 1000 : pesoNeto,
-        lote: r.codigo_lote || '',
-        estatus: r.estatus
+        return totalDescuentoKg;
       };
-    });
-    exportToCSV(data, headers, 'reporte_entradas');
+
+      const headers = ['Boleta', 'Fecha', 'Producto', 'Proveedor', 'Chofer', 'Placas', 'Peso Bruto (Kg)', 'Peso Tara (Kg)', 'Peso Neto (Kg)', 'Deducción (Kg)', 'A Liquidar (Kg)', 'Lote', 'Estatus'];
+      const data = filteredRecepciones.map(r => {
+        const deduccion = calcularDeduccion(r);
+        const pesoNeto = r.peso_neto || 0;
+        return {
+          boleta: r.boleta,
+          fecha: r.fecha,
+          producto: r.producto?.nombre || '',
+          proveedor: r.proveedor?.empresa || '',
+          chofer: r.chofer || '',
+          placas: r.placas || '',
+          peso_bruto: r.peso_bruto || 0,
+          peso_tara: r.peso_tara || 0,
+          peso_neto: pesoNeto,
+          deduccion: deduccion > 0 ? -Math.round(deduccion * 1000) / 1000 : '',
+          a_liquidar: deduccion > 0 ? Math.round((pesoNeto - deduccion) * 1000) / 1000 : pesoNeto,
+          lote: r.codigo_lote || '',
+          estatus: r.estatus
+        };
+      });
+
+      toast.dismiss(toastId);
+      exportToCSV(data, headers, 'reporte_entradas');
+    } catch (err) {
+      toast.dismiss(toastId);
+      toast.error('Error al generar el reporte');
+      console.error('Error en handleExportEntradas:', err);
+    }
   };
 
   const handleExportSalidas = () => {
