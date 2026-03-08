@@ -279,10 +279,15 @@ const Reportes = () => {
         }
       }
 
-      // DEBUG: mostrar qué hay en el mapa de análisis
-      console.log('[Export] productosAnalisisMap:', Object.fromEntries(productosAnalisisMap));
-      console.log('[Export] Ejemplo recepcion.analisis:', filteredRecepciones[0]?.analisis);
-      console.log('[Export] Ejemplo recepcion.producto_id:', filteredRecepciones[0]?.producto_id);
+      // DEBUG: ver rangosDescuento específicamente
+      productosAnalisisMap.forEach((analisis, productoId) => {
+        analisis.filter((a: any) => a.generaDescuento).forEach((a: any) => {
+          console.log(`[Export] Producto ${productoId} - ${a.nombre}: rangosDescuento.length=${a.rangosDescuento?.length}, rangos=`, a.rangosDescuento?.slice(0, 3));
+        });
+      });
+      // DEBUG: ver la primera recepcion con producto_id
+      const primeraConProducto = filteredRecepciones.find(r => r.producto_id);
+      console.log('[Export] Primera recepcion con producto_id:', primeraConProducto?.boleta, 'producto_id:', primeraConProducto?.producto_id, 'analisis:', primeraConProducto?.analisis);
 
       const calcularDeduccion = (recepcion: Recepcion): number => {
         if (!recepcion.producto_id) return 0;
