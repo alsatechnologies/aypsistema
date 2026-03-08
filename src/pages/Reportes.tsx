@@ -194,6 +194,8 @@ const Reportes = () => {
       'Peso Bruto (Kg)': 'peso_bruto',
       'Peso Tara (Kg)': 'peso_tara',
       'Peso Neto (Kg)': 'peso_neto',
+      'Deducción (Kg)': 'deduccion',
+      'A Liquidar (Kg)': 'a_liquidar',
       'Lote': 'lote',
       'Estatus': 'estatus',
       'Cliente/Proveedor': 'cliente_proveedor',
@@ -279,16 +281,6 @@ const Reportes = () => {
         }
       }
 
-      // DEBUG: ver rangosDescuento específicamente
-      productosAnalisisMap.forEach((analisis, productoId) => {
-        analisis.filter((a: any) => a.generaDescuento).forEach((a: any) => {
-          console.log(`[Export] Producto ${productoId} - ${a.nombre}: rangosDescuento.length=${a.rangosDescuento?.length}, rangos=`, a.rangosDescuento?.slice(0, 3));
-        });
-      });
-      // DEBUG: ver la primera recepcion con producto_id
-      const primeraConProducto = filteredRecepciones.find(r => r.producto_id);
-      console.log('[Export] Primera recepcion con producto_id:', primeraConProducto?.boleta, 'producto_id:', primeraConProducto?.producto_id, 'analisis:', primeraConProducto?.analisis);
-
       const calcularDeduccion = (recepcion: Recepcion): number => {
         if (!recepcion.producto_id) return 0;
         const analisisProducto = productosAnalisisMap.get(recepcion.producto_id) || [];
@@ -303,7 +295,6 @@ const Reportes = () => {
             if (!valor) return;
             const rangos = [...item.rangosDescuento].sort((a: any, b: any) => b.porcentaje - a.porcentaje);
             const rangoAplicable = rangos.find((r: any) => valor >= r.porcentaje);
-            console.log(`[Calc] ${recepcion.boleta} - ${item.nombre}: valor=${valor}, rangoAplicable=`, rangoAplicable, `kgDesc=${rangoAplicable ? (rangoAplicable.kgDescuentoTon * pesoNeto) / 1000 : 0}`);
             if (rangoAplicable) {
               totalDescuentoKg += (rangoAplicable.kgDescuentoTon * pesoNeto) / 1000;
             }
