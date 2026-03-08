@@ -279,6 +279,11 @@ const Reportes = () => {
         }
       }
 
+      // DEBUG: mostrar qué hay en el mapa de análisis
+      console.log('[Export] productosAnalisisMap:', Object.fromEntries(productosAnalisisMap));
+      console.log('[Export] Ejemplo recepcion.analisis:', filteredRecepciones[0]?.analisis);
+      console.log('[Export] Ejemplo recepcion.producto_id:', filteredRecepciones[0]?.producto_id);
+
       const calcularDeduccion = (recepcion: Recepcion): number => {
         if (!recepcion.producto_id) return 0;
         const analisisProducto = productosAnalisisMap.get(recepcion.producto_id) || [];
