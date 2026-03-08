@@ -303,6 +303,7 @@ const Reportes = () => {
             if (!valor) return;
             const rangos = [...item.rangosDescuento].sort((a: any, b: any) => b.porcentaje - a.porcentaje);
             const rangoAplicable = rangos.find((r: any) => valor >= r.porcentaje);
+            console.log(`[Calc] ${recepcion.boleta} - ${item.nombre}: valor=${valor}, rangoAplicable=`, rangoAplicable, `kgDesc=${rangoAplicable ? (rangoAplicable.kgDescuentoTon * pesoNeto) / 1000 : 0}`);
             if (rangoAplicable) {
               totalDescuentoKg += (rangoAplicable.kgDescuentoTon * pesoNeto) / 1000;
             }
