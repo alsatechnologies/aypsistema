@@ -28,8 +28,6 @@ const Laboratorio = lazy(() => import("./pages/Laboratorio"));
 const Produccion = lazy(() => import("./pages/Produccion"));
 const Configuracion = lazy(() => import("./pages/Configuracion"));
 const Auditoria = lazy(() => import("./pages/Auditoria"));
-const EmergencyReset = lazy(() => import("./pages/EmergencyReset"));
-const FixLogin = lazy(() => import("./pages/FixLogin"));
 
 // Componente de carga
 const PageLoader = () => (
@@ -70,9 +68,6 @@ const App = () => (
               <Routes>
             <Route path="/" element={<Navigate to="/login" />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/emergency-reset" element={<EmergencyReset />} />
-            <Route path="/fix-login" element={<FixLogin />} />
-            
             {/* Rutas protegidas */}
             <Route 
               path="/oficina" 

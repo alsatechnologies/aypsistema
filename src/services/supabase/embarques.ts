@@ -328,7 +328,8 @@ export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
     }, 'Embarques');
   }
   
-  // Retornar la boleta guardada (con o sin lote)
+  // Usar la boleta guardada (con o sin lote)
+  // Si se generó lote, dataGuardada ya tiene el lote asignado
   const data = dataGuardada;
   
   // RESTAR DEL INVENTARIO: Si el embarque está completado y tiene peso_neto y almacen_id
