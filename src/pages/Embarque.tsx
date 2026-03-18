@@ -468,6 +468,7 @@ const EmbarquePage = () => {
     
     if (!validacion.valid) {
       validacion.errors.forEach(error => toast.error(error));
+      setIsSaving(false);
       return;
     }
 

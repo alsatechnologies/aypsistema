@@ -216,7 +216,8 @@ const Reportes = () => {
     };
 
     const rows = data.map(item => headers.map(header => {
-      const key = headerToKey[header] || header.toLowerCase().replace(/\s+/g, '_');
+      // Primero buscar en el mapa fijo, luego por nombre exacto (para análisis dinámicos), luego transformado
+      const key = headerToKey[header] || (header in item ? header : header.toLowerCase().replace(/\s+/g, '_'));
       let value = item[key];
       
       // Manejar valores undefined o null
@@ -303,11 +304,26 @@ const Reportes = () => {
         return totalDescuentoKg;
       };
 
-      const headers = ['Boleta', 'Fecha', 'Producto', 'Proveedor', 'Chofer', 'Placas', 'Peso Bruto (Kg)', 'Peso Tara (Kg)', 'Peso Neto (Kg)', 'Deducción (Kg)', 'A Liquidar (Kg)', 'Lote', 'Estatus'];
+      // Recopilar todos los nombres de análisis únicos en todas las recepciones filtradas
+      const nombresAnalisis = Array.from(
+        new Set(
+          filteredRecepciones.flatMap(r => Object.keys(r.analisis || {}))
+        )
+      ).sort();
+
+      const headers = [
+        'Boleta', 'Fecha', 'Producto', 'Proveedor', 'Chofer', 'Placas',
+        'Peso Bruto (Kg)', 'Peso Tara (Kg)', 'Peso Neto (Kg)',
+        'Deducción (Kg)', 'A Liquidar (Kg)', 'Lote', 'Estatus',
+        ...nombresAnalisis  // Análisis al final
+      ];
+
       const data = filteredRecepciones.map(r => {
         const deduccion = calcularDeduccion(r);
         const pesoNeto = r.peso_neto || 0;
-        return {
+        const valoresAnalisis = r.analisis || {};
+
+        const row: Record<string, any> = {
           boleta: r.boleta,
           fecha: r.fecha,
           producto: r.producto?.nombre || '',
@@ -322,6 +338,14 @@ const Reportes = () => {
           lote: r.codigo_lote || '',
           estatus: r.estatus
         };
+
+        // Agregar valores de análisis (0 si no aplica o no fue capturado)
+        for (const nombre of nombresAnalisis) {
+          const val = valoresAnalisis[nombre];
+          row[nombre] = (val !== undefined && val !== null) ? val : 0;
+        }
+
+        return row;
       });
 
       toast.dismiss(toastId);
@@ -645,27 +669,15 @@ const Reportes = () => {
                   // Función para identificar el tipo de aceite por nombre del producto
                   const getTipoAceite = (nombreProducto: string | null): string | null => {
                     if (!nombreProducto) return null;
-                    // Normalizar: mayúsculas, quitar tildes y espacios
                     const nombreNormalizado = nombreProducto
                       .toUpperCase()
                       .normalize('NFD')
-                      .replace(/[\u0300-\u036f]/g, '') // Quitar tildes
+                      .replace(/[\u0300-\u036f]/g, '')
                       .trim();
-                    
-                    // Excluir semillas
-                    if (nombreNormalizado.includes('SEMILLA')) {
-                      return null;
-                    }
-                    
-                    if (nombreNormalizado.includes('CARTAMO')) {
-                      return 'Cártamo';
-                    }
-                    if (nombreNormalizado.includes('GIRASOL')) {
-                      return 'Girasol';
-                    }
-                    if (nombreNormalizado === 'MEZCLAS' || nombreNormalizado.includes('MEZCLA')) {
-                      return 'Mezclas';
-                    }
+                    if (nombreNormalizado.includes('SEMILLA')) return null;
+                    if (nombreNormalizado.includes('CARTAMO')) return 'Cártamo';
+                    if (nombreNormalizado.includes('GIRASOL')) return 'Girasol';
+                    if (nombreNormalizado === 'MEZCLAS' || nombreNormalizado.includes('MEZCLA')) return 'Mezclas';
                     return null;
                   };
 
@@ -709,7 +721,6 @@ const Reportes = () => {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           {Array.from(aceitePorTipo.entries())
                             .sort(([tipoA], [tipoB]) => {
-                              // Ordenar: Cártamo, Girasol, Mezclas
                               const orden: Record<string, number> = { 'Cártamo': 1, 'Girasol': 2, 'Mezclas': 3 };
                               return (orden[tipoA] || 999) - (orden[tipoB] || 999);
                             })
@@ -745,13 +756,26 @@ const Reportes = () => {
                 <div className="space-y-4">
                   {Array.from(porProducto.entries()).map(([producto, datos]) => {
                     const tanquesDelProducto = nivelesTanques.filter(t => (t.producto || 'Sin producto') === producto);
-                    
+
+                    // Calcular total kg de aceite para este grupo de producto
+                    const totalKgGrupo = tanquesDelProducto.reduce((sum, t) => {
+                      const goma = nivelesGomas.find(g => g.goma === t.tanque);
+                      const aceite = Math.max(0, (t.nivel || 0) - (goma?.nivel || 0));
+                      const factorKgCm = factoresKgCmMap.get(t.tanque);
+                      return sum + (factorKgCm && aceite > 0 ? (aceite * 100) * factorKgCm : 0);
+                    }, 0);
+
                     return (
                       <Card key={producto}>
                         <CardHeader className="pb-3">
                           <CardTitle className="text-base flex items-center gap-2">
                             <Package className="h-4 w-4" />
                             {producto}
+                            {totalKgGrupo > 0 && (
+                              <span className="text-sm font-semibold text-blue-600">
+                                {totalKgGrupo.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg
+                              </span>
+                            )}
                             <Badge variant="secondary" className="ml-auto">
                               {datos.tanques} tanque{datos.tanques !== 1 ? 's' : ''}
                             </Badge>
@@ -1350,23 +1374,45 @@ const Reportes = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {almacenes.map((a) => {
-                        // Para almacenes de pasta, restar las salidas totales desde el inicio del sistema
-                        const esPasta = a.nombre.toLowerCase().includes('pasta');
-                        const capacidadConSalidas = esPasta && a.capacidad_actual
-                          ? Math.max(0, (a.capacidad_actual || 0) - totalSalidasPasta)
-                          : (a.capacidad_actual || 0);
-                        
-                        const porcentajeOcupado = a.capacidad_total > 0 
-                          ? ((a.capacidad_actual || 0) / a.capacidad_total * 100) 
+                      {(() => {
+                        // Obtener el reporte de producción más reciente para leer niveles de tanques
+                        const reporteReciente = reportesProduccion.length > 0
+                          ? [...reportesProduccion].sort((a, b) =>
+                              new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+                            )[0]
+                          : null;
+                        const nivelesTanquesRecientes: Array<{ tanque: string; nivel: number }> = reporteReciente?.niveles_tanques || [];
+                        const nivelesGomasRecientes: Array<{ goma: string; nivel: number }> = reporteReciente?.niveles_gomas || [];
+
+                        return almacenes.map((a) => {
+                        // Para tanques de aceite (nombre empieza con "TQ"), usar nivel del reporte más reciente
+                        const esTanqueAceite = /^TQ\s*\d/i.test(a.nombre.trim());
+                        let capacidadActual = a.capacidad_actual || 0;
+
+                        if (esTanqueAceite && reporteReciente) {
+                          const tanqueNivel = nivelesTanquesRecientes.find(t => t.tanque === a.nombre);
+                          if (tanqueNivel) {
+                            const gomaNivel = nivelesGomasRecientes.find(g => g.goma === a.nombre);
+                            const aceiteM = Math.max(0, (tanqueNivel.nivel || 0) - (gomaNivel?.nivel || 0));
+                            const factorKgCm = a.factor_kg_cm;
+                            if (factorKgCm && aceiteM > 0) {
+                              capacidadActual = (aceiteM * 100) * factorKgCm;
+                            } else {
+                              capacidadActual = 0;
+                            }
+                          }
+                        }
+
+                        const porcentajeOcupado = a.capacidad_total > 0
+                          ? (capacidadActual / a.capacidad_total * 100)
                           : 0;
                         return (
                           <TableRow key={a.id}>
                             <TableCell className="font-medium">{a.nombre}</TableCell>
                             <TableCell className="text-right">{formatNumber(a.capacidad_total)}</TableCell>
-                            <TableCell className="text-right">{formatNumber(capacidadConSalidas)}</TableCell>
+                            <TableCell className="text-right">{formatNumber(capacidadActual)}</TableCell>
                             <TableCell className="text-right font-semibold">
-                              {formatNumber(capacidadConSalidas)}
+                              {formatNumber(capacidadActual)}
                             </TableCell>
                             <TableCell className="text-right">
                               <Badge variant={porcentajeOcupado > 80 ? 'destructive' : porcentajeOcupado > 60 ? 'default' : 'secondary'}>
@@ -1376,7 +1422,8 @@ const Reportes = () => {
                             <TableCell>{a.unidad}</TableCell>
                           </TableRow>
                         );
-                      })}
+                        });
+                      })()}
                     </TableBody>
                   </Table>
                 )}

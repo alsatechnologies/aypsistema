@@ -321,10 +321,11 @@ export async function updateRecepcion(id: number, recepcion: Partial<Recepcion>)
         }
         
         const cantidadActual = inventarioActual?.cantidad || 0;
-        
-        // Si había un peso_neto anterior, primero restarlo (para correcciones)
-        // Luego sumar el nuevo peso_neto
-        const cantidadAjustada = pesoNetoAnterior && pesoNetoAnterior > 0
+
+        // Solo ajustar (restar el anterior y sumar el nuevo) si el estatus anterior
+        // también era 'Completado' — evita resta incorrecta al pasar de En Proceso → Completado
+        const estatusAnteriorRecepcion = recepcionAnterior?.estatus;
+        const cantidadAjustada = (pesoNetoAnterior && pesoNetoAnterior > 0 && estatusAnteriorRecepcion === 'Completado')
           ? cantidadActual - pesoNetoAnterior + pesoNeto
           : cantidadActual + pesoNeto;
         

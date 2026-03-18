@@ -281,6 +281,7 @@ const Reciba = () => {
       await updateRecepcion(selectedRecepcion.id, {
         producto_id: productoSeleccionado,
         proveedor_id: proveedorIdFinal,
+        almacen_id: almacenSeleccionado || null,
         peso_bruto: pesoBruto > 0 ? pesoBruto : null,
         peso_tara: pesoTara > 0 ? pesoTara : null,
         peso_neto: pesoNeto > 0 ? pesoNeto : null,
@@ -381,9 +382,10 @@ const Reciba = () => {
     
     if (!validacion.valid) {
       validacion.errors.forEach(error => toast.error(error));
+      setIsSaving(false);
       return;
     }
-    
+
     // Manejar proveedor personalizado
     let proveedorIdFinal = proveedorSeleccionado;
     if (mostrarProveedorPersonalizado && proveedorPersonalizado.trim()) {
@@ -399,12 +401,14 @@ const Reciba = () => {
         toast.success('Proveedor creado correctamente');
       } catch (error) {
         handleError(error, { module: 'Reciba', action: 'createProveedor' }, 'Error al crear proveedor');
+        setIsSaving(false);
         return;
       }
     }
-    
+
     if (!proveedorIdFinal) {
       toast.error('Debe seleccionar o ingresar un proveedor');
+      setIsSaving(false);
       return;
     }
 
@@ -414,6 +418,7 @@ const Reciba = () => {
       const producto = productosDB.find(p => p.id === productoSeleccionado);
       if (!producto) {
         toast.error('Producto no encontrado');
+        setIsSaving(false);
         return;
       }
 
