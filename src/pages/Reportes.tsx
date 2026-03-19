@@ -1161,7 +1161,7 @@ const Reportes = () => {
                         {filteredRecepciones.map((r) => (
                           <TableRow key={r.id}>
                             <TableCell className="font-medium">{r.boleta}</TableCell>
-                            <TableCell>{format(new Date(r.fecha), 'dd/MM/yyyy', { locale: es })}</TableCell>
+                            <TableCell>{r.fecha ? (() => { const [a,m,d] = r.fecha.split('-'); return `${d}/${m}/${a}`; })() : '-'}</TableCell>
                             <TableCell>{r.producto?.nombre || '-'}</TableCell>
                             <TableCell>{r.proveedor?.empresa || '-'}</TableCell>
                             <TableCell>{r.chofer || '-'}</TableCell>

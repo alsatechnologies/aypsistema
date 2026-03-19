@@ -503,16 +503,15 @@ const EmbarquePage = () => {
       
       const codigoLoteFinal = embarqueActualizado?.codigo_lote;
       
-      // Crear movimiento de salida solo si no existe uno para esta boleta
+      // Crear o actualizar movimiento de salida
       try {
-        const { getMovimientoByBoleta } = await import('@/services/supabase/movimientos');
+        const { getMovimientoByBoleta, updateMovimiento } = await import('@/services/supabase/movimientos');
         const movimientoExistente = await getMovimientoByBoleta(selectedEmbarque.boleta);
-        
+        const almacen = formData.almacenId ? almacenesDB.find(a => a.id === formData.almacenId) : null;
+
         if (!movimientoExistente) {
-          const producto = productosDB.find(p => p.id === selectedEmbarque.productoId);
           const cliente = clientesDB.find(c => c.id === selectedEmbarque.clienteId);
-          const almacen = formData.almacenId ? almacenesDB.find(a => a.id === formData.almacenId) : null;
-          
+
           await createMovimiento({
             boleta: selectedEmbarque.boleta,
             producto_id: selectedEmbarque.productoId || null,
@@ -527,9 +526,18 @@ const EmbarquePage = () => {
             chofer: selectedEmbarque.chofer || null,
             placas: formData.placas || null
           });
+        } else {
+          // Actualizar pesos si cambiaron
+          await updateMovimiento(movimientoExistente.id, {
+            peso_neto: pesoNeto,
+            peso_bruto: formData.pesoBruto,
+            peso_tara: formData.pesoTara,
+            ubicacion: almacen?.nombre || selectedEmbarque.destino || movimientoExistente.ubicacion,
+            placas: formData.placas || null
+          });
         }
       } catch (error) {
-        console.error('Error creating movimiento:', error);
+        console.error('Error creating/updating movimiento:', error);
         // No mostrar error al usuario, solo loguear
       }
       

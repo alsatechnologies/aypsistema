@@ -453,14 +453,13 @@ const Reciba = () => {
       
       // Crear movimiento de entrada solo si no existe uno para esta boleta
       try {
-        const { getMovimientoByBoleta } = await import('@/services/supabase/movimientos');
+        const { getMovimientoByBoleta, updateMovimiento } = await import('@/services/supabase/movimientos');
         const movimientoExistente = await getMovimientoByBoleta(boletaFinal);
-        
+        const almacen = almacenSeleccionado ? almacenesDB.find(a => a.id === almacenSeleccionado) : null;
+
         if (!movimientoExistente) {
-          const producto = productosDB.find(p => p.id === productoSeleccionado);
           const proveedor = proveedoresDB.find(p => p.id === proveedorIdFinal);
-          const almacen = almacenSeleccionado ? almacenesDB.find(a => a.id === almacenSeleccionado) : null;
-          
+
           await createMovimiento({
             boleta: boletaFinal,
             producto_id: productoSeleccionado,
@@ -475,9 +474,18 @@ const Reciba = () => {
             chofer: selectedRecepcion.chofer || null,
             placas: selectedRecepcion.placas || null
           });
+        } else {
+          // Actualizar pesos si cambiaron
+          await updateMovimiento(movimientoExistente.id, {
+            peso_neto: pesoNeto,
+            peso_bruto: pesoBruto,
+            peso_tara: pesoTara,
+            ubicacion: almacen?.nombre || movimientoExistente.ubicacion,
+            placas: selectedRecepcion.placas || null
+          });
         }
       } catch (error) {
-        console.error('Error creating movimiento:', error);
+        console.error('Error creating/updating movimiento:', error);
         // No mostrar error al usuario, solo loguear
       }
       
