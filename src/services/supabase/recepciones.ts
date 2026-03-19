@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase';
 import { generarCodigoLoteParaOperacion } from './lotes';
 import { registrarAuditoria } from './auditoria';
 import { logger } from '@/services/logger';
-import { upsertInventarioAlmacen } from './inventarioAlmacenes';
+import { recalcularInventarioDesdeBase } from './inventarioAlmacenes';
 
 export interface Recepcion {
   id: number;
@@ -298,58 +298,28 @@ export async function updateRecepcion(id: number, recepcion: Partial<Recepcion>)
   const data = dataGuardada;
   
   // SUMAR AL INVENTARIO: Si la recepción está completada y tiene peso_neto y almacen_id
-  // Sumar automáticamente al inventario del almacén correspondiente
-  // (estatusFinal ya fue definido arriba para la generación de lote)
+  // Recalcula desde la base para evitar errores de delta acumulados
   if (estatusFinal === 'Completado' && productoId && almacenId) {
     const pesoNeto = data.peso_neto || recepcion.peso_neto;
-    const pesoNetoAnterior = recepcionAnterior?.peso_neto;
-    
-    // Solo sumar si hay peso_neto válido y es mayor a 0
+
+    // Solo actualizar si hay peso_neto válido y es mayor a 0
     if (pesoNeto && pesoNeto > 0) {
       try {
-        // Obtener inventario actual del almacén para este producto
-        const { data: inventarioActual, error: inventarioError } = await supabase
-          .from('inventario_almacenes')
-          .select('cantidad')
-          .eq('almacen_id', almacenId)
-          .eq('producto_id', productoId)
-          .maybeSingle(); // Usar maybeSingle en lugar de single para evitar error si no existe
-        
-        // Si hay error y no es "no rows", lanzarlo
-        if (inventarioError && inventarioError.code !== 'PGRST116') {
-          throw inventarioError;
-        }
-        
-        const cantidadActual = inventarioActual?.cantidad || 0;
+        const nuevaCantidad = await recalcularInventarioDesdeBase(almacenId, productoId);
 
-        // Solo ajustar (restar el anterior y sumar el nuevo) si el estatus anterior
-        // también era 'Completado' — evita resta incorrecta al pasar de En Proceso → Completado
-        const estatusAnteriorRecepcion = recepcionAnterior?.estatus;
-        const cantidadAjustada = (pesoNetoAnterior && pesoNetoAnterior > 0 && estatusAnteriorRecepcion === 'Completado')
-          ? cantidadActual - pesoNetoAnterior + pesoNeto
-          : cantidadActual + pesoNeto;
-        
-        // Asegurar que no sea negativo
-        const nuevaCantidad = Math.max(0, cantidadAjustada);
-        
-        // Actualizar inventario
-        await upsertInventarioAlmacen(almacenId, productoId, nuevaCantidad);
-        
-        // Actualizar capacidad_actual del almacén sumando todas las cantidades de inventario_almacenes
+        // Actualizar capacidad_actual del almacén
         try {
           const { actualizarCapacidadActualAlmacen } = await import('./inventarioAlmacenes');
           await actualizarCapacidadActualAlmacen(almacenId);
         } catch (errorCapacidad) {
-          // Log el error pero no fallar el proceso
           console.error(`[RECEPCIONES] Error al actualizar capacidad_actual del almacén ${almacenId}:`, errorCapacidad);
         }
-        
+
         logger.info(`Inventario actualizado para recepción ${id}`, {
           recepcionId: id,
           almacenId,
           productoId,
           pesoNeto,
-          cantidadAnterior: cantidadActual,
           cantidadNueva: nuevaCantidad
         }, 'Recepciones');
       } catch (inventarioError) {

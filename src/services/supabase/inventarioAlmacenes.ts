@@ -193,6 +193,54 @@ export async function deleteInventarioAlmacen(id: number) {
   });
 }
 
+// Recalcular inventario desde la base + movimientos nuevos
+// Evita errores de delta: siempre calcula base + entradas - salidas
+export async function recalcularInventarioDesdeBase(
+  almacenId: number,
+  productoId: number
+): Promise<number> {
+  if (!supabase) throw new Error('Supabase no está configurado');
+
+  // Obtener base y IDs de corte
+  const { data: inv } = await supabase
+    .from('inventario_almacenes')
+    .select('cantidad_base, base_max_recepcion_id, base_max_embarque_id')
+    .eq('almacen_id', almacenId)
+    .eq('producto_id', productoId)
+    .single();
+
+  const cantidadBase = Number(inv?.cantidad_base) || 0;
+  const maxRecepcionId = Number(inv?.base_max_recepcion_id) || 0;
+  const maxEmbarqueId = Number(inv?.base_max_embarque_id) || 0;
+
+  // Sumar recepciones nuevas (id > maxRecepcionId, Completado)
+  const { data: recepciones } = await supabase
+    .from('recepciones')
+    .select('peso_neto')
+    .eq('almacen_id', almacenId)
+    .eq('producto_id', productoId)
+    .eq('estatus', 'Completado')
+    .gt('id', maxRecepcionId);
+
+  // Sumar embarques nuevos (id > maxEmbarqueId, Completado)
+  const { data: embarques } = await supabase
+    .from('embarques')
+    .select('peso_neto')
+    .eq('almacen_id', almacenId)
+    .eq('producto_id', productoId)
+    .eq('estatus', 'Completado')
+    .gt('id', maxEmbarqueId);
+
+  const totalEntradas = (recepciones || []).reduce((s, r) => s + (Number(r.peso_neto) || 0), 0);
+  const totalSalidas = (embarques || []).reduce((s, e) => s + (Number(e.peso_neto) || 0), 0);
+
+  const nuevaCantidad = Math.max(0, cantidadBase + totalEntradas - totalSalidas);
+
+  await upsertInventarioAlmacen(almacenId, productoId, nuevaCantidad);
+
+  return nuevaCantidad;
+}
+
 // Actualizar capacidad_actual del almacén basado en la suma de productos
 export async function actualizarCapacidadActualAlmacen(almacenId: number) {
   if (!supabase) {

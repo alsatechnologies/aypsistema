@@ -312,7 +312,7 @@ const Reportes = () => {
       ).sort();
 
       const headers = [
-        'Boleta', 'Fecha', 'Producto', 'Proveedor', 'Chofer', 'Placas',
+        'Boleta', 'Fecha', 'Producto', 'Proveedor', 'Procedencia', 'Almacén', 'Chofer', 'Placas',
         'Peso Bruto (Kg)', 'Peso Tara (Kg)', 'Peso Neto (Kg)',
         'Deducción (Kg)', 'A Liquidar (Kg)', 'Lote', 'Estatus',
         ...nombresAnalisis  // Análisis al final
@@ -322,12 +322,17 @@ const Reportes = () => {
         const deduccion = calcularDeduccion(r);
         const pesoNeto = r.peso_neto || 0;
         const valoresAnalisis = r.analisis || {};
+        const almacenNombre = r.almacen_id
+          ? (almacenes.find(a => a.id === r.almacen_id)?.nombre || '')
+          : '';
 
         const row: Record<string, any> = {
           boleta: r.boleta,
           fecha: r.fecha,
           producto: r.producto?.nombre || '',
           proveedor: r.proveedor?.empresa || '',
+          Procedencia: (r as any).destino || '',
+          Almacén: almacenNombre,
           chofer: r.chofer || '',
           placas: r.placas || '',
           peso_bruto: r.peso_bruto || 0,
@@ -358,13 +363,14 @@ const Reportes = () => {
   };
 
   const handleExportSalidas = () => {
-    const headers = ['Boleta', 'Fecha', 'Producto', 'Cliente', 'Destino', 'Chofer', 'Placas', 'Peso Bruto (Kg)', 'Peso Tara (Kg)', 'Peso Neto (Kg)', 'Lote', 'Estatus'];
+    const headers = ['Boleta', 'Fecha', 'Producto', 'Cliente', 'Destino', 'Almacén', 'Chofer', 'Placas', 'Peso Bruto (Kg)', 'Peso Tara (Kg)', 'Peso Neto (Kg)', 'Lote', 'Estatus'];
     const data = filteredEmbarques.map(e => ({
       boleta: e.boleta,
       fecha: e.fecha,
       producto: e.producto?.nombre || '',
       cliente: e.cliente?.empresa || '',
       destino: e.destino || '',
+      Almacén: e.almacen_id ? (almacenes.find(a => a.id === e.almacen_id)?.nombre || '') : '',
       chofer: e.chofer || '',
       placas: e.placas || '',
       peso_bruto: e.peso_bruto || 0,

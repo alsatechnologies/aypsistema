@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase';
 import { generarCodigoLoteParaOperacion } from './lotes';
 import { registrarAuditoria } from './auditoria';
 import { logger } from '@/services/logger';
-import { upsertInventarioAlmacen } from './inventarioAlmacenes';
+import { recalcularInventarioDesdeBase } from './inventarioAlmacenes';
 
 export interface Embarque {
   id: number;
@@ -333,50 +333,28 @@ export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
   const data = dataGuardada;
   
   // RESTAR DEL INVENTARIO: Si el embarque está completado y tiene peso_neto y almacen_id
-  // Restar automáticamente del inventario del almacén correspondiente
+  // Recalcula desde la base para evitar errores de delta acumulados
   if (estatusFinal === 'Completado' && productoId && almacenId) {
     const pesoNeto = data.peso_neto || embarque.peso_neto;
-    const pesoNetoAnterior = embarqueAnterior?.peso_neto;
-    
-    // Solo restar si hay peso_neto válido y es mayor a 0
+
+    // Solo actualizar si hay peso_neto válido y es mayor a 0
     if (pesoNeto && pesoNeto > 0) {
       try {
-        // Obtener inventario actual del almacén para este producto
-        const { data: inventarioActual } = await supabase
-          .from('inventario_almacenes')
-          .select('cantidad')
-          .eq('almacen_id', almacenId)
-          .eq('producto_id', productoId)
-          .single();
-        
-        const cantidadActual = inventarioActual?.cantidad || 0;
-        
-        // Si había un peso_neto anterior, primero sumarlo de vuelta (para correcciones)
-        const cantidadAjustada = pesoNetoAnterior && pesoNetoAnterior > 0
-          ? cantidadActual + pesoNetoAnterior - pesoNeto
-          : cantidadActual - pesoNeto;
-        
-        // Asegurar que no sea negativo
-        const nuevaCantidad = Math.max(0, cantidadAjustada);
-        
-        // Actualizar inventario
-        await upsertInventarioAlmacen(almacenId, productoId, nuevaCantidad);
-        
-        // Actualizar capacidad_actual del almacén sumando todas las cantidades de inventario_almacenes
+        const nuevaCantidad = await recalcularInventarioDesdeBase(almacenId, productoId);
+
+        // Actualizar capacidad_actual del almacén
         try {
           const { actualizarCapacidadActualAlmacen } = await import('./inventarioAlmacenes');
           await actualizarCapacidadActualAlmacen(almacenId);
         } catch (errorCapacidad) {
-          // Log el error pero no fallar el proceso
           console.error(`[EMBARQUES] Error al actualizar capacidad_actual del almacén ${almacenId}:`, errorCapacidad);
         }
-        
+
         logger.info(`Inventario actualizado para embarque ${id}`, {
           embarqueId: id,
           almacenId,
           productoId,
           pesoNeto,
-          cantidadAnterior: cantidadActual,
           cantidadNueva: nuevaCantidad
         }, 'Embarques');
       } catch (inventarioError) {
