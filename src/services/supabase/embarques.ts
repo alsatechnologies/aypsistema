@@ -292,7 +292,21 @@ export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
       }
       
       logger.info(`Código de lote generado y asignado para embarque ${id}: ${codigo}`, { embarqueId: id, codigo }, 'Embarques');
-      
+
+      // Actualizar inventario antes de retornar (el return temprano lo saltaba)
+      if (productoId && almacenId) {
+        const pesoNetoFinal = dataActualizada.peso_neto || embarque.peso_neto;
+        if (pesoNetoFinal && pesoNetoFinal > 0) {
+          try {
+            await recalcularInventarioDesdeBase(almacenId, productoId);
+            const { actualizarCapacidadActualAlmacen } = await import('./inventarioAlmacenes');
+            await actualizarCapacidadActualAlmacen(almacenId);
+          } catch (errorInv) {
+            console.error(`[EMBARQUES] Error al actualizar inventario para embarque ${id}:`, errorInv);
+          }
+        }
+      }
+
       // Retornar la boleta actualizada con el lote
       return dataActualizada;
     } catch (error) {
