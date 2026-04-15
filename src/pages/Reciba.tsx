@@ -23,6 +23,8 @@ import { generarCodigoLoteParaOperacion } from '@/services/supabase/lotes';
 import { useRecepciones } from '@/services/hooks/useRecepciones';
 import { useProductos } from '@/services/hooks/useProductos';
 import { useProveedores } from '@/services/hooks/useProveedores';
+import { getProveedores } from '@/services/supabase/proveedores';
+import type { Proveedor } from '@/services/supabase/proveedores';
 import { useAlmacenes } from '@/services/hooks/useAlmacenes';
 import { getOrdenByBoleta } from '@/services/supabase/ordenes';
 import { getProductoConAnalisis } from '@/services/supabase/productos';
@@ -72,8 +74,13 @@ const Reciba = () => {
   const { usuario } = useAuth();
   const { recepciones: recepcionesDB, loading, loadingMore, hasMore, addRecepcion, updateRecepcion, loadRecepciones, loadMore } = useRecepciones();
   const { productos: productosDB } = useProductos();
-  const { proveedores: proveedoresDB, addProveedor } = useProveedores();
+  const { addProveedor } = useProveedores();
+  const [proveedoresDB, setProveedoresDB] = useState<Proveedor[]>([]);
   const { almacenes: almacenesDB } = useAlmacenes();
+
+  useEffect(() => {
+    getProveedores().then(data => setProveedoresDB(data as Proveedor[])).catch(console.error);
+  }, []);
   
   const [search, setSearch] = useState('');
   const [selectedRecepcion, setSelectedRecepcion] = useState<Recepcion | null>(null);
