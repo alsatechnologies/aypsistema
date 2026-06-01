@@ -212,6 +212,7 @@ const Oficina = () => {
             boleta: boletaFinal,
             producto_id: parseInt(nuevaOrdenData.productoId),
             proveedor_id: parseInt(nuevaOrdenData.proveedorId),
+            procedencia: nuevaOrdenData.destino || null,
             chofer: nuevaOrdenData.chofer || null,
             placas: nuevaOrdenData.placas || null,
             fecha: fechaMST,
@@ -357,6 +358,7 @@ const Oficina = () => {
             const recepcionData = {
               producto_id: data.producto_id,
               proveedor_id: data.proveedor_id,
+              procedencia: orden.destino || null,
               chofer: orden.nombre_chofer || null,
               placas: orden.placas || null,
               fecha: fechaMST,

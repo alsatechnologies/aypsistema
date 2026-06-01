@@ -331,7 +331,7 @@ const Reportes = () => {
           fecha: r.fecha,
           producto: r.producto?.nombre || '',
           proveedor: r.proveedor?.empresa || '',
-          Procedencia: (r as any).destino || '',
+          Procedencia: r.procedencia || '',
           Almacén: almacenNombre,
           chofer: r.chofer || '',
           placas: r.placas || '',

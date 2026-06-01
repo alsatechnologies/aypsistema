@@ -275,6 +275,7 @@ const Ingreso = () => {
             boleta: ticketTemporal, // Boleta temporal con formato TEMP-YYYYMMDDHHMMSS
             producto_id: null, // Se completará en Reciba
             proveedor_id: null, // Se completará en Reciba
+            procedencia: data.procedenciaDestino || null,
             chofer: data.nombreChofer,
             placas: data.placas || null,
             fecha: fechaFormato,

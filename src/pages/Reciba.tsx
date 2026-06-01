@@ -51,6 +51,7 @@ interface Recepcion {
   proveedor: string;
   chofer?: string | null;
   placas?: string | null;
+  procedencia?: string | null;
   fecha: string;
   created_at?: string;
   estatus: 'Pendiente' | 'Peso Bruto' | 'En Descarga' | 'Peso Tara' | 'Completado';
@@ -119,6 +120,7 @@ const Reciba = () => {
     proveedor: r.proveedor?.empresa || '',
     chofer: r.chofer,
     placas: r.placas,
+    procedencia: r.procedencia,
     fecha: r.fecha,
     created_at: r.created_at,
     estatus: r.estatus as any,
@@ -677,7 +679,7 @@ const Reciba = () => {
         lote: selectedRecepcion.codigoLote || '',
         productor: proveedor.empresa,
         producto: producto.nombre,
-        procedencia: selectedRecepcion.destino || 'N/A',
+        procedencia: selectedRecepcion.procedencia || 'N/A',
         vehiculo: nombreVehiculo,
         placas: selectedRecepcion.placas || 'N/A',
         chofer: selectedRecepcion.chofer || 'N/A',
@@ -958,6 +960,12 @@ const Reciba = () => {
                       <p className="font-medium">{selectedRecepcion.chofer}</p>
                       <p className="text-sm font-mono text-muted-foreground">{selectedRecepcion.placas}</p>
                     </div>
+                    {selectedRecepcion.procedencia && (
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Procedencia</Label>
+                        <p className="font-medium">{selectedRecepcion.procedencia}</p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Segunda fila: Producto, Proveedor, Almacén */}

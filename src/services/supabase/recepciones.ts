@@ -12,6 +12,7 @@ export interface Recepcion {
   proveedor_id?: number | null;
   chofer?: string | null;
   placas?: string | null;
+  procedencia?: string | null;
   fecha: string;
   estatus: string;
   peso_bruto?: number | null;
