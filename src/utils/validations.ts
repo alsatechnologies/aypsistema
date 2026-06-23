@@ -213,7 +213,7 @@ export function puedeModificarRegistro(estatus: string, rolUsuario?: string): Va
   const errors: string[] = [];
 
   // Administrador y Oficina pueden modificar registros completados
-  const puedeModificarCompletados = rolUsuario === 'Administrador' || rolUsuario === 'Oficina';
+  const puedeModificarCompletados = rolUsuario === 'Administrador' || rolUsuario === 'Oficina' || rolUsuario === 'Báscula';
 
   if (estatus === 'Completado' && !puedeModificarCompletados) {
     errors.push('No se puede modificar un registro completado. Contacte al administrador si necesita hacer cambios.');
