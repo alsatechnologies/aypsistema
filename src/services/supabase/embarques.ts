@@ -34,6 +34,7 @@ export interface Embarque {
   hora_peso_bruto?: string | null;
   hora_peso_tara?: string | null;
   hora_peso_neto?: string | null;
+  hora_ingreso?: string | null;
   observaciones?: string | null;
   created_at?: string;
   updated_at?: string;

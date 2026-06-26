@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Truck, Train, Plus, Ship } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Truck, Train, Plus, Ship, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Producto } from '@/services/supabase/productos';
 import type { Cliente } from '@/services/supabase/clientes';
@@ -20,10 +21,15 @@ interface NuevoEmbarqueDialogProps {
     chofer: string;
     tipoTransporte: 'Camión' | 'Ferroviaria';
     tipoEmbarque: 'Nacional' | 'Exportación';
+    fecha?: string;
+    hora?: string;
   }) => void;
   productos: Producto[];
   clientes: Cliente[];
 }
+
+const todayISO = () => new Date().toISOString().split('T')[0];
+const nowTime = () => new Date().toTimeString().slice(0, 5);
 
 const NuevoEmbarqueDialog = ({ open, onOpenChange, onCrear, productos, clientes }: NuevoEmbarqueDialogProps) => {
   const [tipoTransporte, setTipoTransporte] = useState<'Camión' | 'Ferroviaria'>('Camión');
@@ -32,10 +38,17 @@ const NuevoEmbarqueDialog = ({ open, onOpenChange, onCrear, productos, clientes 
   const [clienteId, setClienteId] = useState<string>('');
   const [destino, setDestino] = useState('');
   const [chofer, setChofer] = useState('');
+  const [usarFechaPersonalizada, setUsarFechaPersonalizada] = useState(false);
+  const [fechaPersonalizada, setFechaPersonalizada] = useState(todayISO());
+  const [horaPersonalizada, setHoraPersonalizada] = useState(nowTime());
 
   const handleCrear = () => {
     if (!productoId || !clienteId || !destino || !chofer) {
       toast.error('Todos los campos son requeridos');
+      return;
+    }
+    if (usarFechaPersonalizada && !fechaPersonalizada) {
+      toast.error('Selecciona una fecha');
       return;
     }
 
@@ -45,7 +58,9 @@ const NuevoEmbarqueDialog = ({ open, onOpenChange, onCrear, productos, clientes 
       destino,
       chofer,
       tipoTransporte,
-      tipoEmbarque
+      tipoEmbarque,
+      fecha: usarFechaPersonalizada ? fechaPersonalizada : undefined,
+      hora: usarFechaPersonalizada ? horaPersonalizada : undefined,
     });
 
     // Reset form
@@ -55,6 +70,9 @@ const NuevoEmbarqueDialog = ({ open, onOpenChange, onCrear, productos, clientes 
     setChofer('');
     setTipoTransporte('Camión');
     setTipoEmbarque('Nacional');
+    setUsarFechaPersonalizada(false);
+    setFechaPersonalizada(todayISO());
+    setHoraPersonalizada(nowTime());
     onOpenChange(false);
   };
 
@@ -156,11 +174,46 @@ const NuevoEmbarqueDialog = ({ open, onOpenChange, onCrear, productos, clientes 
           {/* Chofer */}
           <div className="space-y-2">
             <Label>{tipoTransporte === 'Ferroviaria' ? 'Operador' : 'Chofer'}</Label>
-            <Input 
+            <Input
               value={chofer}
               onChange={(e) => setChofer(e.target.value)}
               placeholder={tipoTransporte === 'Ferroviaria' ? 'Nombre del operador' : 'Nombre del chofer'}
             />
+          </div>
+
+          {/* Fecha personalizada */}
+          <div className="border rounded-lg p-3 space-y-3 bg-muted/30">
+            <div className="flex items-center justify-between">
+              <Label className="flex items-center gap-2 cursor-pointer" htmlFor="fecha-custom-embarque">
+                <Calendar className="h-4 w-4" />
+                Fecha/hora personalizada
+              </Label>
+              <Switch
+                id="fecha-custom-embarque"
+                checked={usarFechaPersonalizada}
+                onCheckedChange={setUsarFechaPersonalizada}
+              />
+            </div>
+            {usarFechaPersonalizada && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Fecha</Label>
+                  <Input
+                    type="date"
+                    value={fechaPersonalizada}
+                    onChange={(e) => setFechaPersonalizada(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Hora</Label>
+                  <Input
+                    type="time"
+                    value={horaPersonalizada}
+                    onChange={(e) => setHoraPersonalizada(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

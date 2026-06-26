@@ -16,6 +16,7 @@ interface Embarque {
   destino: string;
   chofer: string;
   fecha: string;
+  hora_ingreso?: string | null;
   tipoTransporte: 'Camión' | 'Ferroviaria';
   tipoEmbarque: 'Nacional' | 'Exportación';
   estatus: string;
@@ -69,8 +70,13 @@ const BoletaEmbarqueDialog: React.FC<BoletaEmbarqueDialogProps> = ({ open, onOpe
           }))
         : [];
 
-      const fechaActual = format(new Date(), 'dd/MM/yyyy', { locale: es });
-      
+      const fechaBase = embarque.fecha
+        ? embarque.fecha.split('-').reverse().join('/')
+        : format(new Date(), 'dd/MM/yyyy', { locale: es });
+      const fechaActual = embarque.hora_ingreso
+        ? `${fechaBase} ${embarque.hora_ingreso}`
+        : fechaBase;
+
       const boletaData = {
         boleta_no: embarque.boleta,
         fecha: fechaActual,
@@ -219,7 +225,8 @@ const BoletaEmbarqueDialog: React.FC<BoletaEmbarqueDialogProps> = ({ open, onOpe
                 </Badge>
               </div>
               <p className="text-sm text-muted-foreground mt-2">
-                Fecha: {format(new Date(), "dd/MM/yyyy HH:mm", { locale: es })}
+                Fecha: {embarque.fecha ? embarque.fecha.split('-').reverse().join('/') : format(new Date(), 'dd/MM/yyyy', { locale: es })}
+                {embarque.hora_ingreso ? `  ${embarque.hora_ingreso} hrs` : ''}
               </p>
             </div>
 

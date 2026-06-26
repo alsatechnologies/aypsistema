@@ -216,12 +216,45 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       const busqueda = usuarioOCorreo.toLowerCase().trim();
       console.log('🔐 Iniciando login para:', busqueda);
-      
-      // Buscar usuario usando función serverless (más confiable)
-      console.log('🔍 Buscando usuario...');
+
       let usuarioData = null;
       let usuarioError = null;
-      
+
+      // En desarrollo local, usar fetch directo (evita problemas del cliente JS con WebSockets)
+      if (import.meta.env.DEV) {
+        console.log('🔍 [DEV] Buscando usuario via fetch directo...');
+        const SUPA_URL = import.meta.env.VITE_SUPABASE_URL;
+        const SUPA_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+        const headers = { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` };
+
+        try {
+          // Buscar por nombre_usuario
+          const r1 = await fetch(
+            `${SUPA_URL}/rest/v1/usuarios?nombre_usuario=eq.${encodeURIComponent(busqueda)}&activo=eq.true&select=*`,
+            { headers }
+          );
+          const d1 = await r1.json();
+          if (Array.isArray(d1) && d1.length > 0) {
+            usuarioData = d1[0];
+          } else {
+            // Buscar por correo
+            const r2 = await fetch(
+              `${SUPA_URL}/rest/v1/usuarios?correo=eq.${encodeURIComponent(busqueda)}&activo=eq.true&select=*`,
+              { headers }
+            );
+            const d2 = await r2.json();
+            if (Array.isArray(d2) && d2.length > 0) {
+              usuarioData = d2[0];
+            } else {
+              usuarioError = { message: 'Usuario no encontrado' };
+            }
+          }
+        } catch (e) {
+          toast.error('Error de conexión con Supabase. Verifica tu red.');
+          return false;
+        }
+      } else {
+      // En producción, usar función serverless
       try {
         console.log('   Llamando a función serverless para buscar usuario...');
         const searchResponse = await Promise.race([
@@ -232,96 +265,53 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             },
             body: JSON.stringify({ busqueda }),
           }),
-          new Promise((_, reject) => 
+          new Promise((_, reject) =>
             setTimeout(() => reject(new Error('Timeout en búsqueda después de 5 segundos')), 5000)
           )
         ]) as Response;
 
-        // Si el endpoint no existe (404) o hay error, usar fallback inmediatamente
         if (!searchResponse.ok) {
-          if (searchResponse.status === 404) {
-            console.warn('⚠️ Endpoint /api/get-user-for-login no encontrado (404), usando fallback directo...');
-          } else {
-            console.warn(`⚠️ Error en /api/get-user-for-login (${searchResponse.status}), usando fallback directo...`);
-          }
           throw new Error('Endpoint no disponible, usando fallback');
         }
 
         const result = await searchResponse.json();
-        
+
         if (result.success && result.usuario) {
-          console.log('✅ Usuario encontrado:', result.usuario);
           usuarioData = result.usuario;
         } else {
-          console.error('❌ Error en búsqueda:', result.error);
           usuarioError = { message: result.error || 'Usuario no encontrado' };
         }
       } catch (timeoutError) {
         console.warn('⚠️ Error con función serverless, usando fallback directo:', timeoutError);
-        // Fallback: intentar búsqueda directa si la función serverless falla
-        console.log('   Intentando búsqueda directa como fallback...');
         try {
-          if (!supabase) {
-            const errorMsg = 'Supabase no está configurado en el navegador. Verifica VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY.';
-            console.error('❌', errorMsg);
-            toast.error(errorMsg);
-            throw new Error(errorMsg);
-          }
-
-          // Buscar por nombre_usuario primero
-          const busquedaLower = busqueda.toLowerCase().trim();
-          console.log('   Buscando usuario por nombre_usuario:', busquedaLower);
-          const { data: dataPorUsuario, error: errorPorUsuario } = await supabase
+          const { data: dataPorUsuario } = await supabase
             .from('usuarios')
             .select('*')
             .eq('activo', true)
-            .eq('nombre_usuario', busquedaLower)
+            .eq('nombre_usuario', busqueda)
             .maybeSingle();
-          
-          if (dataPorUsuario && !errorPorUsuario) {
-            console.log('✅ Usuario encontrado (fallback directo por nombre_usuario)');
+
+          if (dataPorUsuario) {
             usuarioData = dataPorUsuario;
-          } else if (errorPorUsuario) {
-            console.error('❌ Error buscando por nombre_usuario:', errorPorUsuario);
-            // Buscar por correo
-            console.log('   Buscando usuario por correo:', busquedaLower);
-            const { data: dataPorCorreo, error: errorPorCorreo } = await supabase
-              .from('usuarios')
-              .select('*')
-              .eq('activo', true)
-              .eq('correo', busquedaLower)
-              .maybeSingle();
-            
-            if (dataPorCorreo && !errorPorCorreo) {
-              console.log('✅ Usuario encontrado (fallback directo por correo)');
-              usuarioData = dataPorCorreo;
-            } else {
-              console.error('❌ Error buscando por correo:', errorPorCorreo);
-              usuarioError = errorPorCorreo || { message: 'Usuario no encontrado' };
-            }
           } else {
-            // No se encontró por nombre_usuario, intentar por correo
-            console.log('   Usuario no encontrado por nombre_usuario, buscando por correo...');
             const { data: dataPorCorreo, error: errorPorCorreo } = await supabase
               .from('usuarios')
               .select('*')
               .eq('activo', true)
-              .eq('correo', busquedaLower)
+              .eq('correo', busqueda)
               .maybeSingle();
-            
-            if (dataPorCorreo && !errorPorCorreo) {
-              console.log('✅ Usuario encontrado (fallback directo por correo)');
+
+            if (dataPorCorreo) {
               usuarioData = dataPorCorreo;
             } else {
-              console.error('❌ Usuario no encontrado ni por nombre_usuario ni por correo');
               usuarioError = errorPorCorreo || { message: 'Usuario no encontrado' };
             }
           }
         } catch (fallbackError) {
-          console.error('❌ Error en fallback:', fallbackError);
           const errorMessage = fallbackError instanceof Error ? fallbackError.message : 'Error desconocido';
-          usuarioError = { message: errorMessage || 'Error al buscar usuario. Verifica tu conexión y las variables de entorno.' };
+          usuarioError = { message: errorMessage };
         }
+      }
       }
 
       if (usuarioError) {
@@ -352,153 +342,74 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log('   Email:', usuarioData.correo);
       console.log('   Contraseña proporcionada:', contrasena ? '***' : 'NO');
 
-      // Intentar autenticación usando función serverless (más confiable)
-      console.log('   Llamando a función serverless para autenticar...');
-      
       let authData = null;
       let authError = null;
-      
-      try {
-        const authResponse = await Promise.race([
-          fetch('/api/auth-login', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
+
+      if (import.meta.env.DEV) {
+        // En desarrollo, ir directo a Supabase Auth con timeout
+        console.log('🔑 [DEV] Autenticando directamente con Supabase...');
+        try {
+          const result = await Promise.race([
+            supabase.auth.signInWithPassword({
               email: usuarioData.correo,
               password: contrasena,
             }),
-          }),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Timeout en autenticación después de 15 segundos')), 15000)
-          )
-        ]) as Response;
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('Timeout: Supabase no responde')), 8000)
+            )
+          ]) as any;
+          if (result.data?.user && !result.error) {
+            authData = result.data;
+          } else {
+            authError = result.error || { message: 'Credenciales incorrectas' };
+          }
+        } catch (e) {
+          authError = { message: e instanceof Error ? e.message : 'Error de autenticación' };
+        }
+      } else {
+        // En producción, usar función serverless
+        try {
+          const authResponse = await Promise.race([
+            fetch('/api/auth-login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: usuarioData.correo, password: contrasena }),
+            }),
+            new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('Timeout')), 15000)
+            )
+          ]) as Response;
 
-        const result = await authResponse.json();
-        
-        if (result.success && result.user) {
-          console.log('✅ Autenticación exitosa vía serverless');
-          authData = { user: result.user, session: result.session };
-          
-          // Establecer la sesión en el cliente de Supabase (IMPORTANTE para RLS)
-          if (supabase && result.session) {
-            console.log('   Estableciendo sesión en cliente Supabase...');
-            try {
-              const { error: sessionError } = await supabase.auth.setSession({
+          const result = await authResponse.json();
+
+          if (result.success && result.user) {
+            authData = { user: result.user, session: result.session };
+            if (supabase && result.session) {
+              await supabase.auth.setSession({
                 access_token: result.session.access_token,
                 refresh_token: result.session.refresh_token,
               });
-              
-              if (sessionError) {
-                console.error('❌ Error estableciendo sesión:', sessionError);
-              } else {
-                console.log('   ✅ Sesión establecida correctamente');
-              }
-            } catch (sessionErr) {
-              console.error('❌ Error al establecer sesión:', sessionErr);
             }
-          }
-        } else {
-          console.error('❌ Error en autenticación:', result.error);
-          authError = { message: result.error || 'Error al autenticar' };
-        }
-      } catch (timeoutError) {
-        console.error('❌ Timeout o error en autenticación serverless:', timeoutError);
-        // Fallback: intentar autenticación directa
-        console.log('   Intentando autenticación directa como fallback...');
-        try {
-          if (!supabase) {
-            throw new Error('Supabase no está configurado en el navegador');
-          }
-
-          const directAuth = await Promise.race([
-            supabase.auth.signInWithPassword({
-              email: usuarioData.correo,
-              password: contrasena
-            }),
-            new Promise((_, reject) => 
-              setTimeout(() => reject(new Error('Timeout en autenticación directa')), 10000)
-            )
-          ]) as any;
-          
-          if (directAuth.data && !directAuth.error) {
-            console.log('✅ Autenticación exitosa (fallback directo)');
-            authData = directAuth.data;
           } else {
-            console.error('❌ Error en autenticación directa:', directAuth.error);
-            authError = directAuth.error || { message: 'Error al autenticar' };
+            authError = { message: result.error || 'Error al autenticar' };
           }
-        } catch (fallbackError) {
-          console.error('❌ Error en fallback de autenticación:', fallbackError);
-          const errorMsg = fallbackError instanceof Error ? fallbackError.message : 'Error desconocido';
-          authError = { message: errorMsg || 'Error al autenticar. Verifica tu conexión y que el usuario exista en auth.users.' };
+        } catch {
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email: usuarioData.correo,
+            password: contrasena,
+          });
+          if (data?.user && !error) {
+            authData = data;
+          } else {
+            authError = error || { message: 'Error al autenticar' };
+          }
         }
       }
 
       if (authError) {
-        // Si el error es que el usuario no existe en auth.users, intentar crearlo automáticamente
-        if (authError.message?.includes('Invalid login credentials') || 
-            authError.message?.includes('User not found')) {
-          console.log('🔄 Usuario no existe en auth.users, intentando crearlo automáticamente...');
-          
-          try {
-            const createAuthResponse = await fetch('/api/create-auth-user', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                email: usuarioData.correo,
-                password: contrasena,
-                nombre_completo: usuarioData.nombre_completo,
-                nombre_usuario: usuarioData.nombre_usuario || null,
-                rol: usuarioData.rol
-              }),
-            });
-
-            if (createAuthResponse.ok) {
-              console.log('✅ Usuario creado automáticamente en auth.users, reintentando login...');
-              // Reintentar login después de crear el usuario
-              const retryAuthResponse = await fetch('/api/auth-login', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  email: usuarioData.correo,
-                  password: contrasena,
-                }),
-              });
-
-              const retryResult = await retryAuthResponse.json();
-              
-              if (retryResult.success && retryResult.user) {
-                authData = { user: retryResult.user, session: retryResult.session };
-                
-                // Establecer la sesión en el cliente de Supabase
-                if (supabase && retryResult.session) {
-                  await supabase.auth.setSession({
-                    access_token: retryResult.session.access_token,
-                    refresh_token: retryResult.session.refresh_token,
-                  });
-                }
-              } else {
-                throw new Error(retryResult.error || 'Error al autenticar después de crear usuario');
-              }
-            } else {
-              throw new Error('No se pudo crear usuario en auth.users');
-            }
-          } catch (autoCreateError) {
-            console.error('❌ Error al crear usuario automáticamente:', autoCreateError);
-            toast.error('Usuario o contraseña incorrectos. Si el problema persiste, contacta al administrador.');
-            return false;
-          }
-        } else {
-          console.error('❌ Error de autenticación:', authError);
-          toast.error(authError.message || 'Usuario o contraseña incorrectos');
-          return false;
-        }
+        console.error('❌ Error de autenticación:', authError);
+        toast.error((authError as any).message || 'Usuario o contraseña incorrectos');
+        return false;
       }
 
       if (!authData?.user) {

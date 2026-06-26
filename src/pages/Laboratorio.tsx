@@ -111,7 +111,9 @@ const Laboratorio = () => {
     aceiteOleico: '',
     aceiteHumedad: '',
     aceiteFlashPoint: '+' as '+' | '-',
-    aceiteFlashPointValor: ''
+    aceiteFlashPointValor: '',
+    aceiteObservaciones: '',
+    observacionesGenerales: ''
   });
 
   const { reportes: reportesDB, loading, addReporte, updateReporte, deleteReporte, loadReportes } = useLaboratorio();
@@ -268,7 +270,9 @@ const Laboratorio = () => {
         expander_costra_vibrador_humedad: formData.expanderCostraVibradorHumedad ? parseFloat(formData.expanderCostraVibradorHumedad) : null,
         expander_costra_directa_residual: formData.expanderCostraDirectaResidual ? parseFloat(formData.expanderCostraDirectaResidual) : null,
         expander_costra_directa_humedad: formData.expanderCostraDirectaHumedad ? parseFloat(formData.expanderCostraDirectaHumedad) : null,
-        expander_aceite: expanderAceite.length > 0 ? expanderAceite : null
+        expander_aceite: expanderAceite.length > 0 ? expanderAceite : null,
+        aceite_observaciones: formData.aceiteObservaciones || null,
+        observaciones_generales: formData.observacionesGenerales || null
       });
       
       await loadReportes();
@@ -300,7 +304,9 @@ const Laboratorio = () => {
         aceiteOleico: '',
         aceiteHumedad: '',
         aceiteFlashPoint: '+',
-        aceiteFlashPointValor: ''
+        aceiteFlashPointValor: '',
+        aceiteObservaciones: '',
+        observacionesGenerales: ''
       });
       setIsNuevoReporteOpen(false);
       toast.success('Reporte de laboratorio creado');
@@ -669,15 +675,25 @@ const Laboratorio = () => {
                     {formData.aceiteFlashPoint === '+' && (
                       <div className="space-y-2">
                         <Label>Valor Flash Point</Label>
-                        <Input 
-                          type="number" 
-                          step="0.01" 
+                        <Input
+                          type="number"
+                          step="0.01"
                           placeholder="Ej: 250"
-                          value={formData.aceiteFlashPointValor} 
-                          onChange={(e) => setFormData({ ...formData, aceiteFlashPointValor: e.target.value })} 
+                          value={formData.aceiteFlashPointValor}
+                          onChange={(e) => setFormData({ ...formData, aceiteFlashPointValor: e.target.value })}
                         />
                       </div>
                     )}
+                    <div className="col-span-2 space-y-2">
+                      <Label>Observaciones (Horario / Temperatura)</Label>
+                      <textarea
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                        rows={2}
+                        placeholder="Ej: 08:00 hrs - 55°C"
+                        value={formData.aceiteObservaciones}
+                        onChange={(e) => setFormData({ ...formData, aceiteObservaciones: e.target.value })}
+                      />
+                    </div>
                   </div>
                 </div>
                 </div>
@@ -809,18 +825,17 @@ const Laboratorio = () => {
                     </Button>
                   </div>
                   <div className="space-y-2">
-                    <div className="grid grid-cols-5 gap-2 font-semibold text-sm border-b pb-2">
+                    <div className="grid grid-cols-4 gap-2 font-semibold text-sm border-b pb-2">
                       <div>Tipo</div>
-                      <div>Filtro</div>
                       <div>HUMEDAD (%)</div>
                       <div>ACIDEZ (%)</div>
                       <div>ÁCIDO OLEICO (%)</div>
                     </div>
                     {formData.expanderAceite.map((item, index) => (
-                      <div key={index} className="grid grid-cols-5 gap-2 items-end">
+                      <div key={index} className="grid grid-cols-4 gap-2 items-end">
                         <div className="space-y-2">
-                          <Select 
-                            value={item.tipo} 
+                          <Select
+                            value={item.tipo}
                             onValueChange={(v) => {
                               const newAceite = [...formData.expanderAceite];
                               newAceite[index].tipo = v as any;
@@ -837,21 +852,6 @@ const Laboratorio = () => {
                               <SelectItem value="Filtro">Filtro</SelectItem>
                             </SelectContent>
                           </Select>
-                        </div>
-                        <div className="space-y-2">
-                          {item.tipo === 'Filtro' ? (
-                            <Input
-                              placeholder="Ej: 19, 23, 2, 4 y 8"
-                              value={item.filtroNumeros}
-                              onChange={(e) => {
-                                const newAceite = [...formData.expanderAceite];
-                                newAceite[index].filtroNumeros = e.target.value;
-                                setFormData({ ...formData, expanderAceite: newAceite });
-                              }}
-                            />
-                          ) : (
-                            <Input disabled className="bg-gray-100" />
-                          )}
                         </div>
                         <div className="space-y-2">
                           <Input
@@ -911,6 +911,20 @@ const Laboratorio = () => {
                 </div>
               </div>
             </div>
+            {/* OBSERVACIONES GENERALES */}
+            <div className="px-1 pb-2">
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <Label className="text-base font-semibold mb-3 block">OBSERVACIONES GENERALES</Label>
+                <textarea
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                  rows={3}
+                  placeholder="Aclaraciones, notas sobre muestras o parámetros relevantes..."
+                  value={formData.observacionesGenerales}
+                  onChange={(e) => setFormData({ ...formData, observacionesGenerales: e.target.value })}
+                />
+              </div>
+            </div>
+
             <DialogFooter>
               <DialogClose asChild>
                 <Button variant="outline">Cancelar</Button>

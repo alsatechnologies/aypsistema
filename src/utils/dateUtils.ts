@@ -18,6 +18,20 @@ export function getCurrentDateTimeMST(): string {
 }
 
 /**
+ * Convierte una fecha y hora en MST (UTC-7) a formato ISO UTC.
+ * Usado para entrada retroactiva donde el operador especifica la hora local MST.
+ * @param fecha - "YYYY-MM-DD"
+ * @param hora  - "HH:MM" en hora MST
+ * @returns ISO string en UTC (ej: "2026-06-23T21:30:00.000Z")
+ */
+export function buildISOFromMST(fecha: string, hora: string): string {
+  const [year, month, day] = fecha.split('-').map(Number);
+  const [h, m] = hora.split(':').map(Number);
+  // MST = UTC-7 → sumar 7 horas para obtener UTC
+  return new Date(Date.UTC(year, month - 1, day, h + 7, m, 0, 0)).toISOString();
+}
+
+/**
  * Formatea una fecha ISO a formato legible en zona horaria MST
  * @param isoString - String en formato ISO (puede venir con UTC de Supabase)
  * @returns String formateado como "DD/MM/YYYY HH:mm" en MST
