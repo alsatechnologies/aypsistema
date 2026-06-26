@@ -27,7 +27,7 @@ import { useAlmacenes } from '@/services/hooks/useAlmacenes';
 import { getOrdenByBoleta } from '@/services/supabase/ordenes';
 import { getProductoConAnalisis } from '@/services/supabase/productos';
 import { createMovimiento } from '@/services/supabase/movimientos';
-import { getCurrentDateTimeMST, formatDateTimeMST, formatDateTimeSplitMST } from '@/utils/dateUtils';
+import { getCurrentDateTimeMST, formatDateTimeMST, formatDateTimeSplitMST, buildISOFromMST } from '@/utils/dateUtils';
 import { validarEmbarque, puedeModificarRegistro } from '@/utils/validations';
 import { handleError } from '@/utils/errorHandler';
 import type { Embarque as EmbarqueDB } from '@/services/supabase/embarques';
@@ -74,6 +74,7 @@ interface Embarque {
   horaPesoBruto?: string | null;
   horaPesoTara?: string | null;
   horaPesoNeto?: string | null;
+  hora_ingreso?: string | null;
   observaciones?: string | null;
   created_at?: string | null;
 }
@@ -135,6 +136,7 @@ const EmbarquePage = () => {
     horaPesoBruto: e.hora_peso_bruto || null,
     horaPesoTara: e.hora_peso_tara || null,
     horaPesoNeto: e.hora_peso_neto || null,
+    hora_ingreso: e.hora_ingreso || null,
     observaciones: e.observaciones || null,
     created_at: e.created_at || null
   }));
@@ -163,6 +165,11 @@ const EmbarquePage = () => {
   const [horaPesoTara, setHoraPesoTara] = useState<string | null>(null);
   const [horaPesoBruto, setHoraPesoBruto] = useState<string | null>(null);
   const [horaPesoNeto, setHoraPesoNeto] = useState<string | null>(null);
+  const nowHHMM = () => new Date().toTimeString().slice(0, 5);
+  const [fechaBrutoManual, setFechaBrutoManual] = useState('');
+  const [horaBrutoManual, setHoraBrutoManual] = useState(nowHHMM());
+  const [fechaTaraManual, setFechaTaraManual] = useState('');
+  const [horaTaraManual, setHoraTaraManual] = useState(nowHHMM());
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [observaciones, setObservaciones] = useState<string>('');
@@ -237,6 +244,12 @@ const EmbarquePage = () => {
     setHoraPesoBruto(embarque.horaPesoBruto || null);
     setHoraPesoNeto(embarque.horaPesoNeto || null);
     setObservaciones(embarque.observaciones || '');
+    // Inicializar fecha/hora manual con la fecha de la boleta (para modo retroactivo)
+    const fechaBoleta = embarque.fecha || new Date().toISOString().split('T')[0];
+    setFechaBrutoManual(fechaBoleta);
+    setHoraBrutoManual(nowHHMM());
+    setFechaTaraManual(fechaBoleta);
+    setHoraTaraManual(nowHHMM());
     setIsDialogOpen(true);
   };
 
@@ -274,7 +287,8 @@ const EmbarquePage = () => {
       if (result.success && result.weight !== undefined) {
         const nuevoPesoTara = Math.round(result.weight);
         setFormData({ ...formData, pesoTara: nuevoPesoTara });
-        setHoraPesoTara(getCurrentDateTimeMST());
+        const esRetroactivo = !!selectedEmbarque?.hora_ingreso;
+        setHoraPesoTara(esRetroactivo ? buildISOFromMST(fechaTaraManual, horaTaraManual) : getCurrentDateTimeMST());
         toast.success(`Peso tara capturado: ${nuevoPesoTara} kg`, { id: 'reading-weight-tara' });
       } else {
         toast.error(result.error || 'Error al leer peso de la báscula', { id: 'reading-weight-tara' });
@@ -309,7 +323,8 @@ const EmbarquePage = () => {
       if (result.success && result.weight !== undefined) {
         const nuevoPesoBruto = Math.round(result.weight);
         setFormData({ ...formData, pesoBruto: nuevoPesoBruto });
-        setHoraPesoBruto(getCurrentDateTimeMST());
+        const esRetroactivo = !!selectedEmbarque?.hora_ingreso;
+        setHoraPesoBruto(esRetroactivo ? buildISOFromMST(fechaBrutoManual, horaBrutoManual) : getCurrentDateTimeMST());
         toast.success(`Peso bruto capturado: ${nuevoPesoBruto} kg`, { id: 'reading-weight-bruto' });
       } else {
         toast.error(result.error || 'Error al leer peso de la báscula', { id: 'reading-weight-bruto' });
@@ -322,17 +337,17 @@ const EmbarquePage = () => {
 
   const handlePesoTaraChange = (value: number) => {
     setFormData({ ...formData, pesoTara: value });
-    // Si se ingresa manualmente y no hay hora, capturarla
     if (value > 0 && !horaPesoTara) {
-      setHoraPesoTara(getCurrentDateTimeMST());
+      const esRetroactivo = !!selectedEmbarque?.hora_ingreso;
+      setHoraPesoTara(esRetroactivo ? buildISOFromMST(fechaTaraManual, horaTaraManual) : getCurrentDateTimeMST());
     }
   };
 
   const handlePesoBrutoChange = (value: number) => {
     setFormData({ ...formData, pesoBruto: value });
-    // Si se ingresa manualmente y no hay hora, capturarla
     if (value > 0 && !horaPesoBruto) {
-      setHoraPesoBruto(getCurrentDateTimeMST());
+      const esRetroactivo = !!selectedEmbarque?.hora_ingreso;
+      setHoraPesoBruto(esRetroactivo ? buildISOFromMST(fechaBrutoManual, horaBrutoManual) : getCurrentDateTimeMST());
     }
   };
 
@@ -343,6 +358,8 @@ const EmbarquePage = () => {
     chofer: string;
     tipoTransporte: 'Camión' | 'Ferroviaria';
     tipoEmbarque: 'Nacional' | 'Exportación';
+    fecha?: string;
+    hora?: string;
   }) => {
     try {
       const producto = productosDB.find(p => p.id === data.productoId);
@@ -361,18 +378,18 @@ const EmbarquePage = () => {
     
       const nuevaBoleta = generateNumeroBoleta(tipoOperacion, codigoBoleta, siguienteConsecutivo);
       
-      // Usar fecha/hora actual en MST
-      const fechaHoraActual = getCurrentDateTimeMST();
-      const fechaActual = fechaHoraActual.split('T')[0];
-      
+      // Usar fecha personalizada si se proporcionó, si no la fecha/hora actual en MST
+      const fechaActual = data.fecha || getCurrentDateTimeMST().split('T')[0];
+
       await addEmbarque({
         boleta: nuevaBoleta,
         producto_id: data.productoId,
         cliente_id: data.clienteId,
-      destino: data.destino,
-      chofer: data.chofer,
-      fecha: fechaActual,
-      estatus: 'Pendiente',
+        destino: data.destino,
+        chofer: data.chofer,
+        fecha: fechaActual,
+        hora_ingreso: data.hora || null,
+        estatus: 'Pendiente',
         tipo_transporte: data.tipoTransporte,
         tipo_embarque: data.tipoEmbarque
       });
@@ -606,8 +623,11 @@ const EmbarquePage = () => {
       }
 
       const pesoNeto = formData.pesoBruto - formData.pesoTara;
-      const fechaActual = format(new Date(), 'dd/MM/yyyy', { locale: es });
-      
+      // Usar la fecha guardada en la boleta
+      const fechaActual = selectedEmbarque.fecha
+        ? selectedEmbarque.fecha.split('-').reverse().join('/')
+        : format(new Date(), 'dd/MM/yyyy', { locale: es });
+
       // Formatear fechas y horas de peso
       const fechaHoraBruto = formatearFechaHora(horaPesoBruto);
       const fechaHoraTara = formatearFechaHora(horaPesoTara);
@@ -1028,18 +1048,24 @@ const EmbarquePage = () => {
                           <CardTitle className="text-sm text-orange-700">1. Peso Tara (Vacío)</CardTitle>
                         </CardHeader>
                         <CardContent>
-                          <Input 
-                            type="number" 
+                          <Input
+                            type="number"
                             className="text-2xl font-bold text-center h-14"
                             value={formData.pesoTara || ''}
                             onChange={(e) => handlePesoTaraChange(Number(e.target.value))}
                             placeholder="0"
                           />
+                          {selectedEmbarque?.hora_ingreso && !horaPesoTara && (
+                            <div className="grid grid-cols-2 gap-1 mt-2">
+                              <Input type="date" value={fechaTaraManual} onChange={(e) => setFechaTaraManual(e.target.value)} className="text-xs h-7 px-1" />
+                              <Input type="time" value={horaTaraManual} onChange={(e) => setHoraTaraManual(e.target.value)} className="text-xs h-7 px-1" />
+                            </div>
+                          )}
                           {!(
-                            (selectedEmbarque?.estatus === 'Peso Tara' || 
-                             selectedEmbarque?.estatus === 'En Carga' || 
-                             selectedEmbarque?.estatus === 'Peso Bruto' || 
-                             selectedEmbarque?.estatus === 'Completado') && 
+                            (selectedEmbarque?.estatus === 'Peso Tara' ||
+                             selectedEmbarque?.estatus === 'En Carga' ||
+                             selectedEmbarque?.estatus === 'Peso Bruto' ||
+                             selectedEmbarque?.estatus === 'Completado') &&
                             formData.pesoTara > 0
                           ) && (
                             <Button className="w-full mt-2" size="sm" onClick={handleCapturarPesoTara}>
@@ -1059,16 +1085,22 @@ const EmbarquePage = () => {
                           <CardTitle className="text-sm text-blue-700">2. Peso Bruto (Cargado)</CardTitle>
                         </CardHeader>
                         <CardContent>
-                          <Input 
-                            type="number" 
+                          <Input
+                            type="number"
                             className="text-2xl font-bold text-center h-14"
                             value={formData.pesoBruto || ''}
                             onChange={(e) => handlePesoBrutoChange(Number(e.target.value))}
                             placeholder="0"
                           />
+                          {selectedEmbarque?.hora_ingreso && !horaPesoBruto && (
+                            <div className="grid grid-cols-2 gap-1 mt-2">
+                              <Input type="date" value={fechaBrutoManual} onChange={(e) => setFechaBrutoManual(e.target.value)} className="text-xs h-7 px-1" />
+                              <Input type="time" value={horaBrutoManual} onChange={(e) => setHoraBrutoManual(e.target.value)} className="text-xs h-7 px-1" />
+                            </div>
+                          )}
                           {!(
-                            (selectedEmbarque?.estatus === 'Peso Bruto' || 
-                             selectedEmbarque?.estatus === 'Completado') && 
+                            (selectedEmbarque?.estatus === 'Peso Bruto' ||
+                             selectedEmbarque?.estatus === 'Completado') &&
                             formData.pesoBruto > 0
                           ) && (
                             <Button className="w-full mt-2" size="sm" variant="outline" onClick={handleCapturarPesoBruto}>
@@ -1270,6 +1302,7 @@ const EmbarquePage = () => {
             destino: selectedEmbarque.destino,
             chofer: selectedEmbarque.chofer || '',
             fecha: selectedEmbarque.fecha,
+            hora_ingreso: selectedEmbarque.hora_ingreso,
             tipoTransporte: selectedEmbarque.tipoTransporte || 'Camión',
             tipoEmbarque: selectedEmbarque.tipoEmbarque || 'Nacional',
             estatus: selectedEmbarque.estatus,

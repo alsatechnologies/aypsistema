@@ -9,6 +9,31 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
     proxy: {
+      // Proxy para funciones serverless de Vercel en desarrollo local
+      '/api/auth-login': {
+        target: 'https://aypsistema.vercel.app',
+        changeOrigin: true,
+      },
+      '/api/get-user-for-login': {
+        target: 'https://aypsistema.vercel.app',
+        changeOrigin: true,
+      },
+      '/api/create-auth-user': {
+        target: 'https://aypsistema.vercel.app',
+        changeOrigin: true,
+      },
+      '/api/create-usuario': {
+        target: 'https://aypsistema.vercel.app',
+        changeOrigin: true,
+      },
+      '/api/delete-usuario': {
+        target: 'https://aypsistema.vercel.app',
+        changeOrigin: true,
+      },
+      '/api/update-auth-user': {
+        target: 'https://aypsistema.vercel.app',
+        changeOrigin: true,
+      },
       // Proxy para la API de certificados de ENTRADA (Reciba)
       '/api/generate-certificate-entrada': {
         target: 'https://pdf-entrada.alsatechnologies.com',

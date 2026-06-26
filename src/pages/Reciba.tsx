@@ -33,7 +33,7 @@ import type { Recepcion as RecepcionDB } from '@/services/supabase/recepciones';
 import { formatDateTimeMST, formatDateTimeSplitMST } from '@/utils/dateUtils';
 import { validarRecepcion, puedeModificarRegistro } from '@/utils/validations';
 import { handleError } from '@/utils/errorHandler';
-import { getCurrentDateTimeMST } from '@/utils/dateUtils';
+import { getCurrentDateTimeMST, buildISOFromMST } from '@/utils/dateUtils';
 import { getScaleWeight, PREDEFINED_SCALES } from '@/services/api/scales';
 import { generateBoletaRecibaPDF, openPDF } from '@/services/api/certificate';
 import { format } from 'date-fns';
@@ -68,6 +68,7 @@ interface Recepcion {
   horaPesoBruto?: string | null;
   horaPesoTara?: string | null;
   horaPesoNeto?: string | null;
+  hora_ingreso?: string | null;
   observaciones?: string | null;
 }
 
@@ -102,6 +103,11 @@ const Reciba = () => {
   const [horaPesoBruto, setHoraPesoBruto] = useState<string | null>(null);
   const [horaPesoTara, setHoraPesoTara] = useState<string | null>(null);
   const [horaPesoNeto, setHoraPesoNeto] = useState<string | null>(null);
+  const nowHHMM = () => new Date().toTimeString().slice(0, 5);
+  const [fechaBrutoManual, setFechaBrutoManual] = useState('');
+  const [horaBrutoManual, setHoraBrutoManual] = useState(nowHHMM());
+  const [fechaTaraManual, setFechaTaraManual] = useState('');
+  const [horaTaraManual, setHoraTaraManual] = useState(nowHHMM());
   const [valoresAnalisis, setValoresAnalisis] = useState<Record<string, number>>({});
   const [analisisProducto, setAnalisisProducto] = useState<any[]>([]);
   const [almacenSeleccionado, setAlmacenSeleccionado] = useState<number | null>(null);
@@ -137,6 +143,7 @@ const Reciba = () => {
     horaPesoBruto: r.hora_peso_bruto || null,
     horaPesoTara: r.hora_peso_tara || null,
     horaPesoNeto: r.hora_peso_neto || null,
+    hora_ingreso: r.hora_ingreso || null,
     observaciones: r.observaciones || null
   }));
 
@@ -179,6 +186,12 @@ const Reciba = () => {
       setHoraPesoTara(selectedRecepcion.horaPesoTara || null);
       setHoraPesoNeto(selectedRecepcion.horaPesoNeto || null);
       setObservaciones(selectedRecepcion.observaciones || '');
+      // Inicializar fecha/hora manual con la fecha de la boleta (para modo retroactivo)
+      const fechaBoleta = selectedRecepcion.fecha || new Date().toISOString().split('T')[0];
+      setFechaBrutoManual(fechaBoleta);
+      setHoraBrutoManual(nowHHMM());
+      setFechaTaraManual(fechaBoleta);
+      setHoraTaraManual(nowHHMM());
     }
   }, [selectedRecepcion]);
 
@@ -222,6 +235,8 @@ const Reciba = () => {
     chofer: string;
     placas: string;
     tipoTransporte: 'Camión' | 'Ferroviaria';
+    fecha?: string;
+    hora?: string;
   }) => {
     try {
       const producto = productosDB.find(p => p.id === operacion.productoId);
@@ -240,10 +255,11 @@ const Reciba = () => {
         boleta: nuevaBoleta,
         producto_id: operacion.productoId,
         proveedor_id: operacion.proveedorId,
-      chofer: operacion.chofer,
-      placas: operacion.placas,
-      fecha: new Date().toISOString().split('T')[0],
-      estatus: 'Pendiente',
+        chofer: operacion.chofer,
+        placas: operacion.placas,
+        fecha: operacion.fecha || new Date().toISOString().split('T')[0],
+        hora_ingreso: operacion.hora || null,
+        estatus: 'Pendiente',
         tipo_transporte: operacion.tipoTransporte
       });
 
@@ -322,7 +338,8 @@ const Reciba = () => {
       
       if (result.success && result.weight !== undefined) {
         setPesoBruto(Math.round(result.weight));
-        setHoraPesoBruto(getCurrentDateTimeMST());
+        const esRetroactivo = !!selectedRecepcion?.hora_ingreso;
+        setHoraPesoBruto(esRetroactivo ? buildISOFromMST(fechaBrutoManual, horaBrutoManual) : getCurrentDateTimeMST());
         toast.success(`Peso bruto capturado: ${Math.round(result.weight)} kg`, { id: 'reading-weight' });
       } else {
         toast.error(result.error || 'Error al leer peso de la báscula', { id: 'reading-weight' });
@@ -346,12 +363,14 @@ const Reciba = () => {
       if (result.success && result.weight !== undefined) {
         const nuevoPesoTara = Math.round(result.weight);
         setPesoTara(nuevoPesoTara);
-        setHoraPesoTara(getCurrentDateTimeMST());
-        
+        const esRetroactivo = !!selectedRecepcion?.hora_ingreso;
+        const tiempoTara = esRetroactivo ? buildISOFromMST(fechaTaraManual, horaTaraManual) : getCurrentDateTimeMST();
+        setHoraPesoTara(tiempoTara);
+
         // Calcular peso neto y su hora
         const nuevoPesoNeto = pesoBruto - nuevoPesoTara;
         if (nuevoPesoNeto > 0) {
-          setHoraPesoNeto(getCurrentDateTimeMST());
+          setHoraPesoNeto(tiempoTara);
         }
         
         toast.success(`Peso tara capturado: ${nuevoPesoTara} kg`, { id: 'reading-weight-tara' });
@@ -615,8 +634,13 @@ const Reciba = () => {
       // Calcular descuentos (puede ser 0 si no hay análisis)
       const { totalDescuentoKg, pesoNetoAnalizado } = calcularDescuentos();
 
-      // Preparar datos para la API
-      const fechaActual = format(new Date(), 'dd/MM/yyyy', { locale: es });
+      // Preparar datos para la API — usar la fecha guardada en la boleta
+      const fechaBase = selectedRecepcion.fecha
+        ? selectedRecepcion.fecha.split('-').reverse().join('/')
+        : format(new Date(), 'dd/MM/yyyy', { locale: es });
+      const fechaActual = selectedRecepcion.hora_ingreso
+        ? `${fechaBase} ${selectedRecepcion.hora_ingreso}`
+        : fechaBase;
       
       // Formatear fechas y horas (usar valores por defecto si no existen)
       const fechaHoraBruto = formatearFechaHora(horaPesoBruto);
@@ -1095,28 +1119,35 @@ const Reciba = () => {
                           <CardTitle className="text-sm text-blue-700">1. Peso Bruto</CardTitle>
                         </CardHeader>
                         <CardContent>
-                          <Input 
-                            type="number" 
+                          <Input
+                            type="number"
                             className="text-2xl font-bold text-center h-14"
                             value={pesoBruto || ''}
                             onChange={(e) => {
                               const valor = parseInt(e.target.value) || 0;
                               setPesoBruto(valor);
                               if (valor > 0 && !horaPesoBruto) {
-                                setHoraPesoBruto(getCurrentDateTimeMST());
+                                const esRetroactivo = !!selectedRecepcion?.hora_ingreso;
+                                setHoraPesoBruto(esRetroactivo ? buildISOFromMST(fechaBrutoManual, horaBrutoManual) : getCurrentDateTimeMST());
                               }
                             }}
                             placeholder="0"
                           />
+                          {selectedRecepcion?.hora_ingreso && !horaPesoBruto && (
+                            <div className="grid grid-cols-2 gap-1 mt-2">
+                              <Input type="date" value={fechaBrutoManual} onChange={(e) => setFechaBrutoManual(e.target.value)} className="text-xs h-7 px-1" />
+                              <Input type="time" value={horaBrutoManual} onChange={(e) => setHoraBrutoManual(e.target.value)} className="text-xs h-7 px-1" />
+                            </div>
+                          )}
                           {!(
-                            (selectedRecepcion?.estatus === 'Peso Bruto' || 
-                             selectedRecepcion?.estatus === 'En Descarga' || 
-                             selectedRecepcion?.estatus === 'Peso Tara' || 
-                             selectedRecepcion?.estatus === 'Completado') && 
+                            (selectedRecepcion?.estatus === 'Peso Bruto' ||
+                             selectedRecepcion?.estatus === 'En Descarga' ||
+                             selectedRecepcion?.estatus === 'Peso Tara' ||
+                             selectedRecepcion?.estatus === 'Completado') &&
                             pesoBruto > 0
                           ) && (
-                            <Button 
-                              className="w-full mt-2" 
+                            <Button
+                              className="w-full mt-2"
                               size="sm"
                               onClick={handleCapturarPesoBruto}
                             >
@@ -1136,27 +1167,34 @@ const Reciba = () => {
                           <CardTitle className="text-sm text-orange-700">2. Peso Tara</CardTitle>
                         </CardHeader>
                         <CardContent>
-                          <Input 
-                            type="number" 
+                          <Input
+                            type="number"
                             className="text-2xl font-bold text-center h-14"
                             value={pesoTara || ''}
                             onChange={(e) => {
                               const valor = parseInt(e.target.value) || 0;
                               setPesoTara(valor);
                               if (valor > 0 && !horaPesoTara) {
-                                setHoraPesoTara(getCurrentDateTimeMST());
+                                const esRetroactivo = !!selectedRecepcion?.hora_ingreso;
+                                setHoraPesoTara(esRetroactivo ? buildISOFromMST(fechaTaraManual, horaTaraManual) : getCurrentDateTimeMST());
                               }
                             }}
                             placeholder="0"
                           />
+                          {selectedRecepcion?.hora_ingreso && !horaPesoTara && (
+                            <div className="grid grid-cols-2 gap-1 mt-2">
+                              <Input type="date" value={fechaTaraManual} onChange={(e) => setFechaTaraManual(e.target.value)} className="text-xs h-7 px-1" />
+                              <Input type="time" value={horaTaraManual} onChange={(e) => setHoraTaraManual(e.target.value)} className="text-xs h-7 px-1" />
+                            </div>
+                          )}
                           {!(
-                            (selectedRecepcion?.estatus === 'Peso Tara' || 
-                             selectedRecepcion?.estatus === 'Completado') && 
+                            (selectedRecepcion?.estatus === 'Peso Tara' ||
+                             selectedRecepcion?.estatus === 'Completado') &&
                             pesoTara > 0
                           ) && (
-                            <Button 
-                              className="w-full mt-2" 
-                              size="sm" 
+                            <Button
+                              className="w-full mt-2"
+                              size="sm"
                               variant="outline"
                               onClick={handleCapturarPesoTara}
                             >
