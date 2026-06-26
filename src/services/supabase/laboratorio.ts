@@ -42,7 +42,10 @@ export interface ReporteLab {
     acidez?: number;
     acidoOleico?: number;
   }> | null;
-  
+
+  aceite_observaciones?: string | null;
+  observaciones_generales?: string | null;
+
   created_at?: string;
   updated_at?: string;
 }
