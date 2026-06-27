@@ -258,10 +258,11 @@ const EmbarquePage = () => {
     if (formData.pesoBruto > 0 && formData.pesoTara > 0 && !horaPesoNeto) {
       const pesoNeto = formData.pesoBruto - formData.pesoTara;
       if (pesoNeto > 0) {
-        setHoraPesoNeto(getCurrentDateTimeMST());
+        const esRetroactivo = !!selectedEmbarque?.hora_ingreso;
+        setHoraPesoNeto(esRetroactivo && horaPesoBruto ? horaPesoBruto : getCurrentDateTimeMST());
       }
     }
-  }, [formData.pesoBruto, formData.pesoTara, horaPesoNeto]);
+  }, [formData.pesoBruto, formData.pesoTara, horaPesoNeto, selectedEmbarque, horaPesoBruto]);
 
   const handleCapturarPesoTara = async () => {
     // Leer desde la API según el tipo de transporte
@@ -324,7 +325,9 @@ const EmbarquePage = () => {
         const nuevoPesoBruto = Math.round(result.weight);
         setFormData({ ...formData, pesoBruto: nuevoPesoBruto });
         const esRetroactivo = !!selectedEmbarque?.hora_ingreso;
-        setHoraPesoBruto(esRetroactivo ? buildISOFromMST(fechaBrutoManual, horaBrutoManual) : getCurrentDateTimeMST());
+        const tiempoBruto = esRetroactivo ? buildISOFromMST(fechaBrutoManual, horaBrutoManual) : getCurrentDateTimeMST();
+        setHoraPesoBruto(tiempoBruto);
+        if (esRetroactivo) setHoraPesoNeto(tiempoBruto);
         toast.success(`Peso bruto capturado: ${nuevoPesoBruto} kg`, { id: 'reading-weight-bruto' });
       } else {
         toast.error(result.error || 'Error al leer peso de la báscula', { id: 'reading-weight-bruto' });
@@ -347,7 +350,9 @@ const EmbarquePage = () => {
     setFormData({ ...formData, pesoBruto: value });
     if (value > 0 && !horaPesoBruto) {
       const esRetroactivo = !!selectedEmbarque?.hora_ingreso;
-      setHoraPesoBruto(esRetroactivo ? buildISOFromMST(fechaBrutoManual, horaBrutoManual) : getCurrentDateTimeMST());
+      const tiempoBruto = esRetroactivo ? buildISOFromMST(fechaBrutoManual, horaBrutoManual) : getCurrentDateTimeMST();
+      setHoraPesoBruto(tiempoBruto);
+      if (esRetroactivo) setHoraPesoNeto(tiempoBruto);
     }
   };
 

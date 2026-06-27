@@ -200,9 +200,10 @@ const Reciba = () => {
   // Actualizar hora de peso neto cuando se calcula
   useEffect(() => {
     if (pesoBruto > 0 && pesoTara > 0 && pesoNeto > 0 && !horaPesoNeto) {
-      setHoraPesoNeto(getCurrentDateTimeMST());
+      const esRetroactivo = !!selectedRecepcion?.hora_ingreso;
+      setHoraPesoNeto(esRetroactivo && horaPesoTara ? horaPesoTara : getCurrentDateTimeMST());
     }
-  }, [pesoBruto, pesoTara, pesoNeto, horaPesoNeto]);
+  }, [pesoBruto, pesoTara, pesoNeto, horaPesoNeto, selectedRecepcion, horaPesoTara]);
 
   const getEstatusBadge = (estatus: string) => {
     const config: Record<string, { className: string; icon: React.ReactNode }> = {
@@ -366,6 +367,7 @@ const Reciba = () => {
         const esRetroactivo = !!selectedRecepcion?.hora_ingreso;
         const tiempoTara = esRetroactivo ? buildISOFromMST(fechaTaraManual, horaTaraManual) : getCurrentDateTimeMST();
         setHoraPesoTara(tiempoTara);
+        if (esRetroactivo) setHoraPesoBruto(tiempoTara);
 
         // Calcular peso neto y su hora
         const nuevoPesoNeto = pesoBruto - nuevoPesoTara;
@@ -1176,7 +1178,9 @@ const Reciba = () => {
                               setPesoTara(valor);
                               if (valor > 0 && !horaPesoTara) {
                                 const esRetroactivo = !!selectedRecepcion?.hora_ingreso;
-                                setHoraPesoTara(esRetroactivo ? buildISOFromMST(fechaTaraManual, horaTaraManual) : getCurrentDateTimeMST());
+                                const tiempoTara = esRetroactivo ? buildISOFromMST(fechaTaraManual, horaTaraManual) : getCurrentDateTimeMST();
+                                setHoraPesoTara(tiempoTara);
+                                if (esRetroactivo) setHoraPesoBruto(tiempoTara);
                               }
                             }}
                             placeholder="0"
