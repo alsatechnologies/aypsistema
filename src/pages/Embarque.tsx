@@ -25,7 +25,7 @@ import { useProductos } from '@/services/hooks/useProductos';
 import { useClientes } from '@/services/hooks/useClientes';
 import { useAlmacenes } from '@/services/hooks/useAlmacenes';
 import { getOrdenByBoleta } from '@/services/supabase/ordenes';
-import { getProductoConAnalisis, addAnalisisToProducto } from '@/services/supabase/productos';
+import { getProductoConAnalisis } from '@/services/supabase/productos';
 import { createMovimiento } from '@/services/supabase/movimientos';
 import { getCurrentDateTimeMST, formatDateTimeMST, formatDateTimeSplitMST, buildISOFromMST } from '@/utils/dateUtils';
 import { validarEmbarque, puedeModificarRegistro } from '@/utils/validations';
@@ -82,7 +82,7 @@ interface Embarque {
 const EmbarquePage = () => {
   const { usuario } = useAuth();
   const { embarques: embarquesDB, loading, loadingMore, hasMore, addEmbarque, updateEmbarque, loadEmbarques, loadMore } = useEmbarques();
-  const { productos: productosDB, tiposAnalisis: tiposAnalisisDB } = useProductos();
+  const { productos: productosDB } = useProductos();
   const { clientes: clientesDB } = useClientes();
   const { almacenes: almacenesDB } = useAlmacenes();
   
@@ -192,18 +192,6 @@ const EmbarquePage = () => {
 
     cargarAnalisis();
   }, [selectedEmbarque?.productoId]);
-
-  const handleAgregarAnalisisProducto = async (analisisId: string) => {
-    if (!selectedEmbarque?.productoId) return;
-    try {
-      await addAnalisisToProducto(selectedEmbarque.productoId, analisisId, false);
-      const productoCompleto = await getProductoConAnalisis(selectedEmbarque.productoId);
-      setAnalisisProducto(productoCompleto.analisis || []);
-      toast.success('Análisis agregado al producto');
-    } catch (error) {
-      handleError(error, { module: 'Embarque', action: 'agregarAnalisis' }, 'Error al agregar análisis');
-    }
-  };
 
   const getEstatusBadge = (estatus: string) => {
     const config: Record<string, { className: string; icon: React.ReactNode }> = {
@@ -1156,22 +1144,10 @@ const EmbarquePage = () => {
 
                   {/* Análisis Dinámico */}
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
-                        Análisis de Calidad
-                      </h4>
-                      <Select onValueChange={handleAgregarAnalisisProducto}>
-                        <SelectTrigger className="w-48">
-                          <SelectValue placeholder="Agregar análisis" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {tiposAnalisisDB.filter(t => !analisisProducto.some((a: any) => a.id === t.id)).map((tipo) => (
-                            <SelectItem key={tipo.id} value={tipo.id}>{tipo.nombre}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    <h4 className="font-medium flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                      Análisis de Calidad
+                    </h4>
                     <AnalisisDinamico
                       analisis={analisisProducto}
                       valores={formData.valoresAnalisis}

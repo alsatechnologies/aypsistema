@@ -27,7 +27,7 @@ import { getProveedores } from '@/services/supabase/proveedores';
 import type { Proveedor } from '@/services/supabase/proveedores';
 import { useAlmacenes } from '@/services/hooks/useAlmacenes';
 import { getOrdenByBoleta } from '@/services/supabase/ordenes';
-import { getProductoConAnalisis, addAnalisisToProducto } from '@/services/supabase/productos';
+import { getProductoConAnalisis } from '@/services/supabase/productos';
 import { createMovimiento } from '@/services/supabase/movimientos';
 import type { Recepcion as RecepcionDB } from '@/services/supabase/recepciones';
 import { formatDateTimeMST, formatDateTimeSplitMST } from '@/utils/dateUtils';
@@ -75,7 +75,7 @@ interface Recepcion {
 const Reciba = () => {
   const { usuario } = useAuth();
   const { recepciones: recepcionesDB, loading, loadingMore, hasMore, addRecepcion, updateRecepcion, loadRecepciones, loadMore } = useRecepciones();
-  const { productos: productosDB, tiposAnalisis: tiposAnalisisDB } = useProductos();
+  const { productos: productosDB } = useProductos();
   const { addProveedor } = useProveedores();
   const [proveedoresDB, setProveedoresDB] = useState<Proveedor[]>([]);
   const { almacenes: almacenesDB } = useAlmacenes();
@@ -561,18 +561,6 @@ const Reciba = () => {
   // Convierte de UTC (Supabase) a MST usando la función centralizada
   const formatearFechaHora = (fechaHora: string | null) => {
     return formatDateTimeSplitMST(fechaHora);
-  };
-
-  const handleAgregarAnalisisProducto = async (analisisId: string) => {
-    if (!productoSeleccionado) return;
-    try {
-      await addAnalisisToProducto(productoSeleccionado, analisisId, false);
-      const productoCompleto = await getProductoConAnalisis(productoSeleccionado);
-      setAnalisisProducto(productoCompleto.analisis || []);
-      toast.success('Análisis agregado al producto');
-    } catch (error) {
-      handleError(error, { module: 'Reciba', action: 'agregarAnalisis' }, 'Error al agregar análisis');
-    }
   };
 
   const handleEliminar = async (recepcion: Recepcion) => {
@@ -1249,22 +1237,10 @@ const Reciba = () => {
                   {/* Análisis dinámicos según producto */}
                   {productoSeleccionado && (
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-medium flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
-                          Análisis de Calidad - {productosDB.find(p => p.id === productoSeleccionado)?.nombre || 'Producto'}
-                      </h4>
-                      <Select onValueChange={handleAgregarAnalisisProducto}>
-                        <SelectTrigger className="w-48">
-                          <SelectValue placeholder="Agregar análisis" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {tiposAnalisisDB.filter(t => !analisisProducto.some((a: any) => a.id === t.id)).map((tipo) => (
-                            <SelectItem key={tipo.id} value={tipo.id}>{tipo.nombre}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    <h4 className="font-medium flex items-center gap-2">
+                      <FileText className="h-4 w-4" />
+                        Análisis de Calidad - {productosDB.find(p => p.id === productoSeleccionado)?.nombre || 'Producto'}
+                    </h4>
                     <AnalisisDinamico
                         analisis={analisisProducto}
                       valores={valoresAnalisis}
