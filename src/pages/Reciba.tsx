@@ -367,7 +367,6 @@ const Reciba = () => {
         const esRetroactivo = !!selectedRecepcion?.hora_ingreso;
         const tiempoTara = esRetroactivo ? buildISOFromMST(fechaTaraManual, horaTaraManual) : getCurrentDateTimeMST();
         setHoraPesoTara(tiempoTara);
-        if (esRetroactivo) setHoraPesoBruto(tiempoTara);
 
         // Calcular peso neto y su hora
         const nuevoPesoNeto = pesoBruto - nuevoPesoTara;
@@ -1180,7 +1179,6 @@ const Reciba = () => {
                                 const esRetroactivo = !!selectedRecepcion?.hora_ingreso;
                                 const tiempoTara = esRetroactivo ? buildISOFromMST(fechaTaraManual, horaTaraManual) : getCurrentDateTimeMST();
                                 setHoraPesoTara(tiempoTara);
-                                if (esRetroactivo) setHoraPesoBruto(tiempoTara);
                               }
                             }}
                             placeholder="0"
