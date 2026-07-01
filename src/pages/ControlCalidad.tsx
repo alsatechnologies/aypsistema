@@ -50,7 +50,7 @@ interface MapeoAlmacen {
 }
 
 const ControlCalidad = () => {
-  const { tiposOperacion, origenes, loading } = useLotes();
+  const { tiposOperacion, origenes, loading, addOrigen, editOrigen } = useLotes();
   const { productos, updateProducto, loadProductos } = useProductos();
   const { almacenes, updateAlmacen, loadAlmacenes } = useAlmacenes();
   const { clientes } = useClientes();
@@ -84,12 +84,25 @@ const ControlCalidad = () => {
       setProveedoresDisponibles(proveedores.map(p => ({ id: p.id, empresa: p.empresa })));
     }
 
-    // Cargar origen "OTROS" por defecto
-    const origenesData: MapeoOrigen[] = [
-      { id: 999, codigo: '00', nombre: 'OTROS', tipo: 'Otros' as const, cliente_id: null, proveedor_id: null, asignado: true }
-    ];
-    setMapeosOrigenes(origenesData);
   }, [clientes, proveedores]);
+
+  useEffect(() => {
+    if (origenes && origenes.length > 0) {
+      setMapeosOrigenes(origenes.map(o => ({
+        id: o.id,
+        codigo: o.codigo,
+        nombre: o.nombre,
+        tipo: o.tipo,
+        cliente_id: o.cliente_id,
+        proveedor_id: o.proveedor_id,
+        asignado: !!o.codigo
+      })));
+    } else if (!loading) {
+      setMapeosOrigenes([
+        { id: 999, codigo: '00', nombre: 'OTROS', tipo: 'Otros' as const, cliente_id: null, proveedor_id: null, asignado: true }
+      ]);
+    }
+  }, [origenes, loading]);
 
   useEffect(() => {
     // Mapear productos desde Supabase
@@ -131,27 +144,26 @@ const ControlCalidad = () => {
     setCodigoInput('');
   };
 
-  const handleGuardarCodigoOrigen = () => {
+  const handleGuardarCodigoOrigen = async () => {
     if (!editingOrigen || !codigoInput.trim()) {
       toast.error('Ingrese un código válido');
       return;
     }
 
-    // Validar que el código no esté duplicado
     if (mapeosOrigenes.some(m => m.codigo === codigoInput.trim() && m.id !== editingOrigen.id)) {
       toast.error('Este código ya está asignado a otro origen');
       return;
     }
 
-    setMapeosOrigenes(prev => prev.map(m => 
-      m.id === editingOrigen.id 
-        ? { ...m, codigo: codigoInput.trim(), asignado: true }
-        : m
-    ));
-    
-    toast.success('Código asignado correctamente');
-    setEditingOrigen(null);
-    setCodigoInput('');
+    try {
+      await editOrigen(editingOrigen.id, { codigo: codigoInput.trim() });
+      toast.success('Código asignado correctamente');
+      setEditingOrigen(null);
+      setCodigoInput('');
+    } catch (error) {
+      toast.error('Error al guardar el código');
+      console.error(error);
+    }
   };
 
   const handleAsignarCodigoProducto = (producto: MapeoProducto) => {
@@ -232,49 +244,48 @@ const ControlCalidad = () => {
     );
   };
 
-  const handleConfirmarImportacion = () => {
-    const nuevosOrigenes: MapeoOrigen[] = [];
+  const handleConfirmarImportacion = async () => {
+    const promesas: Promise<any>[] = [];
 
-    // Agregar clientes seleccionados
     clientesDisponibles.forEach(cliente => {
       if (origenesSeleccionados.includes(cliente.id)) {
-        // Verificar que no esté ya en la lista
         if (!mapeosOrigenes.some(o => o.cliente_id === cliente.id)) {
-          nuevosOrigenes.push({
-            id: cliente.id,
+          promesas.push(addOrigen({
             codigo: '',
             nombre: cliente.empresa,
             tipo: 'Cliente',
             cliente_id: cliente.id,
             proveedor_id: null,
-            asignado: false
-          });
+            activo: true
+          }));
         }
       }
     });
 
-    // Agregar proveedores seleccionados
     proveedoresDisponibles.forEach(proveedor => {
       const idCompleto = proveedor.id + 1000;
       if (origenesSeleccionados.includes(idCompleto)) {
-        // Verificar que no esté ya en la lista
         if (!mapeosOrigenes.some(o => o.proveedor_id === proveedor.id)) {
-          nuevosOrigenes.push({
-            id: idCompleto,
+          promesas.push(addOrigen({
             codigo: '',
             nombre: proveedor.empresa,
             tipo: 'Proveedor',
             cliente_id: null,
             proveedor_id: proveedor.id,
-            asignado: false
-          });
+            activo: true
+          }));
         }
       }
     });
 
-    if (nuevosOrigenes.length > 0) {
-      setMapeosOrigenes(prev => [...prev, ...nuevosOrigenes]);
-      toast.success(`${nuevosOrigenes.length} origen(es) agregado(s) correctamente`);
+    if (promesas.length > 0) {
+      try {
+        await Promise.all(promesas);
+        toast.success(`${promesas.length} origen(es) importado(s) correctamente`);
+      } catch (error) {
+        toast.error('Error al importar algunos orígenes');
+        console.error(error);
+      }
     } else {
       toast.info('No se seleccionaron orígenes nuevos o ya están en la lista');
     }

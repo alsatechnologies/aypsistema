@@ -259,6 +259,29 @@ export async function getOrigenesLote() {
   return data;
 }
 
+export async function createOrigenLote(origen: Omit<OrigenLote, 'id' | 'created_at'>) {
+  if (!supabase) throw new Error('Supabase no configurado');
+  const { data, error } = await supabase
+    .from('origenes_lote')
+    .insert(origen)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateOrigenLote(id: number, updates: Partial<OrigenLote>) {
+  if (!supabase) throw new Error('Supabase no configurado');
+  const { data, error } = await supabase
+    .from('origenes_lote')
+    .update(updates)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 // Crear lote
 export async function createLote(lote: Omit<Lote, 'id' | 'codigo_lote' | 'created_at' | 'updated_at'>): Promise<Lote> {
   if (!supabase) {

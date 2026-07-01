@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { 
-  getLotes, 
-  createLote, 
+import {
+  getLotes,
+  createLote,
   updateLote,
   deleteLote,
   getTiposOperacionLote,
   getOrigenesLote,
+  createOrigenLote,
+  updateOrigenLote,
   generarCodigoLote,
   Lote,
   TipoOperacionLote,
@@ -121,6 +123,18 @@ export function useLotes() {
     }
   };
 
+  const addOrigen = async (origen: Omit<OrigenLote, 'id' | 'created_at'>) => {
+    const nuevo = await createOrigenLote(origen);
+    setOrigenes(prev => [...prev, nuevo]);
+    return nuevo;
+  };
+
+  const editOrigen = async (id: number, updates: Partial<OrigenLote>) => {
+    const actualizado = await updateOrigenLote(id, updates);
+    setOrigenes(prev => prev.map(o => o.id === id ? actualizado : o));
+    return actualizado;
+  };
+
   return {
     lotes,
     tiposOperacion,
@@ -128,10 +142,13 @@ export function useLotes() {
     loading,
     error,
     loadLotes,
+    loadOrigenes,
     addLote,
     editLote,
     removeLote,
-    generarCodigo
+    generarCodigo,
+    addOrigen,
+    editOrigen
   };
 }
 
