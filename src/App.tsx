@@ -28,6 +28,7 @@ const Laboratorio = lazy(() => import("./pages/Laboratorio"));
 const Produccion = lazy(() => import("./pages/Produccion"));
 const Configuracion = lazy(() => import("./pages/Configuracion"));
 const Auditoria = lazy(() => import("./pages/Auditoria"));
+const Exportaciones = lazy(() => import("./pages/Exportaciones"));
 
 // Componente de carga
 const PageLoader = () => (
@@ -197,13 +198,21 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/auditoria" 
+            <Route
+              path="/auditoria"
               element={
                 <ProtectedRoute requiredModule="auditoria">
                   <Auditoria />
                 </ProtectedRoute>
-              } 
+              }
+            />
+            <Route
+              path="/exportaciones"
+              element={
+                <ProtectedRoute requiredModule="exportaciones">
+                  <Exportaciones />
+                </ProtectedRoute>
+              }
             />
               <Route path="*" element={<NotFound />} />
             </Routes>
