@@ -1,0 +1,53 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "AYP Sistema",
+  "version": "1.0.0",
+  "identifier": "com.aceitesyproteinas.sistema",
+  "build": {
+    "frontendDist": "https://aypsistema.vercel.app"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Aceites y Proteínas",
+        "url": "https://aypsistema.vercel.app/login",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1280,
+        "minHeight": 800,
+        "resizable": true,
+        "maximized": true,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["dmg", "app", "nsis"],
+    "publisher": "Aceites y Proteínas S.A. de C.V.",
+    "copyright": "© Aceites y Proteínas S.A. de C.V.",
+    "category": "Business",
+    "shortDescription": "Sistema de operación AYP",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "webviewInstallMode": { "type": "downloadBootstrapper" },
+      "nsis": {
+        "installMode": "perMachine",
+        "languages": ["Spanish"],
+        "displayLanguageSelector": false
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "11.0"
+    }
+  }
+}
