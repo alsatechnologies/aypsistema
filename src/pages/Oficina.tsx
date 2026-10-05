@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { StatusPill } from '@/components/ui/status-pill';
+import { TipoPill } from '@/components/ui/tipo-pill';
 import { Plus, Search, FileText, Clock, CheckCircle, Printer, Eye, Truck, Ship, Calendar, X, Calculator } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -21,7 +22,7 @@ import { useProveedores } from '@/services/hooks/useProveedores';
 import type { Orden as OrdenDB } from '@/services/supabase/ordenes';
 import CompletarOrdenDialog from '@/components/oficina/CompletarOrdenDialog';
 import { toast } from 'sonner';
-import { formatDateTimeMST } from '@/utils/dateUtils';
+import { formatDateTimeMST, formatDateTimeSplitMST } from '@/utils/dateUtils';
 import { createEmbarque, getEmbarqueByBoleta, updateEmbarque } from '@/services/supabase/embarques';
 import { createRecepcion, getRecepcionByBoleta, updateRecepcion } from '@/services/supabase/recepciones';
 import { getMovimientoByBoleta, updateMovimiento } from '@/services/supabase/movimientos';
@@ -527,14 +528,7 @@ const Oficina = () => {
 
   const getEstatusBadge = (estatus: string) => <StatusPill estatus={estatus} />;
 
-  const getTipoOperacionBadge = (tipo: string) => {
-    const colors: Record<string, string> = {
-      'Reciba': 'bg-green-500 text-white',
-      'Embarque Nacional': 'bg-blue-500 text-white',
-      'Embarque Exportación': 'bg-purple-500 text-white',
-    };
-    return <Badge className={colors[tipo] || 'bg-gray-500 text-white'}>{tipo}</Badge>;
-  };
+  const getTipoOperacionBadge = (tipo: string) => <TipoPill tipo={tipo} />;
 
   const filteredOrdenes = ordenes.filter(o => {
     // Filtro de búsqueda
@@ -912,8 +906,7 @@ const Oficina = () => {
                   <TableHead>Cliente/Proveedor</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Destino/Origen</TableHead>
-                  <TableHead>Chofer</TableHead>
-                  <TableHead>Placas</TableHead>
+                  <TableHead>Transporte</TableHead>
                   <TableHead>Ingreso</TableHead>
                   <TableHead>Estatus</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
@@ -933,13 +926,32 @@ const Oficina = () => {
                     }}
                   >
                     <TableCell className="font-mono font-bold text-primary">{orden.boleta}</TableCell>
-                    <TableCell className="font-medium">{orden.producto || '-'}</TableCell>
-                    <TableCell>{orden.cliente || '-'}</TableCell>
+                    <TableCell className="font-medium min-w-[140px] max-w-[200px]">
+                      <span className="line-clamp-2">{orden.producto || '-'}</span>
+                    </TableCell>
+                    <TableCell className="min-w-[140px] max-w-[200px]">
+                      <span className="line-clamp-2">{orden.cliente || '-'}</span>
+                    </TableCell>
                     <TableCell>{getTipoOperacionBadge(orden.tipoOperacion)}</TableCell>
                     <TableCell>{orden.destino}</TableCell>
-                    <TableCell>{orden.nombreChofer}</TableCell>
-                    <TableCell className="font-mono text-sm">{orden.placas}</TableCell>
-                    <TableCell>{formatDateTimeMST(orden.fechaHoraIngreso || null)}</TableCell>
+                    <TableCell className="max-w-[180px]">
+                      <div className="flex flex-col gap-0.5 leading-tight">
+                        <span className="truncate">{orden.nombreChofer || '-'}</span>
+                        <span className="font-mono text-xs text-muted-foreground truncate">{orden.placas || '-'}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="tabular-nums whitespace-nowrap">
+                      {(() => {
+                        const { fecha, hora } = formatDateTimeSplitMST(orden.fechaHoraIngreso || null);
+                        if (!fecha) return '-';
+                        return (
+                          <div className="flex flex-col gap-0.5 leading-tight">
+                            <span>{fecha}</span>
+                            {hora && <span className="text-xs text-muted-foreground">{hora}</span>}
+                          </div>
+                        );
+                      })()}
+                    </TableCell>
                     <TableCell>{getEstatusBadge(orden.estatus)}</TableCell>
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       {orden.estatus === 'Nuevo' && orden.boleta.startsWith('TEMP-') ? (

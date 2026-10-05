@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { StatusPill } from '@/components/ui/status-pill';
+import { TipoPill } from '@/components/ui/tipo-pill';
 import { Search, Scale, Truck, Train, Clock, CheckCircle, FileText, Printer, Save, Ship, Plus, Eye, BookmarkPlus, Calendar, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -202,13 +203,7 @@ const EmbarquePage = () => {
 
   const getEstatusBadge = (estatus: string) => <StatusPill estatus={estatus} />;
 
-  const getTipoEmbarqueBadge = (tipo: string) => {
-    const colors: Record<string, string> = {
-      'Nacional': 'bg-blue-500 text-white',
-      'Exportación': 'bg-purple-500 text-white',
-    };
-    return <Badge className={colors[tipo]}>{tipo}</Badge>;
-  };
+  const getTipoEmbarqueBadge = (tipo: string) => <TipoPill tipo={tipo} />;
 
   const getTransporteIcon = (tipo: string | null | undefined) => {
     if (!tipo) return <Truck className="h-4 w-4 text-muted-foreground" />;
@@ -839,12 +834,9 @@ const EmbarquePage = () => {
                   <TableHead>Boleta</TableHead>
                   <TableHead>Producto</TableHead>
                   <TableHead>Cliente</TableHead>
-                  <TableHead>Destino</TableHead>
-                  <TableHead>Almacén</TableHead>
+                  <TableHead>Destino · Almacén</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Transporte</TableHead>
-                  <TableHead>Placas</TableHead>
-                  <TableHead>Chofer</TableHead>
                   <TableHead>Fecha</TableHead>
                   <TableHead>Estatus</TableHead>
                   {puedeEditarEliminar && <TableHead className="text-right">Acciones</TableHead>}
@@ -858,20 +850,31 @@ const EmbarquePage = () => {
                     onClick={() => handleRowClick(embarque)}
                   >
                     <TableCell className="font-mono font-bold text-primary">{embarque.boleta}</TableCell>
-                    <TableCell className="font-medium">{embarque.producto}</TableCell>
-                    <TableCell>{embarque.cliente}</TableCell>
-                    <TableCell>{embarque.destino}</TableCell>
-                    <TableCell>{almacenesDB.find(a => a.id === embarque.almacenId)?.nombre || '-'}</TableCell>
-                    <TableCell>{getTipoEmbarqueBadge(embarque.tipoEmbarque)}</TableCell>
-                    <TableCell>
-                      <span className="flex items-center gap-1">
-                        {getTransporteIcon(embarque.tipoTransporte)}
-                        {embarque.tipoTransporte || 'Camión'}
-                      </span>
+                    <TableCell className="font-medium min-w-[140px] max-w-[200px]">
+                      <span className="line-clamp-2">{embarque.producto}</span>
                     </TableCell>
-                    <TableCell className="font-mono">{embarque.placas || '-'}</TableCell>
-                    <TableCell>{embarque.chofer}</TableCell>
-                    <TableCell>{embarque.fecha}</TableCell>
+                    <TableCell className="min-w-[140px] max-w-[200px]">
+                      <span className="line-clamp-2">{embarque.cliente}</span>
+                    </TableCell>
+                    <TableCell className="max-w-[180px]">
+                      <div className="flex flex-col gap-0.5 leading-tight">
+                        <span className="truncate">{embarque.destino || '-'}</span>
+                        <span className="text-xs text-muted-foreground truncate">
+                          {almacenesDB.find(a => a.id === embarque.almacenId)?.nombre || '-'}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>{getTipoEmbarqueBadge(embarque.tipoEmbarque)}</TableCell>
+                    <TableCell className="max-w-[200px]">
+                      <div className="flex flex-col gap-0.5 leading-tight">
+                        <span className="truncate">{embarque.chofer || '-'}</span>
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
+                          {getTransporteIcon(embarque.tipoTransporte)}
+                          {embarque.tipoTransporte || 'Camión'} · <span className="font-mono truncate">{embarque.placas || '-'}</span>
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="tabular-nums whitespace-nowrap">{embarque.fecha}</TableCell>
                     <TableCell>{getEstatusBadge(embarque.estatus)}</TableCell>
                     {puedeEditarEliminar && (
                       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
@@ -941,7 +944,7 @@ const EmbarquePage = () => {
                       {selectedEmbarque.tipoTransporte || 'Camión'}
                     </span>
                     {selectedEmbarque.tipoEmbarque === 'Exportación' && (
-                      <Badge className="bg-purple-500 text-white ml-2">Exportación</Badge>
+                      <TipoPill tipo="Exportación" className="ml-2" />
                     )}
                     <HistorialCambiosButton
                       tabla="embarques"
