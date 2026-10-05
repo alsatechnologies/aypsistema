@@ -1,6 +1,10 @@
 name: App de escritorio (Windows)
 
 on:
+  # Se ejecuta al subir cambios de la app; el botón manual solo aparece cuando el workflow está en main
+  push:
+    branches: [feature/app-escritorio]
+    paths: ['desktop/**', '.github/workflows/desktop-windows.yml']
   workflow_dispatch:
 
 jobs:
