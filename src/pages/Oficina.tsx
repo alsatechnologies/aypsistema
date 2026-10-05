@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { StatusPill } from '@/components/ui/status-pill';
 import { Plus, Search, FileText, Clock, CheckCircle, Printer, Eye, Truck, Ship, Calendar, X, Calculator } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -524,15 +525,7 @@ const Oficina = () => {
     }
   };
 
-  const getEstatusBadge = (estatus: string) => {
-    const config: Record<string, { className: string; icon: React.ReactNode }> = {
-      'Nuevo': { className: 'bg-yellow-100 text-yellow-700 border-yellow-300', icon: <Clock className="h-3 w-3 mr-1" /> },
-      'En Proceso': { className: 'bg-orange-100 text-orange-700 border-orange-300', icon: <FileText className="h-3 w-3 mr-1" /> },
-      'Completado': { className: 'bg-green-100 text-green-700 border-green-300', icon: <CheckCircle className="h-3 w-3 mr-1" /> },
-    };
-    const { className, icon } = config[estatus] || { className: 'bg-muted', icon: null };
-    return <Badge className={`flex items-center w-fit ${className}`}>{icon}{estatus}</Badge>;
-  };
+  const getEstatusBadge = (estatus: string) => <StatusPill estatus={estatus} />;
 
   const getTipoOperacionBadge = (tipo: string) => {
     const colors: Record<string, string> = {

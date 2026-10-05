@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { StatusPill } from '@/components/ui/status-pill';
 import { Search, Scale, Truck, Train, Clock, CheckCircle, FileText, Printer, Save, BookmarkPlus, Plus, Calendar, X, Factory, ArrowRightLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -275,17 +276,7 @@ const Reciba = () => {
     }
   }, [pesoBruto, pesoTara, pesoNeto, horaPesoNeto, selectedRecepcion, horaPesoTara]);
 
-  const getEstatusBadge = (estatus: string) => {
-    const config: Record<string, { className: string; icon: React.ReactNode }> = {
-      'Pendiente': { className: 'bg-yellow-100 text-yellow-700', icon: <Clock className="h-3 w-3 mr-1" /> },
-      'Peso Bruto': { className: 'bg-blue-100 text-blue-700', icon: <Scale className="h-3 w-3 mr-1" /> },
-      'En Descarga': { className: 'bg-orange-100 text-orange-700', icon: <Truck className="h-3 w-3 mr-1" /> },
-      'Peso Tara': { className: 'bg-purple-100 text-purple-700', icon: <Scale className="h-3 w-3 mr-1" /> },
-      'Completado': { className: 'bg-green-100 text-green-700', icon: <CheckCircle className="h-3 w-3 mr-1" /> },
-    };
-    const { className, icon } = config[estatus] || { className: 'bg-muted', icon: null };
-    return <Badge className={`flex items-center w-fit ${className}`}>{icon}{estatus}</Badge>;
-  };
+  const getEstatusBadge = (estatus: string) => <StatusPill estatus={estatus} />;
 
   const getTransporteIcon = (tipo: string) => {
     return tipo === 'Camión' ? <Truck className="h-4 w-4 text-muted-foreground" /> : <Train className="h-4 w-4 text-muted-foreground" />;

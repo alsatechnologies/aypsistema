@@ -4,6 +4,7 @@ import Header from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { StatusPill } from '@/components/ui/status-pill';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -52,14 +53,14 @@ function estatusBadge(estatus: string) {
     cancelada:    { label: 'Cancelada',    variant: 'destructive' },
   };
   const cfg = map[estatus] ?? { label: estatus, variant: 'outline' };
-  return <Badge variant={cfg.variant}>{cfg.label}</Badge>;
+  return <StatusPill estatus={estatus} label={cfg.label} />;
 }
 
 function estatusUnidadBadge(estatus: string) {
-  if (estatus === 'activo')       return <Badge variant="default">Activo</Badge>;
-  if (estatus === 'en_reparacion') return <Badge variant="destructive">En taller</Badge>;
-  if (estatus === 'en_transito')  return <Badge variant="secondary">En tránsito</Badge>;
-  return <Badge variant="outline">{estatus}</Badge>;
+  if (estatus === 'activo')       return <StatusPill estatus={estatus} label="Activo" />;
+  if (estatus === 'en_reparacion') return <StatusPill estatus={estatus} label="En taller" />;
+  if (estatus === 'en_transito')  return <StatusPill estatus={estatus} label="En tránsito" />;
+  return <StatusPill estatus={estatus} />;
 }
 
 function diasEnTaller(fechaEntrada?: string | null) {
@@ -797,62 +798,23 @@ const Exportaciones = () => {
 
   return (
     <Layout>
-      <Header title="Exportaciones" description="Control de órdenes, cargas y flota de exportación" />
+      <Header title="Exportaciones" subtitle="Control de órdenes, cargas y flota de exportación" />
 
+      <div className="p-6">
       {/* Resumen */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
-                <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Enviados</p>
-                <p className="text-2xl font-bold">{enviados}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">En APSA</p>
-                <p className="text-2xl font-bold">{enApsa}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30">
-                <Truck className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">En tránsito</p>
-                <p className="text-2xl font-bold">{enTransito}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
-                <Wrench className="h-5 w-5 text-red-600 dark:text-red-400" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">En taller</p>
-                <p className="text-2xl font-bold">{enTaller}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="mb-6 grid grid-cols-2 md:grid-cols-4 rounded-xl border bg-card divide-y md:divide-y-0 md:divide-x divide-border/70">
+        {[
+          { label: 'Enviados', value: enviados, hint: 'Cargas con estatus enviado', tone: '' },
+          { label: 'En APSA', value: enApsa, hint: 'Unidades activas listas', tone: '' },
+          { label: 'En tránsito', value: enTransito, hint: 'Cargas fuera de APSA', tone: '' },
+          { label: 'En taller', value: enTaller, hint: 'Unidades en reparación', tone: enTaller > 0 ? 'text-[#9B1C1C] dark:text-red-400' : '' },
+        ].map(kpi => (
+          <div key={kpi.label} className="flex flex-col gap-1.5 px-5 py-4">
+            <span className="text-[13px] text-muted-foreground">{kpi.label}</span>
+            <span className={`font-mono text-[30px] leading-none font-medium tracking-tight ${kpi.tone}`}>{kpi.value}</span>
+            <span className="text-[12.5px] text-muted-foreground">{kpi.hint}</span>
+          </div>
+        ))}
       </div>
 
       {/* Buscador global */}
@@ -1145,6 +1107,7 @@ const Exportaciones = () => {
           </Card>
         </TabsContent>
       </Tabs>
+      </div>
 
       {/* Dialogs */}
       <FormCarga
