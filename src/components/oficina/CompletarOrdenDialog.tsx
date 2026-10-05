@@ -22,6 +22,10 @@ interface CompletarOrdenDialogProps {
     cliente_id?: number | null;
     proveedor_id?: number | null;
     tipo_transporte?: string;
+    nombre_chofer?: string | null;
+    vehiculo?: string | null;
+    placas?: string | null;
+    destino?: string | null;
   }) => Promise<void>;
 }
 
@@ -39,6 +43,10 @@ const CompletarOrdenDialog: React.FC<CompletarOrdenDialogProps> = ({
   const [clienteId, setClienteId] = useState<string>('');
   const [proveedorId, setProveedorId] = useState<string>('');
   const [tipoTransporte, setTipoTransporte] = useState<string>('');
+  const [nombreChofer, setNombreChofer] = useState<string>('');
+  const [vehiculo, setVehiculo] = useState<string>('');
+  const [placas, setPlacas] = useState<string>('');
+  const [destino, setDestino] = useState<string>('');
   const [loading, setLoading] = useState(false);
 
   // Cargar datos de la orden cuando se abre el diálogo
@@ -47,8 +55,11 @@ const CompletarOrdenDialog: React.FC<CompletarOrdenDialogProps> = ({
       setProductoId(orden.producto_id?.toString() || '');
       setClienteId(orden.cliente_id?.toString() || '');
       setProveedorId(orden.proveedor_id?.toString() || '');
-      // Obtener tipo_transporte de la orden si existe
       setTipoTransporte(orden.tipo_transporte || '');
+      setNombreChofer(orden.nombre_chofer || '');
+      setVehiculo(orden.vehiculo || '');
+      setPlacas(orden.placas || '');
+      setDestino(orden.destino || '');
     }
   }, [orden, open]);
 
@@ -74,7 +85,11 @@ const CompletarOrdenDialog: React.FC<CompletarOrdenDialogProps> = ({
         producto_id: parseInt(productoId),
         cliente_id: orden.tipo_operacion === 'Reciba' ? null : (clienteId ? parseInt(clienteId) : null),
         proveedor_id: orden.tipo_operacion === 'Reciba' ? (proveedorId ? parseInt(proveedorId) : null) : null,
-        tipo_transporte: tipoTransporte || null
+        tipo_transporte: tipoTransporte || null,
+        nombre_chofer: nombreChofer || null,
+        vehiculo: vehiculo || null,
+        placas: placas || null,
+        destino: destino || null,
       });
       toast.success('Orden completada correctamente');
       onOpenChange(false);
@@ -91,6 +106,7 @@ const CompletarOrdenDialog: React.FC<CompletarOrdenDialogProps> = ({
   const isReciba = orden.tipo_operacion === 'Reciba';
   const isEmbarqueNacional = orden.tipo_operacion === 'Embarque Nacional';
   const isEmbarqueExportacion = orden.tipo_operacion === 'Embarque Exportación';
+  const isCompletado = orden.estatus === 'Completado';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -102,25 +118,46 @@ const CompletarOrdenDialog: React.FC<CompletarOrdenDialogProps> = ({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* Información del Ingreso (solo lectura) */}
+          {/* Datos del Transporte — editables mientras no esté Completado */}
           <div className="border rounded-lg p-4 bg-gray-50">
-            <h4 className="font-medium mb-3 text-sm text-gray-600">Datos del Ingreso (Portero)</h4>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <Label className="text-xs text-gray-500">Chofer</Label>
-                <p className="font-medium">{orden.nombre_chofer || '-'}</p>
+            <h4 className="font-medium mb-3 text-sm text-gray-600">Datos del Transporte (Portero)</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs text-gray-500">Nombre del Chofer</Label>
+                <Input
+                  value={nombreChofer}
+                  onChange={e => setNombreChofer(e.target.value)}
+                  placeholder="Nombre del chofer"
+                  disabled={isCompletado}
+                />
               </div>
-              <div>
+              <div className="space-y-1">
                 <Label className="text-xs text-gray-500">Vehículo</Label>
-                <p className="font-medium">{orden.vehiculo || '-'}</p>
+                <Input
+                  value={vehiculo}
+                  onChange={e => setVehiculo(e.target.value)}
+                  placeholder="Tipo de vehículo"
+                  disabled={isCompletado}
+                />
               </div>
-              <div>
+              <div className="space-y-1">
                 <Label className="text-xs text-gray-500">Placas</Label>
-                <p className="font-medium font-mono">{orden.placas || '-'}</p>
+                <Input
+                  value={placas}
+                  onChange={e => setPlacas(e.target.value)}
+                  placeholder="ABC-123-A"
+                  className="font-mono"
+                  disabled={isCompletado}
+                />
               </div>
-              <div>
-                <Label className="text-xs text-gray-500">{isReciba ? 'Origen' : 'Destino'}</Label>
-                <p className="font-medium">{orden.destino || '-'}</p>
+              <div className="space-y-1">
+                <Label className="text-xs text-gray-500">{isReciba ? 'Origen / Procedencia' : 'Destino'}</Label>
+                <Input
+                  value={destino}
+                  onChange={e => setDestino(e.target.value)}
+                  placeholder={isReciba ? 'Ciudad, Estado' : 'Ciudad, Estado'}
+                  disabled={isCompletado}
+                />
               </div>
             </div>
           </div>

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Search, Download, ArrowDown, ArrowUp, Truck, Train, MapPin, Calendar, Filter } from 'lucide-react';
+import { Search, Download, ArrowDown, ArrowUp, Truck, Train, MapPin, Calendar, Filter, Factory } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -23,11 +23,12 @@ interface Movimiento {
   boleta: string;
   producto: string;
   clienteProveedor?: string | null;
-  tipo: 'Entrada' | 'Salida';
+  tipo: 'Entrada' | 'Salida' | 'Producción';
   transporte?: string | null;
   fecha: string;
   ubicacion?: string | null;
   pesoNeto?: number | null;
+  pesoNetoAnalizado?: number | null;
   pesoBruto?: number | null;
   pesoTara?: number | null;
   chofer?: string | null;
@@ -59,11 +60,12 @@ const Movimientos = () => {
     boleta: m.boleta,
     producto: m.producto?.nombre || '',
     clienteProveedor: m.cliente_proveedor,
-    tipo: m.tipo as 'Entrada' | 'Salida',
+    tipo: m.tipo as 'Entrada' | 'Salida' | 'Producción',
     transporte: m.transporte,
     fecha: m.fecha,
     ubicacion: m.ubicacion,
     pesoNeto: m.peso_neto,
+    pesoNetoAnalizado: m.peso_neto_analizado,
     pesoBruto: m.peso_bruto,
     pesoTara: m.peso_tara,
     chofer: m.chofer,
@@ -78,6 +80,14 @@ const Movimientos = () => {
         <Badge className="bg-green-100 text-green-700 border-green-300 flex items-center gap-1 w-fit">
           <ArrowDown className="h-3 w-3" />
           Entrada
+        </Badge>
+      );
+    }
+    if (tipo === 'Producción') {
+      return (
+        <Badge className="bg-orange-100 text-orange-700 border-orange-300 flex items-center gap-1 w-fit">
+          <Factory className="h-3 w-3" />
+          Producción
         </Badge>
       );
     }
@@ -130,7 +140,7 @@ const Movimientos = () => {
   const formatNumber = (num: number) => num.toLocaleString('es-MX');
 
   const handleDownload = () => {
-    const headers = ['Boleta', 'Producto', 'Cliente/Proveedor', 'Tipo', 'Transporte', 'Fecha', 'Ubicación', 'Peso Neto (Kg)'];
+    const headers = ['Boleta', 'Producto', 'Cliente/Proveedor', 'Tipo', 'Transporte', 'Fecha', 'Ubicación', 'Peso a Liquidar (Kg)'];
     const data = filteredMovimientos.map(m => ({
       boleta: m.boleta,
       producto: m.producto,
@@ -139,7 +149,7 @@ const Movimientos = () => {
       transporte: m.transporte,
       fecha: m.fecha,
       'Ubicación': m.ubicacion,
-      'Peso Neto (Kg)': m.pesoNeto
+      'Peso a Liquidar (Kg)': getPesoALiquidar(m)
     }));
 
     // Usar la misma lógica que exportToCSV en Reportes.tsx
@@ -147,7 +157,7 @@ const Movimientos = () => {
       // Mapear headers a claves del objeto
       const key = header === 'Cliente/Proveedor' ? 'Cliente/Proveedor' :
                   header === 'Ubicación' ? 'Ubicación' :
-                  header === 'Peso Neto (Kg)' ? 'Peso Neto (Kg)' :
+                  header === 'Peso a Liquidar (Kg)' ? 'Peso a Liquidar (Kg)' :
                   header.toLowerCase().replace(/\s+/g, '_');
       let value = item[key];
       
@@ -210,8 +220,10 @@ const Movimientos = () => {
     setSearch('');
   };
 
-  const totalEntradas = filteredMovimientos.filter(m => m.tipo === 'Entrada').reduce((acc, m) => acc + (m.pesoNeto || 0), 0);
-  const totalSalidas = filteredMovimientos.filter(m => m.tipo === 'Salida').reduce((acc, m) => acc + (m.pesoNeto || 0), 0);
+  const getPesoALiquidar = (m: Movimiento) => m.tipo === 'Entrada' ? (m.pesoNetoAnalizado ?? m.pesoNeto ?? 0) : (m.pesoNeto ?? 0);
+  const totalEntradas = filteredMovimientos.filter(m => m.tipo === 'Entrada').reduce((acc, m) => acc + getPesoALiquidar(m), 0);
+  const totalSalidas = filteredMovimientos.filter(m => m.tipo === 'Salida' || m.tipo === 'Producción').reduce((acc, m) => acc + (m.pesoNeto || 0), 0);
+  const totalProduccion = filteredMovimientos.filter(m => m.tipo === 'Producción').reduce((acc, m) => acc + (m.pesoNeto || 0), 0);
 
   return (
     <Layout>
@@ -252,6 +264,7 @@ const Movimientos = () => {
                   <SelectItem value="todos">Todos</SelectItem>
                   <SelectItem value="Entrada">Entradas</SelectItem>
                   <SelectItem value="Salida">Salidas</SelectItem>
+                  <SelectItem value="Producción">Producción</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -351,7 +364,7 @@ const Movimientos = () => {
                   <TableHead>Transporte</TableHead>
                   <TableHead>Fecha</TableHead>
                   <TableHead>Ubicación</TableHead>
-                  <TableHead className="text-right">Peso Neto</TableHead>
+                  <TableHead className="text-right">Peso a Liquidar</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -373,8 +386,8 @@ const Movimientos = () => {
                         {movimiento.ubicacion}
                       </span>
                     </TableCell>
-                    <TableCell className={`text-right font-medium ${movimiento.tipo === 'Entrada' ? 'text-green-600' : 'text-blue-600'}`}>
-                      {movimiento.tipo === 'Entrada' ? '+' : '-'}{formatNumber(movimiento.pesoNeto || 0)} Kg
+                    <TableCell className={`text-right font-medium ${movimiento.tipo === 'Entrada' ? 'text-green-600' : movimiento.tipo === 'Producción' ? 'text-orange-600' : 'text-blue-600'}`}>
+                      {movimiento.tipo === 'Entrada' ? '+' : '-'}{formatNumber(getPesoALiquidar(movimiento))} Kg
                     </TableCell>
                   </TableRow>
                 ))}

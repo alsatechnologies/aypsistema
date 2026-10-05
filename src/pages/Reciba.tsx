@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Search, Scale, Truck, Train, Clock, CheckCircle, FileText, Printer, Save, BookmarkPlus, Plus, Calendar, X } from 'lucide-react';
+import { Search, Scale, Truck, Train, Clock, CheckCircle, FileText, Printer, Save, BookmarkPlus, Plus, Calendar, X, Factory, ArrowRightLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -28,7 +28,7 @@ import type { Proveedor } from '@/services/supabase/proveedores';
 import { useAlmacenes } from '@/services/hooks/useAlmacenes';
 import { getOrdenByBoleta } from '@/services/supabase/ordenes';
 import { getProductoConAnalisis } from '@/services/supabase/productos';
-import { createMovimiento } from '@/services/supabase/movimientos';
+import { createMovimiento, getMovimientos } from '@/services/supabase/movimientos';
 import type { Recepcion as RecepcionDB } from '@/services/supabase/recepciones';
 import { formatDateTimeMST, formatDateTimeSplitMST } from '@/utils/dateUtils';
 import { validarRecepcion, puedeModificarRegistro } from '@/utils/validations';
@@ -90,8 +90,10 @@ const Reciba = () => {
   const [isNuevaOperacionOpen, setIsNuevaOperacionOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [tipoBascula, setTipoBascula] = useState<'Camión' | 'Ferroviaria'>('Camión');
-  const [fechaDesde, setFechaDesde] = useState('');
-  const [fechaHasta, setFechaHasta] = useState('');
+  const hoy = format(new Date(), 'yyyy-MM-dd');
+  const [modoDia, setModoDia] = useState(true);
+  const [fechaDesde, setFechaDesde] = useState(hoy);
+  const [fechaHasta, setFechaHasta] = useState(hoy);
   
   // Estado del formulario
   const [productoSeleccionado, setProductoSeleccionado] = useState<number | null>(null);
@@ -114,6 +116,71 @@ const Reciba = () => {
   const [observaciones, setObservaciones] = useState<string>('');
   const [recepcionAEliminar, setRecepcionAEliminar] = useState<Recepcion | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [choferEditable, setChoferEditable] = useState<string>('');
+  const [placasEditable, setPlacasEditable] = useState<string>('');
+  const [procedenciaEditable, setProcedenciaEditable] = useState<string>('');
+
+  // Estado pase a producción
+  const [ppProductoId, setPpProductoId] = useState<string>('');
+  const [ppCantidad, setPpCantidad] = useState<string>('');
+  const [ppDestino, setPpDestino] = useState<string>('');
+  const [ppGuardando, setPpGuardando] = useState(false);
+  const [ppHistorial, setPpHistorial] = useState<any[]>([]);
+  const [ppLoadingHistorial, setPpLoadingHistorial] = useState(false);
+
+  const productosSemilla = productosDB.filter(p =>
+    p.nombre.toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes('SEMILLA')
+  );
+
+  const cargarHistorialPP = async () => {
+    setPpLoadingHistorial(true);
+    try {
+      const data = await getMovimientos({ tipo: 'Producción', limit: 50 }) as any;
+      setPpHistorial(Array.isArray(data) ? data : data.data || []);
+    } catch { /* silencioso */ }
+    finally { setPpLoadingHistorial(false); }
+  };
+
+  useEffect(() => { cargarHistorialPP(); }, []);
+
+  const handlePaseProduccion = async () => {
+    if (!ppProductoId) { toast.error('Seleccione un producto'); return; }
+    const kg = parseFloat(ppCantidad);
+    if (!kg || kg <= 0) { toast.error('Ingrese una cantidad válida'); return; }
+    if (!ppDestino.trim()) { toast.error('Ingrese el destino'); return; }
+
+    setPpGuardando(true);
+    try {
+      const ahora = new Date();
+      const fecha = `${ahora.getFullYear()}-${String(ahora.getMonth()+1).padStart(2,'0')}-${String(ahora.getDate()).padStart(2,'0')}`;
+      const boleta = `PP-${fecha.replace(/-/g,'')}-${Date.now().toString().slice(-6)}`;
+
+      await createMovimiento({
+        boleta,
+        producto_id: parseInt(ppProductoId),
+        cliente_proveedor: ppDestino.trim(),
+        tipo: 'Producción',
+        transporte: null,
+        fecha,
+        ubicacion: ppDestino.trim(),
+        peso_neto: kg,
+        peso_bruto: kg,
+        peso_tara: null,
+        chofer: null,
+        placas: null,
+      });
+
+      toast.success(`Pase registrado — ${kg.toLocaleString('es-MX')} kg → ${ppDestino}`);
+      setPpProductoId('');
+      setPpCantidad('');
+      setPpDestino('');
+      await cargarHistorialPP();
+    } catch (err) {
+      toast.error('Error al registrar el pase');
+    } finally {
+      setPpGuardando(false);
+    }
+  };
 
   // Verificar si el usuario puede editar/eliminar
   const puedeEditarEliminar = usuario?.rol === 'Administrador' || usuario?.rol === 'Oficina';
@@ -186,6 +253,9 @@ const Reciba = () => {
       setHoraPesoTara(selectedRecepcion.horaPesoTara || null);
       setHoraPesoNeto(selectedRecepcion.horaPesoNeto || null);
       setObservaciones(selectedRecepcion.observaciones || '');
+      setChoferEditable(selectedRecepcion.chofer || '');
+      setPlacasEditable(selectedRecepcion.placas || '');
+      setProcedenciaEditable(selectedRecepcion.procedencia || '');
       // Inicializar fecha/hora manual con la fecha de la boleta (para modo retroactivo)
       const fechaBoleta = selectedRecepcion.fecha || new Date().toISOString().split('T')[0];
       setFechaBrutoManual(fechaBoleta);
@@ -317,7 +387,10 @@ const Reciba = () => {
         hora_peso_bruto: horaPesoBruto || null,
         hora_peso_tara: horaPesoTara || null,
         hora_peso_neto: horaPesoNeto || null,
-        observaciones: observaciones || null
+        observaciones: observaciones || null,
+        chofer: choferEditable || null,
+        placas: placasEditable || null,
+        procedencia: procedenciaEditable || null,
       });
       
       await loadRecepciones();
@@ -471,7 +544,9 @@ const Reciba = () => {
         estatus: 'Completado',
         tipo_bascula: tipoBascula,
         almacen_id: almacenSeleccionado || null,
-        placas: selectedRecepcion.placas || null,
+        chofer: choferEditable || null,
+        placas: placasEditable || null,
+        procedencia: procedenciaEditable || null,
         hora_peso_bruto: horaPesoBruto || null,
         hora_peso_tara: horaPesoTara || null,
         hora_peso_neto: horaPesoNeto || null,
@@ -486,6 +561,9 @@ const Reciba = () => {
         const movimientoExistente = await getMovimientoByBoleta(boletaFinal);
         const almacen = almacenSeleccionado ? almacenesDB.find(a => a.id === almacenSeleccionado) : null;
 
+        const { pesoNetoAnalizado } = calcularDescuentos();
+        const pesoAnalizado = pesoNetoAnalizado !== pesoNeto ? pesoNetoAnalizado : null;
+
         if (!movimientoExistente) {
           const proveedor = proveedoresDB.find(p => p.id === proveedorIdFinal);
 
@@ -498,6 +576,7 @@ const Reciba = () => {
             fecha: selectedRecepcion.fecha,
             ubicacion: almacen?.nombre || null,
             peso_neto: pesoNeto,
+            peso_neto_analizado: pesoAnalizado,
             peso_bruto: pesoBruto,
             peso_tara: pesoTara,
             chofer: selectedRecepcion.chofer || null,
@@ -507,6 +586,7 @@ const Reciba = () => {
           // Actualizar pesos si cambiaron
           await updateMovimiento(movimientoExistente.id, {
             peso_neto: pesoNeto,
+            peso_neto_analizado: pesoAnalizado,
             peso_bruto: pesoBruto,
             peso_tara: pesoTara,
             ubicacion: almacen?.nombre || movimientoExistente.ubicacion,
@@ -758,12 +838,12 @@ const Reciba = () => {
       r.chofer.toLowerCase().includes(search.toLowerCase());
     
     let matchesDate = true;
-    if (fechaDesde || fechaHasta) {
+    if (modoDia && (fechaDesde || fechaHasta)) {
       const recepcionFecha = r.fecha || '';
       if (fechaDesde && recepcionFecha < fechaDesde) matchesDate = false;
       if (fechaHasta && recepcionFecha > fechaHasta) matchesDate = false;
     }
-    
+
     return matchesSearch && matchesDate;
   });
 
@@ -773,6 +853,19 @@ const Reciba = () => {
     <Layout>
       <Header title="Reciba" subtitle="Báscula - Recepción de materia prima" />
       <div className="p-6">
+        <Tabs defaultValue="recepciones" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="recepciones" className="flex items-center gap-2">
+              <Scale className="h-4 w-4" />
+              Recepciones
+            </TabsTrigger>
+            <TabsTrigger value="pase-produccion" className="flex items-center gap-2">
+              <Factory className="h-4 w-4" />
+              Pase a Producción
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="recepciones">
         {/* Search, Filters y Nueva Operación */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
           <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
@@ -786,29 +879,55 @@ const Reciba = () => {
             />
             </div>
             <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <Input 
-                type="date" 
-                className="w-36"
-                value={fechaDesde}
-                onChange={(e) => setFechaDesde(e.target.value)}
-              />
-              <span className="text-muted-foreground">-</span>
-              <Input 
-                type="date" 
-                className="w-36"
-                value={fechaHasta}
-                onChange={(e) => setFechaHasta(e.target.value)}
-              />
-              {(fechaDesde || fechaHasta) && (
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => { setFechaDesde(''); setFechaHasta(''); }}
-                  title="Limpiar filtros"
+              {/* Toggle modo */}
+              <div className="flex rounded-md border overflow-hidden text-xs">
+                <button
+                  className={`px-3 py-1.5 font-medium transition-colors ${modoDia ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-muted'}`}
+                  onClick={() => { setModoDia(true); setFechaDesde(hoy); setFechaHasta(hoy); }}
                 >
-                  <X className="h-4 w-4" />
-                </Button>
+                  Por día
+                </button>
+                <button
+                  className={`px-3 py-1.5 font-medium transition-colors border-l ${!modoDia ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-muted'}`}
+                  onClick={() => setModoDia(false)}
+                >
+                  Ver todo
+                </button>
+              </div>
+              {/* Navegador de día */}
+              {modoDia && (
+                <>
+                  <Button variant="ghost" size="icon" className="h-8 w-8"
+                    onClick={() => {
+                      if (!fechaDesde) return;
+                      const d = new Date(fechaDesde + 'T12:00:00');
+                      d.setDate(d.getDate() - 1);
+                      const f = format(d, 'yyyy-MM-dd');
+                      setFechaDesde(f); setFechaHasta(f);
+                    }}
+                    title="Día anterior"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Input
+                    type="date"
+                    className="w-36 text-center"
+                    value={fechaDesde}
+                    onChange={(e) => { setFechaDesde(e.target.value); setFechaHasta(e.target.value); }}
+                  />
+                  <Button variant="ghost" size="icon" className="h-8 w-8"
+                    onClick={() => {
+                      if (!fechaDesde) return;
+                      const d = new Date(fechaDesde + 'T12:00:00');
+                      d.setDate(d.getDate() + 1);
+                      const f = format(d, 'yyyy-MM-dd');
+                      setFechaDesde(f); setFechaHasta(f);
+                    }}
+                    title="Día siguiente"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </>
               )}
             </div>
           </div>
@@ -834,9 +953,11 @@ const Reciba = () => {
                   <TableHead>Boleta</TableHead>
                   <TableHead>Producto</TableHead>
                   <TableHead>Proveedor</TableHead>
+                  <TableHead>Procedencia</TableHead>
                   <TableHead>Chofer</TableHead>
                   <TableHead>Placas</TableHead>
                   <TableHead>Transporte</TableHead>
+                  <TableHead>Almacén</TableHead>
                   <TableHead>Fecha</TableHead>
                   <TableHead>Estatus</TableHead>
                   {puedeEditarEliminar && <TableHead className="text-right">Acciones</TableHead>}
@@ -854,6 +975,7 @@ const Reciba = () => {
                     </TableCell>
                     <TableCell className="font-medium">{recepcion.producto}</TableCell>
                     <TableCell>{recepcion.proveedor}</TableCell>
+                    <TableCell>{recepcion.procedencia || '-'}</TableCell>
                     <TableCell>{recepcion.chofer}</TableCell>
                     <TableCell className="font-mono">{recepcion.placas}</TableCell>
                     <TableCell>
@@ -862,6 +984,7 @@ const Reciba = () => {
                         {recepcion.tipoTransporte}
                       </span>
                     </TableCell>
+                    <TableCell>{almacenesDB.find(a => a.id === recepcion.almacenId)?.nombre || '-'}</TableCell>
                     <TableCell>{recepcion.fecha}</TableCell>
                     <TableCell>{getEstatusBadge(recepcion.estatus)}</TableCell>
                     {puedeEditarEliminar && (
@@ -917,6 +1040,111 @@ const Reciba = () => {
             )}
           </CardContent>
         </Card>
+
+          </TabsContent>
+
+          {/* ── PASE A PRODUCCIÓN ─────────────────────────── */}
+          <TabsContent value="pase-produccion">
+            <div className="max-w-2xl mx-auto space-y-6">
+              {/* Formulario */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ArrowRightLeft className="h-5 w-5" />
+                    Registrar Pase de Semilla a Producción
+                  </CardTitle>
+                  <CardDescription>
+                    La cantidad registrada se descontará del inventario de semilla.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Producto (Semilla) *</Label>
+                    <Select value={ppProductoId} onValueChange={setPpProductoId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar semilla..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {productosSemilla.map(p => (
+                          <SelectItem key={p.id} value={p.id.toString()}>{p.nombre}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Cantidad (kg) *</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="1"
+                        placeholder="0"
+                        value={ppCantidad}
+                        onChange={e => setPpCantidad(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Destino *</Label>
+                      <Input
+                        placeholder="Ej: Extracción Planta 1"
+                        value={ppDestino}
+                        onChange={e => setPpDestino(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <Button
+                    className="w-full bg-primary hover:bg-primary/90"
+                    onClick={handlePaseProduccion}
+                    disabled={ppGuardando}
+                  >
+                    {ppGuardando ? 'Registrando...' : 'Registrar Pase'}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Historial */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Historial de Pases</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {ppLoadingHistorial ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">Cargando...</p>
+                  ) : ppHistorial.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">Sin registros aún</p>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Boleta</TableHead>
+                          <TableHead>Fecha</TableHead>
+                          <TableHead>Producto</TableHead>
+                          <TableHead className="text-right">Cantidad (kg)</TableHead>
+                          <TableHead>Destino</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {ppHistorial.map(m => (
+                          <TableRow key={m.id}>
+                            <TableCell className="font-mono text-sm text-primary">{m.boleta}</TableCell>
+                            <TableCell>{m.fecha}</TableCell>
+                            <TableCell>{m.producto?.nombre || '-'}</TableCell>
+                            <TableCell className="text-right font-medium text-orange-600">
+                              -{(m.peso_neto || 0).toLocaleString('es-MX')}
+                            </TableCell>
+                            <TableCell>{m.ubicacion || m.cliente_proveedor || '-'}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
 
         {/* Dialog Nueva Operación */}
         <NuevaOperacionDialog 
@@ -981,16 +1209,35 @@ const Reciba = () => {
                       </div>
                     )}
                     <div>
-                      <Label className="text-xs text-muted-foreground">Chofer / Placas</Label>
-                      <p className="font-medium">{selectedRecepcion.chofer}</p>
-                      <p className="text-sm font-mono text-muted-foreground">{selectedRecepcion.placas}</p>
+                      <Label className="text-xs text-muted-foreground">Chofer</Label>
+                      <Input
+                        value={choferEditable}
+                        onChange={e => setChoferEditable(e.target.value)}
+                        placeholder="Nombre del chofer"
+                        disabled={isCompletado}
+                        className="mt-1 h-8 text-sm"
+                      />
                     </div>
-                    {selectedRecepcion.procedencia && (
-                      <div>
-                        <Label className="text-xs text-muted-foreground">Procedencia</Label>
-                        <p className="font-medium">{selectedRecepcion.procedencia}</p>
-                      </div>
-                    )}
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Placas</Label>
+                      <Input
+                        value={placasEditable}
+                        onChange={e => setPlacasEditable(e.target.value)}
+                        placeholder="ABC-123-A"
+                        disabled={isCompletado}
+                        className="mt-1 h-8 text-sm font-mono"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Procedencia</Label>
+                      <Input
+                        value={procedenciaEditable}
+                        onChange={e => setProcedenciaEditable(e.target.value)}
+                        placeholder="Ciudad, Estado"
+                        disabled={isCompletado}
+                        className="mt-1 h-8 text-sm"
+                      />
+                    </div>
                   </div>
 
                   {/* Segunda fila: Producto, Proveedor, Almacén */}

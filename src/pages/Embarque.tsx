@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Search, Scale, Truck, Train, Clock, CheckCircle, FileText, Printer, Save, Ship, Plus, Eye, BookmarkPlus, Calendar, X } from 'lucide-react';
+import { Search, Scale, Truck, Train, Clock, CheckCircle, FileText, Printer, Save, Ship, Plus, Eye, BookmarkPlus, Calendar, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -54,6 +54,7 @@ interface Embarque {
   pesoBruto?: number | null;
   pesoTara?: number | null;
   pesoNeto?: number | null;
+  ajusteKg?: number | null;
   tipoTransporte?: string | null;
   tipoEmbarque?: string | null;
   sellos?: {
@@ -92,13 +93,16 @@ const EmbarquePage = () => {
   const [isNuevoDialogOpen, setIsNuevoDialogOpen] = useState(false);
   const [isBoletaDialogOpen, setIsBoletaDialogOpen] = useState(false);
   const [consecutivo, setConsecutivo] = useState(5);
-  const [fechaDesde, setFechaDesde] = useState('');
-  const [fechaHasta, setFechaHasta] = useState('');
+  const hoy = format(new Date(), 'yyyy-MM-dd');
+  const [modoDia, setModoDia] = useState(true);
+  const [fechaDesde, setFechaDesde] = useState(hoy);
+  const [fechaHasta, setFechaHasta] = useState(hoy);
   const [embarqueAEliminar, setEmbarqueAEliminar] = useState<Embarque | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // Verificar si el usuario puede editar/eliminar
   const puedeEditarEliminar = usuario?.rol === 'Administrador' || usuario?.rol === 'Oficina';
+  const canAjuste = ['Administrador', 'Oficina', 'Sistemas'].includes(usuario?.rol ?? '');
 
   // Mapear embarques de DB a formato local
   const embarques: Embarque[] = embarquesDB.map(e => ({
@@ -114,6 +118,7 @@ const EmbarquePage = () => {
     pesoBruto: e.peso_bruto,
     pesoTara: e.peso_tara,
     pesoNeto: e.peso_neto,
+    ajusteKg: e.ajuste_kg,
     tipoTransporte: e.tipo_transporte as any,
     tipoEmbarque: e.tipo_embarque as any,
     sellos: e.sello_entrada_1 || e.sello_entrada_2 || e.sello_entrada_3 || e.sello_entrada_4 || e.sello_entrada_5 || e.sello_salida_1 || e.sello_salida_2 || e.sello_salida_3 || e.sello_salida_4 || e.sello_salida_5 ? {
@@ -157,6 +162,7 @@ const EmbarquePage = () => {
     valoresAnalisis: {} as Record<string, number>,
     pesoBruto: 0,
     pesoTara: 0,
+    ajusteKg: null as number | null,
     almacenId: null as number | null,
     placas: ''
   });
@@ -236,6 +242,7 @@ const EmbarquePage = () => {
       valoresAnalisis: embarque.valoresAnalisis || {},
       pesoBruto: embarque.pesoBruto || 0,
       pesoTara: embarque.pesoTara || 0,
+      ajusteKg: embarque.ajusteKg ?? null,
       almacenId: embarque.almacenId || null,
       placas: embarque.placas || ''
     });
@@ -434,6 +441,7 @@ const EmbarquePage = () => {
         peso_bruto: formData.pesoBruto > 0 ? formData.pesoBruto : null,
         peso_tara: formData.pesoTara > 0 ? formData.pesoTara : null,
         peso_neto: pesoNeto > 0 ? pesoNeto : null,
+        ajuste_kg: formData.ajusteKg ?? null,
         sello_entrada_1: formData.sellos.selloEntrada1 || null,
         sello_entrada_2: formData.sellos.selloEntrada2 || null,
         sello_entrada_3: formData.sellos.selloEntrada3 || null,
@@ -502,6 +510,7 @@ const EmbarquePage = () => {
         peso_bruto: formData.pesoBruto,
         peso_tara: formData.pesoTara,
         peso_neto: pesoNeto,
+        ajuste_kg: formData.ajusteKg ?? null,
         sello_entrada_1: formData.sellos.selloEntrada1 || null,
         sello_entrada_2: formData.sellos.selloEntrada2 || null,
         sello_entrada_3: formData.sellos.selloEntrada3 || null,
@@ -628,6 +637,7 @@ const EmbarquePage = () => {
       }
 
       const pesoNeto = formData.pesoBruto - formData.pesoTara;
+      const pesoFinal = formData.ajusteKg ? pesoNeto - formData.ajusteKg : pesoNeto;
       // Usar la fecha guardada en la boleta
       const fechaActual = selectedEmbarque.fecha
         ? selectedEmbarque.fecha.split('-').reverse().join('/')
@@ -685,8 +695,8 @@ const EmbarquePage = () => {
           horatara: fechaHoraTara.hora
         },
         pesos_info2: {
-          deduccion: 0,
-          peso_neto_analizado: pesoNeto
+          deduccion: formData.ajusteKg ?? 0,
+          peso_neto_analizado: pesoFinal
         },
         observaciones: observaciones || '',
         // La API espera sellos como array de strings (sin null)
@@ -736,12 +746,12 @@ const EmbarquePage = () => {
       e.chofer.toLowerCase().includes(search.toLowerCase());
     
     let matchesDate = true;
-    if (fechaDesde || fechaHasta) {
+    if (modoDia && (fechaDesde || fechaHasta)) {
       const embarqueFecha = e.fecha || '';
       if (fechaDesde && embarqueFecha < fechaDesde) matchesDate = false;
       if (fechaHasta && embarqueFecha > fechaHasta) matchesDate = false;
     }
-    
+
     return matchesSearch && matchesDate;
   });
 
@@ -764,29 +774,55 @@ const EmbarquePage = () => {
             />
             </div>
             <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <Input 
-                type="date" 
-                className="w-36"
-                value={fechaDesde}
-                onChange={(e) => setFechaDesde(e.target.value)}
-              />
-              <span className="text-muted-foreground">-</span>
-              <Input 
-                type="date" 
-                className="w-36"
-                value={fechaHasta}
-                onChange={(e) => setFechaHasta(e.target.value)}
-              />
-              {(fechaDesde || fechaHasta) && (
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => { setFechaDesde(''); setFechaHasta(''); }}
-                  title="Limpiar filtros"
+              {/* Toggle modo */}
+              <div className="flex rounded-md border overflow-hidden text-xs">
+                <button
+                  className={`px-3 py-1.5 font-medium transition-colors ${modoDia ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-muted'}`}
+                  onClick={() => { setModoDia(true); setFechaDesde(hoy); setFechaHasta(hoy); }}
                 >
-                  <X className="h-4 w-4" />
-                </Button>
+                  Por día
+                </button>
+                <button
+                  className={`px-3 py-1.5 font-medium transition-colors border-l ${!modoDia ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-muted'}`}
+                  onClick={() => setModoDia(false)}
+                >
+                  Ver todo
+                </button>
+              </div>
+              {/* Navegador de día */}
+              {modoDia && (
+                <>
+                  <Button variant="ghost" size="icon" className="h-8 w-8"
+                    onClick={() => {
+                      if (!fechaDesde) return;
+                      const d = new Date(fechaDesde + 'T12:00:00');
+                      d.setDate(d.getDate() - 1);
+                      const f = format(d, 'yyyy-MM-dd');
+                      setFechaDesde(f); setFechaHasta(f);
+                    }}
+                    title="Día anterior"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Input
+                    type="date"
+                    className="w-36 text-center"
+                    value={fechaDesde}
+                    onChange={(e) => { setFechaDesde(e.target.value); setFechaHasta(e.target.value); }}
+                  />
+                  <Button variant="ghost" size="icon" className="h-8 w-8"
+                    onClick={() => {
+                      if (!fechaDesde) return;
+                      const d = new Date(fechaDesde + 'T12:00:00');
+                      d.setDate(d.getDate() + 1);
+                      const f = format(d, 'yyyy-MM-dd');
+                      setFechaDesde(f); setFechaHasta(f);
+                    }}
+                    title="Día siguiente"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </>
               )}
             </div>
           </div>
@@ -813,6 +849,7 @@ const EmbarquePage = () => {
                   <TableHead>Producto</TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Destino</TableHead>
+                  <TableHead>Almacén</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Transporte</TableHead>
                   <TableHead>Placas</TableHead>
@@ -833,6 +870,7 @@ const EmbarquePage = () => {
                     <TableCell className="font-medium">{embarque.producto}</TableCell>
                     <TableCell>{embarque.cliente}</TableCell>
                     <TableCell>{embarque.destino}</TableCell>
+                    <TableCell>{almacenesDB.find(a => a.id === embarque.almacenId)?.nombre || '-'}</TableCell>
                     <TableCell>{getTipoEmbarqueBadge(embarque.tipoEmbarque)}</TableCell>
                     <TableCell>
                       <span className="flex items-center gap-1">
@@ -1209,6 +1247,37 @@ const EmbarquePage = () => {
                           {formatNumber(formData.pesoBruto - formData.pesoTara)} Kg
                         </span>
                       </div>
+                      {/* Corrección de peso — solo ferroviaria + roles con permiso */}
+                      {selectedEmbarque.tipoTransporte === 'Ferroviaria' && canAjuste && (
+                        <>
+                          <Separator className="my-3" />
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <label className="text-sm font-medium">Corrección (kg a restar)</label>
+                              <span className="text-xs text-muted-foreground">Solo jumbos ferroviarios</span>
+                            </div>
+                            <input
+                              type="number"
+                              step="1"
+                              placeholder="0"
+                              className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                              value={formData.ajusteKg ?? ''}
+                              onChange={e => setFormData(f => ({
+                                ...f,
+                                ajusteKg: e.target.value === '' ? null : Number(e.target.value)
+                              }))}
+                            />
+                          </div>
+                          {formData.ajusteKg != null && formData.ajusteKg > 0 && (
+                            <div className="flex justify-between text-lg font-bold mt-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                              <span className="text-green-800">Peso Final Corregido:</span>
+                              <span className="text-green-700">
+                                {formatNumber(formData.pesoBruto - formData.pesoTara - formData.ajusteKg)} Kg
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

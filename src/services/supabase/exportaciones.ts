@@ -48,6 +48,8 @@ export interface CargaExportacion {
   fecha_embarque?: string | null;
   estatus: 'pendiente' | 'orden' | 'enviado';
   notas?: string | null;
+  peso_neto?: number | null;
+  ajuste_kg?: number | null;
   created_at?: string;
   updated_at?: string;
   unidad?: UnidadExportacion;

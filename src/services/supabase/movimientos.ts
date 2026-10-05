@@ -10,6 +10,7 @@ export interface Movimiento {
   fecha: string;
   ubicacion?: string | null;
   peso_neto?: number | null;
+  peso_neto_analizado?: number | null;
   peso_bruto?: number | null;
   peso_tara?: number | null;
   chofer?: string | null;

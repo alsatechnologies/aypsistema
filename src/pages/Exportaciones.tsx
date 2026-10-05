@@ -15,7 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import {
   Plus, Search, Truck, Package, ClipboardList, Edit2, Trash2,
   MapPin, Calendar, ArrowRight, CheckCircle2, Clock, AlertCircle,
-  Wrench, Ship
+  Wrench, Ship, List, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useExportaciones } from '@/services/hooks/useExportaciones';
@@ -90,6 +90,7 @@ const FormCarga: React.FC<FormCargaProps> = ({ open, onClose, onSave, initial, o
     fecha_embarque: initial?.fecha_embarque ?? '',
     estatus: initial?.estatus ?? 'pendiente',
     notas: initial?.notas ?? '',
+    ajuste_kg: initial?.ajuste_kg ?? null,
   });
   const [saving, setSaving] = useState(false);
 
@@ -104,6 +105,7 @@ const FormCarga: React.FC<FormCargaProps> = ({ open, onClose, onSave, initial, o
       fecha_embarque: initial?.fecha_embarque ?? '',
       estatus: initial?.estatus ?? 'pendiente',
       notas: initial?.notas ?? '',
+      ajuste_kg: initial?.ajuste_kg ?? null,
     });
   }, [initial, open]);
 
@@ -133,11 +135,11 @@ const FormCarga: React.FC<FormCargaProps> = ({ open, onClose, onSave, initial, o
               <Label>Orden</Label>
               <Select
                 value={form.orden_id?.toString() ?? ''}
-                onValueChange={v => setForm(f => ({ ...f, orden_id: v ? Number(v) : undefined }))}
+                onValueChange={v => setForm(f => ({ ...f, orden_id: v && v !== 'none' ? Number(v) : undefined }))}
               >
                 <SelectTrigger><SelectValue placeholder="Sin orden" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sin orden</SelectItem>
+                  <SelectItem value="none">Sin orden</SelectItem>
                   {ordenes.filter(o => o.estatus !== 'cancelada' && o.estatus !== 'completada').map(o => (
                     <SelectItem key={o.id} value={o.id.toString()}>
                       {o.cliente?.nombre} — {o.producto}
@@ -150,7 +152,7 @@ const FormCarga: React.FC<FormCargaProps> = ({ open, onClose, onSave, initial, o
               <Label>Unidad</Label>
               <Select
                 value={form.unidad_id?.toString() ?? ''}
-                onValueChange={v => setForm(f => ({ ...f, unidad_id: v ? Number(v) : undefined }))}
+                onValueChange={v => setForm(f => ({ ...f, unidad_id: v && v !== 'none' ? Number(v) : undefined }))}
               >
                 <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                 <SelectContent>
@@ -168,11 +170,12 @@ const FormCarga: React.FC<FormCargaProps> = ({ open, onClose, onSave, initial, o
             <div className="space-y-1">
               <Label>Carga anterior</Label>
               <Select
-                value={form.carga_anterior ?? ''}
-                onValueChange={v => setForm(f => ({ ...f, carga_anterior: v }))}
+                value={form.carga_anterior ?? 'none'}
+                onValueChange={v => setForm(f => ({ ...f, carga_anterior: v === 'none' ? '' : v }))}
               >
                 <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">— Ninguna —</SelectItem>
                   {PRODUCTOS_EXPORTACION.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -180,11 +183,12 @@ const FormCarga: React.FC<FormCargaProps> = ({ open, onClose, onSave, initial, o
             <div className="space-y-1">
               <Label>Próxima carga</Label>
               <Select
-                value={form.proxima_carga ?? ''}
-                onValueChange={v => setForm(f => ({ ...f, proxima_carga: v }))}
+                value={form.proxima_carga ?? 'none'}
+                onValueChange={v => setForm(f => ({ ...f, proxima_carga: v === 'none' ? '' : v }))}
               >
                 <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">— Ninguna —</SelectItem>
                   {PRODUCTOS_EXPORTACION.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -195,17 +199,18 @@ const FormCarga: React.FC<FormCargaProps> = ({ open, onClose, onSave, initial, o
             <div className="space-y-1">
               <Label>Ubicación actual</Label>
               <Select
-                value={form.ubicacion_actual ?? ''}
-                onValueChange={v => setForm(f => ({ ...f, ubicacion_actual: v }))}
+                value={form.ubicacion_actual ?? 'none'}
+                onValueChange={v => setForm(f => ({ ...f, ubicacion_actual: v === 'none' ? '' : v }))}
               >
                 <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">— Seleccionar —</SelectItem>
                   {UBICACIONES.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
-              <Label>ETA a APSA</Label>
+              <Label>Llegada a AYP</Label>
               <Input
                 type="date"
                 value={form.eta_apsa ?? ''}
@@ -248,6 +253,30 @@ const FormCarga: React.FC<FormCargaProps> = ({ open, onClose, onSave, initial, o
               placeholder="Observaciones opcionales..."
             />
           </div>
+
+          {/* Ajuste de tara — solo jumbos, lo llena Oficina al final del proceso */}
+          {(() => {
+            const selectedUnidad = unidades.find(u => u.id === form.unidad_id);
+            if (selectedUnidad?.tipo !== 'jumbo') return null;
+            return (
+              <div className="space-y-1 border-t pt-4">
+                <Label className="font-semibold">Ajuste de tara (kg)</Label>
+                <p className="text-xs text-muted-foreground mb-1">
+                  Corrección entre tara teórica y real. Lo completa Oficina al cerrar la documentación.
+                </p>
+                <Input
+                  type="number"
+                  step="1"
+                  placeholder="0"
+                  value={form.ajuste_kg ?? ''}
+                  onChange={e => setForm(f => ({
+                    ...f,
+                    ajuste_kg: e.target.value === '' ? null : Number(e.target.value)
+                  }))}
+                />
+              </div>
+            );
+          })()}
         </div>
         <DialogFooter>
           <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
@@ -522,11 +551,12 @@ const FormUnidad: React.FC<FormUnidadProps> = ({ open, onClose, onSave, initial 
             <div className="space-y-1">
               <Label>Ubicación actual</Label>
               <Select
-                value={form.ubicacion_actual ?? ''}
-                onValueChange={v => setForm(f => ({ ...f, ubicacion_actual: v }))}
+                value={form.ubicacion_actual ?? 'none'}
+                onValueChange={v => setForm(f => ({ ...f, ubicacion_actual: v === 'none' ? '' : v }))}
               >
                 <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">— Seleccionar —</SelectItem>
                   {UBICACIONES.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -565,6 +595,126 @@ const FormUnidad: React.FC<FormUnidadProps> = ({ open, onClose, onSave, initial 
   );
 };
 
+// ─── Vista Calendario ─────────────────────────────────────────────────────────
+
+const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+interface EventoCal {
+  tipo: 'eta' | 'embarque';
+  carga: CargaExportacion;
+}
+
+function buildCalendar(year: number, month: number): (Date | null)[][] {
+  const firstDay = new Date(year, month, 1);
+  // Lunes=0 ... Domingo=6
+  const startDow = (firstDay.getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells: (Date | null)[] = Array(startDow).fill(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
+  while (cells.length % 7 !== 0) cells.push(null);
+  const weeks: (Date | null)[][] = [];
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
+  return weeks;
+}
+
+const CalendarioCargas: React.FC<{
+  cargas: CargaExportacion[];
+  onEditCarga: (c: CargaExportacion) => void;
+}> = ({ cargas, onEditCarga }) => {
+  const hoy = new Date();
+  const [mes, setMes] = useState(hoy.getMonth());
+  const [anio, setAnio] = useState(hoy.getFullYear());
+
+  const semanas = buildCalendar(anio, mes);
+
+  // Mapear fecha → eventos
+  const eventosPorFecha = new Map<string, EventoCal[]>();
+  cargas.forEach(c => {
+    if (c.eta_apsa) {
+      const k = c.eta_apsa.slice(0, 10);
+      if (!eventosPorFecha.has(k)) eventosPorFecha.set(k, []);
+      eventosPorFecha.get(k)!.push({ tipo: 'eta', carga: c });
+    }
+    if (c.fecha_embarque) {
+      const k = c.fecha_embarque.slice(0, 10);
+      if (!eventosPorFecha.has(k)) eventosPorFecha.set(k, []);
+      eventosPorFecha.get(k)!.push({ tipo: 'embarque', carga: c });
+    }
+  });
+
+  const irAnterior = () => { if (mes === 0) { setMes(11); setAnio(a => a - 1); } else setMes(m => m - 1); };
+  const irSiguiente = () => { if (mes === 11) { setMes(0); setAnio(a => a + 1); } else setMes(m => m + 1); };
+
+  const hoyStr = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
+
+  return (
+    <div>
+      {/* Navegación mes */}
+      <div className="flex items-center justify-between mb-4">
+        <Button variant="outline" size="icon" onClick={irAnterior}><ChevronLeft className="h-4 w-4" /></Button>
+        <h3 className="text-lg font-semibold">{MESES[mes]} {anio}</h3>
+        <Button variant="outline" size="icon" onClick={irSiguiente}><ChevronRight className="h-4 w-4" /></Button>
+      </div>
+
+      {/* Leyenda */}
+      <div className="flex gap-4 mb-3 text-xs">
+        <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-blue-500" />Llegada a AYP</div>
+        <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-green-500" />Fecha embarque</div>
+      </div>
+
+      {/* Grid */}
+      <div className="border rounded-lg overflow-hidden">
+        {/* Encabezado días */}
+        <div className="grid grid-cols-7 bg-muted">
+          {DIAS_SEMANA.map(d => (
+            <div key={d} className="text-center text-xs font-semibold py-2 text-muted-foreground">{d}</div>
+          ))}
+        </div>
+
+        {/* Semanas */}
+        {semanas.map((semana, si) => (
+          <div key={si} className="grid grid-cols-7 border-t" style={{ minHeight: 100 }}>
+            {semana.map((dia, di) => {
+              if (!dia) return <div key={di} className="bg-muted/30 border-r last:border-r-0" />;
+              const key = `${dia.getFullYear()}-${String(dia.getMonth()+1).padStart(2,'0')}-${String(dia.getDate()).padStart(2,'0')}`;
+              const eventos = eventosPorFecha.get(key) ?? [];
+              const esHoy = key === hoyStr;
+              return (
+                <div key={di} className={`border-r last:border-r-0 p-1 ${esHoy ? 'bg-primary/5' : ''}`}>
+                  <div className={`text-xs font-medium mb-1 w-6 h-6 flex items-center justify-center rounded-full
+                    ${esHoy ? 'bg-primary text-primary-foreground' : 'text-foreground'}`}>
+                    {dia.getDate()}
+                  </div>
+                  <div className="space-y-0.5">
+                    {eventos.slice(0, 3).map((ev, ei) => (
+                      <button
+                        key={ei}
+                        onClick={() => onEditCarga(ev.carga)}
+                        className={`w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded truncate font-medium
+                          ${ev.tipo === 'eta'
+                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
+                            : 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
+                          }`}
+                        title={`${ev.tipo === 'eta' ? 'ETA' : 'Embarque'}: ${ev.carga.unidad?.identificador ?? '—'} — ${ev.carga.orden?.cliente?.nombre ?? '—'}`}
+                      >
+                        {ev.tipo === 'eta' ? '↓' : '↑'} {ev.carga.unidad?.identificador ?? 'Contenedor'}
+                      </button>
+                    ))}
+                    {eventos.length > 3 && (
+                      <p className="text-[10px] text-muted-foreground pl-1">+{eventos.length - 3} más</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 
 const Exportaciones = () => {
@@ -573,6 +723,7 @@ const Exportaciones = () => {
   const [search, setSearch] = useState('');
   const [tabFlota, setTabFlota] = useState('todas');
 
+  const [vistaCal, setVistaCal] = useState(false);
   const [formCargaOpen, setFormCargaOpen]   = useState(false);
   const [formOrdenOpen, setFormOrdenOpen]   = useState(false);
   const [formUnidadOpen, setFormUnidadOpen] = useState(false);
@@ -739,13 +890,36 @@ const Exportaciones = () => {
                 <CardTitle>Próximas cargas</CardTitle>
                 <CardDescription>Asignación de unidades a órdenes de exportación</CardDescription>
               </div>
-              <Button onClick={() => { setEditingCarga(null); setFormCargaOpen(true); }}>
-                <Plus className="h-4 w-4 mr-2" /> Nueva carga
-              </Button>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center border rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => setVistaCal(false)}
+                    className={`px-3 py-1.5 text-sm flex items-center gap-1.5 transition-colors
+                      ${!vistaCal ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+                  >
+                    <List className="h-4 w-4" /> Lista
+                  </button>
+                  <button
+                    onClick={() => setVistaCal(true)}
+                    className={`px-3 py-1.5 text-sm flex items-center gap-1.5 transition-colors
+                      ${vistaCal ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+                  >
+                    <Calendar className="h-4 w-4" /> Calendario
+                  </button>
+                </div>
+                <Button onClick={() => { setEditingCarga(null); setFormCargaOpen(true); }}>
+                  <Plus className="h-4 w-4 mr-2" /> Nueva carga
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {loading ? (
                 <p className="text-center text-muted-foreground py-8">Cargando...</p>
+              ) : vistaCal ? (
+                <CalendarioCargas
+                  cargas={cargasFiltradas}
+                  onEditCarga={c => { setEditingCarga(c); setFormCargaOpen(true); }}
+                />
               ) : cargasFiltradas.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">No hay cargas registradas</p>
               ) : (
@@ -754,11 +928,12 @@ const Exportaciones = () => {
                     <TableRow>
                       <TableHead>Unidad</TableHead>
                       <TableHead>Ubicación</TableHead>
-                      <TableHead>ETA APSA</TableHead>
+                      <TableHead>Llegada a AYP</TableHead>
                       <TableHead>Carga anterior</TableHead>
                       <TableHead>Próxima carga</TableHead>
                       <TableHead>Fecha embarque</TableHead>
                       <TableHead>Cliente</TableHead>
+                      <TableHead className="text-right">Ajuste (kg)</TableHead>
                       <TableHead>Estatus</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
@@ -787,6 +962,11 @@ const Exportaciones = () => {
                           ) : '—'}
                         </TableCell>
                         <TableCell className="text-sm">{carga.orden?.cliente?.nombre ?? '—'}</TableCell>
+                        <TableCell className="text-right text-sm font-medium">
+                          {carga.unidad?.tipo === 'jumbo' && carga.ajuste_kg != null
+                            ? `${carga.ajuste_kg > 0 ? '+' : ''}${carga.ajuste_kg.toLocaleString('es-MX')} kg`
+                            : carga.unidad?.tipo === 'jumbo' ? '—' : ''}
+                        </TableCell>
                         <TableCell>{estatusBadge(carga.estatus)}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
