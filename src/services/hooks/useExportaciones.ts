@@ -1,26 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import {
-  getClientesExportacion,
-  getUnidadesExportacion,
-  getOrdenesExportacion,
-  getCargasExportacion,
-  createClienteExportacion,
-  updateClienteExportacion,
-  createUnidadExportacion,
-  updateUnidadExportacion,
-  createOrdenExportacion,
-  updateOrdenExportacion,
-  createCargaExportacion,
-  updateCargaExportacion,
-  deleteCargaExportacion,
-  type ClienteExportacion,
-  type UnidadExportacion,
-  type OrdenExportacion,
-  type CargaExportacion,
+// ⚠️ RAMA demo/exportaciones: este módulo NO usa la base de datos.
+// Todo trabaja con los datos de ejemplo de abajo, en memoria (se reinicia al recargar).
+import type {
+  ClienteExportacion,
+  UnidadExportacion,
+  OrdenExportacion,
+  CargaExportacion,
 } from '../supabase/exportaciones';
 
-// ─── Datos de demostración (mientras no se aplique la migración 030) ──────────
+// ─── Datos de demostración ────────────────────────────────────────────────────
 
 const MOCK_CLIENTES: ClienteExportacion[] = [
   { id: 1, nombre: 'ADAMS',    tipo_unidad: 'jumbo',      activo: true },
@@ -160,6 +149,79 @@ const MOCK_CARGAS = [
   },
 ];
 
+// ─── API de demostración en memoria (mismas firmas que services/supabase/exportaciones) ───
+
+const ahora = () => new Date().toISOString();
+const demo = {
+  clientes: MOCK_CLIENTES.map(c => ({ ...c })) as ClienteExportacion[],
+  unidades: MOCK_UNIDADES.map(u => ({ ...u })) as any[] as UnidadExportacion[],
+  ordenes: MOCK_ORDENES.map(({ cliente: _c, cargas: _ca, ...o }) => ({ ...o })) as any[] as OrdenExportacion[],
+  cargas: MOCK_CARGAS.map(({ unidad: _u, orden: _o, ...c }) => ({ ...c })) as any[] as CargaExportacion[],
+};
+const siguienteId = (lista: { id: number }[]) => Math.max(0, ...lista.map(x => x.id)) + 1;
+
+const conRelacionesCarga = (c: CargaExportacion): CargaExportacion => ({
+  ...c,
+  unidad: demo.unidades.find(u => u.id === c.unidad_id),
+  orden: demo.ordenes.find(o => o.id === c.orden_id),
+});
+
+async function getClientesExportacion() {
+  return [...demo.clientes].sort((a, b) => a.nombre.localeCompare(b.nombre));
+}
+async function getUnidadesExportacion() {
+  return [...demo.unidades];
+}
+async function getOrdenesExportacion() {
+  return demo.ordenes.map(o => ({
+    ...o,
+    cliente: demo.clientes.find(c => c.id === o.cliente_id),
+    cargas: demo.cargas.filter(c => c.orden_id === o.id).map(conRelacionesCarga),
+  }));
+}
+async function getCargasExportacion() {
+  return demo.cargas.map(conRelacionesCarga);
+}
+async function createClienteExportacion(cliente: Omit<ClienteExportacion, 'id' | 'created_at'>) {
+  const nuevo = { ...cliente, id: siguienteId(demo.clientes), created_at: ahora() } as ClienteExportacion;
+  demo.clientes.push(nuevo);
+  return nuevo;
+}
+async function updateClienteExportacion(id: number, updates: Partial<ClienteExportacion>) {
+  demo.clientes = demo.clientes.map(c => c.id === id ? { ...c, ...updates } : c);
+  return demo.clientes.find(c => c.id === id)!;
+}
+async function createUnidadExportacion(unidad: Omit<UnidadExportacion, 'id' | 'created_at' | 'updated_at'>) {
+  const nueva = { ...unidad, id: siguienteId(demo.unidades), created_at: ahora(), updated_at: ahora() } as UnidadExportacion;
+  demo.unidades.push(nueva);
+  return nueva;
+}
+async function updateUnidadExportacion(id: number, updates: Partial<UnidadExportacion>) {
+  demo.unidades = demo.unidades.map(u => u.id === id ? { ...u, ...updates, updated_at: ahora() } : u);
+  return demo.unidades.find(u => u.id === id)!;
+}
+async function createOrdenExportacion(orden: Omit<OrdenExportacion, 'id' | 'created_at' | 'updated_at' | 'cliente' | 'cargas'>) {
+  const nueva = { ...orden, id: siguienteId(demo.ordenes), created_at: ahora(), updated_at: ahora() } as OrdenExportacion;
+  demo.ordenes.push(nueva);
+  return nueva;
+}
+async function updateOrdenExportacion(id: number, updates: Partial<OrdenExportacion>) {
+  demo.ordenes = demo.ordenes.map(o => o.id === id ? { ...o, ...updates, updated_at: ahora() } : o);
+  return demo.ordenes.find(o => o.id === id)!;
+}
+async function createCargaExportacion(carga: Omit<CargaExportacion, 'id' | 'created_at' | 'updated_at' | 'unidad' | 'orden'>) {
+  const nueva = { ...carga, id: siguienteId(demo.cargas), created_at: ahora(), updated_at: ahora() } as CargaExportacion;
+  demo.cargas.push(nueva);
+  return conRelacionesCarga(nueva);
+}
+async function updateCargaExportacion(id: number, updates: Partial<CargaExportacion>) {
+  demo.cargas = demo.cargas.map(c => c.id === id ? { ...c, ...updates, updated_at: ahora() } : c);
+  return conRelacionesCarga(demo.cargas.find(c => c.id === id)!);
+}
+async function deleteCargaExportacion(id: number) {
+  demo.cargas = demo.cargas.filter(c => c.id !== id);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function useExportaciones() {
@@ -183,12 +245,7 @@ export function useExportaciones() {
       setOrdenes(o);
       setCargas(ca);
     } catch (err) {
-      // Tablas aún no creadas — usar datos de demostración
-      console.warn('Tablas de exportaciones no encontradas, usando datos demo:', err);
-      setClientes(MOCK_CLIENTES);
-      setUnidades(MOCK_UNIDADES as any);
-      setOrdenes(MOCK_ORDENES as any);
-      setCargas(MOCK_CARGAS as any);
+      console.error('Error en datos de demostración de exportaciones:', err);
     } finally {
       setLoading(false);
     }
