@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { useProductos } from '@/services/hooks/useProductos';
 import { useProveedores } from '@/services/hooks/useProveedores';
 import { useClientes } from '@/services/hooks/useClientes';
+import { useAuth } from '@/contexts/AuthContext';
 import { generateNumeroBoleta, TipoOperacion } from '@/utils/folioGenerator';
 import type { Orden } from '@/services/supabase/ordenes';
 
@@ -36,6 +37,7 @@ const CompletarOrdenDialog: React.FC<CompletarOrdenDialogProps> = ({
   onSave
 }) => {
   const { productos } = useProductos();
+  const { usuario } = useAuth();
   const { proveedores } = useProveedores();
   const { clientes } = useClientes();
 
@@ -107,6 +109,9 @@ const CompletarOrdenDialog: React.FC<CompletarOrdenDialogProps> = ({
   const isEmbarqueNacional = orden.tipo_operacion === 'Embarque Nacional';
   const isEmbarqueExportacion = orden.tipo_operacion === 'Embarque Exportación';
   const isCompletado = orden.estatus === 'Completado';
+  // Oficina y Administrador pueden corregir los datos del transporte aunque la boleta
+  // ya esté completada (p. ej. antes de imprimir el ticket)
+  const puedeEditarTransporte = !isCompletado || usuario?.rol === 'Oficina' || usuario?.rol === 'Administrador';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -118,7 +123,7 @@ const CompletarOrdenDialog: React.FC<CompletarOrdenDialogProps> = ({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* Datos del Transporte — editables mientras no esté Completado */}
+          {/* Datos del Transporte — editables mientras no esté Completado (Oficina/Admin siempre) */}
           <div className="border rounded-lg p-4 bg-gray-50">
             <h4 className="font-medium mb-3 text-sm text-gray-600">Datos del Transporte (Portero)</h4>
             <div className="grid grid-cols-2 gap-3">
@@ -128,7 +133,7 @@ const CompletarOrdenDialog: React.FC<CompletarOrdenDialogProps> = ({
                   value={nombreChofer}
                   onChange={e => setNombreChofer(e.target.value)}
                   placeholder="Nombre del chofer"
-                  disabled={isCompletado}
+                  disabled={!puedeEditarTransporte}
                 />
               </div>
               <div className="space-y-1">
@@ -137,7 +142,7 @@ const CompletarOrdenDialog: React.FC<CompletarOrdenDialogProps> = ({
                   value={vehiculo}
                   onChange={e => setVehiculo(e.target.value)}
                   placeholder="Tipo de vehículo"
-                  disabled={isCompletado}
+                  disabled={!puedeEditarTransporte}
                 />
               </div>
               <div className="space-y-1">
@@ -147,7 +152,7 @@ const CompletarOrdenDialog: React.FC<CompletarOrdenDialogProps> = ({
                   onChange={e => setPlacas(e.target.value)}
                   placeholder="ABC-123-A"
                   className="font-mono"
-                  disabled={isCompletado}
+                  disabled={!puedeEditarTransporte}
                 />
               </div>
               <div className="space-y-1">
@@ -156,7 +161,7 @@ const CompletarOrdenDialog: React.FC<CompletarOrdenDialogProps> = ({
                   value={destino}
                   onChange={e => setDestino(e.target.value)}
                   placeholder={isReciba ? 'Ciudad, Estado' : 'Ciudad, Estado'}
-                  disabled={isCompletado}
+                  disabled={!puedeEditarTransporte}
                 />
               </div>
             </div>

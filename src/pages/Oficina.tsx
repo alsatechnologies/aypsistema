@@ -404,20 +404,21 @@ const Oficina = () => {
             };
             
             if (recepcionExistente) {
-              // Actualizar recepción existente
-              await updateRecepcion(recepcionExistente.id, recepcionData);
+              // Actualizar recepción existente sin tocar su fecha ni su estatus
+              // (al editar una boleta ya pesada o completada no debe regresar a Pendiente)
+              const { fecha: _fecha, estatus: _estatus, ...cambiosRecepcion } = recepcionData;
+              await updateRecepcion(recepcionExistente.id, cambiosRecepcion);
               
-              // Actualizar también el movimiento asociado si existe
+              // Actualizar también el movimiento asociado si existe (proveedor y transporte)
               try {
                 const movimientoExistente = await getMovimientoByBoleta(ticketFinal);
-                if (movimientoExistente && proveedoresDB && proveedoresDB.length > 0) {
-                  // Obtener el nombre del proveedor actualizado
-                  const proveedorActualizado = proveedoresDB.find(p => p.id === data.proveedor_id);
-                  if (proveedorActualizado && proveedorActualizado.empresa) {
-                    await updateMovimiento(movimientoExistente.id, {
-                      cliente_proveedor: proveedorActualizado.empresa
-                    });
-                  }
+                if (movimientoExistente) {
+                  const proveedorActualizado = proveedoresDB?.find(p => p.id === data.proveedor_id);
+                  await updateMovimiento(movimientoExistente.id, {
+                    chofer: recepcionData.chofer,
+                    placas: recepcionData.placas,
+                    ...(proveedorActualizado?.empresa ? { cliente_proveedor: proveedorActualizado.empresa } : {}),
+                  });
                 }
               } catch (error) {
                 console.error('Error updating movimiento:', error);
@@ -459,20 +460,20 @@ const Oficina = () => {
             };
             
             if (embarqueExistente) {
-              // Actualizar embarque existente
-              await updateEmbarque(embarqueExistente.id, embarqueData);
+              // Actualizar embarque existente sin cambiar su fecha
+              const { fecha: _fecha, ...cambiosEmbarque } = embarqueData;
+              await updateEmbarque(embarqueExistente.id, cambiosEmbarque);
               
-              // Actualizar también el movimiento asociado si existe
+              // Actualizar también el movimiento asociado si existe (cliente y transporte)
               try {
                 const movimientoExistente = await getMovimientoByBoleta(ticketFinal);
-                if (movimientoExistente && clientesDB && clientesDB.length > 0) {
-                  // Obtener el nombre del cliente actualizado
-                  const clienteActualizado = clientesDB.find(c => c.id === data.cliente_id);
-                  if (clienteActualizado && clienteActualizado.empresa) {
-                    await updateMovimiento(movimientoExistente.id, {
-                      cliente_proveedor: clienteActualizado.empresa
-                    });
-                  }
+                if (movimientoExistente) {
+                  const clienteActualizado = clientesDB?.find(c => c.id === data.cliente_id);
+                  await updateMovimiento(movimientoExistente.id, {
+                    chofer: embarqueData.chofer,
+                    placas: embarqueData.placas,
+                    ...(clienteActualizado?.empresa ? { cliente_proveedor: clienteActualizado.empresa } : {}),
+                  });
                 }
               } catch (error) {
                 console.error('Error updating movimiento:', error);
