@@ -34,6 +34,7 @@ const rolesDisponibles = [
   'Calidad',
   'Laboratorio',
   'Producción',
+  'Exportaciones',
 ];
 
 interface RangoDescuento {
@@ -167,6 +168,7 @@ const Configuracion = () => {
       'Calidad': 'bg-purple-500 text-white',
       'Laboratorio': 'bg-pink-500 text-white',
       'Producción': 'bg-cyan-500 text-white',
+      'Exportaciones': 'bg-indigo-500 text-white',
     };
     return <Badge className={colors[rol] || 'bg-muted text-muted-foreground'}>{rol}</Badge>;
   };

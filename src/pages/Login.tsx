@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Logo from '@/components/Logo';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, rutaInicialPorRol } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
 
 const Login = () => {
@@ -13,7 +13,15 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { login, usuario } = useAuth();
+  const [loginExitoso, setLoginExitoso] = useState(false);
+
+  // Tras iniciar sesión: volver a la pantalla pedida o ir a la primera que permite el rol
+  useEffect(() => {
+    if (!loginExitoso || !usuario) return;
+    const from = (location.state as any)?.from?.pathname;
+    navigate(from || rutaInicialPorRol(usuario.rol), { replace: true });
+  }, [loginExitoso, usuario]);
   const { theme, setTheme } = useTheme();
 
   // Forzar modo claro en la página de login
@@ -47,10 +55,7 @@ const Login = () => {
       
       if (success) {
         console.log('🔵 Login.tsx: Login exitoso, navegando...');
-        const from = (location.state as any)?.from?.pathname || '/oficina';
-        console.log('🔵 Login.tsx: Navegando a:', from);
-        navigate(from, { replace: true });
-        console.log('🔵 Login.tsx: Navegación completada');
+        setLoginExitoso(true);
       } else {
         console.log('🔵 Login.tsx: Login falló');
       }

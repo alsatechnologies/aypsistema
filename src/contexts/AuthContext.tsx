@@ -32,8 +32,14 @@ const permisosPorRol: Record<Rol, string[]> = {
   'Calidad': ['control-calidad'],
   'Laboratorio': ['laboratorio'],
   'Producción': ['produccion'],
-  'Exportaciones': ['exportaciones'],
+  'Exportaciones': ['exportaciones', 'clientes'],
   'Administrador': ['oficina', 'reciba', 'embarque', 'movimientos', 'proveedores', 'clientes', 'reportes', 'ingreso', 'control-calidad', 'laboratorio', 'produccion', 'configuracion', 'auditoria', 'exportaciones']
+};
+
+// Primera pantalla a la que puede entrar el rol (los módulos coinciden con las rutas)
+export const rutaInicialPorRol = (rol: Rol): string => {
+  const modulos = permisosPorRol[rol] || [];
+  return `/${modulos[0] ?? 'oficina'}`;
 };
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -332,7 +338,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log('✅ Usuario encontrado:', usuarioData);
 
       // Validar que el rol sea válido
-      const rolValido: Rol[] = ['Oficina', 'Portero', 'Báscula', 'Calidad', 'Laboratorio', 'Producción', 'Administrador'];
+      const rolValido: Rol[] = ['Oficina', 'Portero', 'Báscula', 'Calidad', 'Laboratorio', 'Producción', 'Exportaciones', 'Administrador'];
       if (!rolValido.includes(usuarioData.rol as Rol)) {
         console.error('❌ Rol inválido:', usuarioData.rol);
         toast.error('Rol de usuario no válido');
