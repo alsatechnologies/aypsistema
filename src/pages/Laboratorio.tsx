@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { Search, Plus, FlaskConical, Clock, CheckCircle, Eye, FileText, Trash2, Calendar, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLaboratorio } from '@/services/hooks/useLaboratorio';
+import { useAuth } from '@/contexts/AuthContext';
 import type { ReporteLab as ReporteLabDB } from '@/services/supabase/laboratorio';
 
 interface ReporteLab {
@@ -124,6 +125,9 @@ const Laboratorio = () => {
   });
 
   const { reportes: reportesDB, loading, addReporte, updateReporte, deleteReporte, loadReportes } = useLaboratorio();
+  const { usuario } = useAuth();
+  // Báscula solo consulta los reportes; capturar es de Laboratorio y Administrador
+  const puedeCapturar = usuario?.rol === 'Laboratorio' || usuario?.rol === 'Administrador';
   
   // Mapear reportes de DB a formato local
   const reportes: ReporteLab[] = reportesDB.map(r => {
@@ -380,10 +384,12 @@ const Laboratorio = () => {
               )}
             </div>
           </div>
-          <Button onClick={() => setIsNuevoReporteOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nuevo Reporte
-          </Button>
+          {puedeCapturar && (
+            <Button onClick={() => setIsNuevoReporteOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nuevo Reporte
+            </Button>
+          )}
         </div>
 
         {/* Table */}
