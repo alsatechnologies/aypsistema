@@ -194,7 +194,7 @@ export async function deleteInventarioAlmacen(id: number) {
 }
 
 // Recalcular inventario desde la base + movimientos nuevos
-// Evita errores de delta: siempre calcula base + entradas - salidas - pases a producción
+// Evita errores de delta: siempre calcula base + entradas + pasta de pases - salidas - pases a producción
 export async function recalcularInventarioDesdeBase(
   almacenId: number,
   productoId: number
@@ -241,7 +241,20 @@ export async function recalcularInventarioDesdeBase(
     .eq('tipo', 'Producción')
     .gt('id', maxPaseId);
 
-  const totalEntradas = (recepciones || []).reduce((s, r) => s + (Number(r.peso_neto) || 0), 0);
+  // Sumar pasta resultante de pases a producción que se mandó a esta bodega (kg × % de pasta)
+  const { data: pasta } = await supabase
+    .from('movimientos')
+    .select('peso_neto, porcentaje_pasta')
+    .eq('almacen_pasta_id', almacenId)
+    .eq('producto_pasta_id', productoId)
+    .eq('tipo', 'Producción')
+    .not('porcentaje_pasta', 'is', null)
+    .gt('id', maxPaseId);
+
+  const totalPasta = (pasta || []).reduce(
+    (s, m) => s + (Number(m.peso_neto) || 0) * (Number(m.porcentaje_pasta) || 0) / 100, 0
+  );
+  const totalEntradas = (recepciones || []).reduce((s, r) => s + (Number(r.peso_neto) || 0), 0) + totalPasta;
   const totalSalidas = (embarques || []).reduce((s, e) => s + (Number(e.peso_neto) || 0), 0);
   const totalPases = (pases || []).reduce((s, m) => s + (Number(m.peso_neto) || 0), 0);
 

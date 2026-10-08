@@ -16,6 +16,9 @@ export interface Movimiento {
   chofer?: string | null;
   placas?: string | null;
   almacen_id?: number | null;
+  porcentaje_pasta?: number | null;
+  almacen_pasta_id?: number | null;
+  producto_pasta_id?: number | null;
   created_at?: string;
   producto?: { id: number; nombre: string };
 }
