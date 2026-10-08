@@ -8,14 +8,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ArrowRightLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { useProductos } from '@/services/hooks/useProductos';
+import { useAlmacenes } from '@/services/hooks/useAlmacenes';
 import { createMovimiento, getMovimientos } from '@/services/supabase/movimientos';
 
 const PaseProduccionPanel: React.FC = () => {
   const { productos: productosDB } = useProductos();
+  const { almacenes: almacenesDB } = useAlmacenes();
 
   const [ppProductoId, setPpProductoId] = useState<string>('');
   const [ppCantidad, setPpCantidad] = useState<string>('');
   const [ppDestino, setPpDestino] = useState<string>('');
+  const [ppAlmacenId, setPpAlmacenId] = useState<string>('');
   const [ppGuardando, setPpGuardando] = useState(false);
   const [ppHistorial, setPpHistorial] = useState<any[]>([]);
   const [ppLoadingHistorial, setPpLoadingHistorial] = useState(false);
@@ -39,6 +42,8 @@ const PaseProduccionPanel: React.FC = () => {
     if (!ppProductoId) { toast.error('Seleccione un producto'); return; }
     const kg = parseFloat(ppCantidad);
     if (!kg || kg <= 0) { toast.error('Ingrese una cantidad válida'); return; }
+    const almacen = almacenesDB.find(a => a.id.toString() === ppAlmacenId);
+    if (!almacen) { toast.error('Seleccione el almacén de procedencia'); return; }
     if (!ppDestino.trim()) { toast.error('Ingrese el destino'); return; }
 
     setPpGuardando(true);
@@ -54,7 +59,7 @@ const PaseProduccionPanel: React.FC = () => {
         tipo: 'Producción',
         transporte: null,
         fecha,
-        ubicacion: ppDestino.trim(),
+        ubicacion: almacen.nombre,
         peso_neto: kg,
         peso_bruto: kg,
         peso_tara: null,
@@ -62,10 +67,11 @@ const PaseProduccionPanel: React.FC = () => {
         placas: null,
       });
 
-      toast.success(`Pase registrado — ${kg.toLocaleString('es-MX')} kg → ${ppDestino}`);
+      toast.success(`Pase registrado — ${kg.toLocaleString('es-MX')} kg de ${almacen.nombre} → ${ppDestino}`);
       setPpProductoId('');
       setPpCantidad('');
       setPpDestino('');
+      setPpAlmacenId('');
       await cargarHistorialPP();
     } catch (err) {
       toast.error('Error al registrar el pase');
@@ -97,6 +103,20 @@ const PaseProduccionPanel: React.FC = () => {
               <SelectContent>
                 {productosSemilla.map(p => (
                   <SelectItem key={p.id} value={p.id.toString()}>{p.nombre}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Procedencia (almacén) *</Label>
+            <Select value={ppAlmacenId} onValueChange={setPpAlmacenId}>
+              <SelectTrigger>
+                <SelectValue placeholder="¿De qué almacén sale la semilla?" />
+              </SelectTrigger>
+              <SelectContent>
+                {almacenesDB.map(a => (
+                  <SelectItem key={a.id} value={a.id.toString()}>{a.nombre}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -151,6 +171,7 @@ const PaseProduccionPanel: React.FC = () => {
                   <TableHead>Boleta</TableHead>
                   <TableHead>Fecha</TableHead>
                   <TableHead>Producto</TableHead>
+                  <TableHead>Procedencia</TableHead>
                   <TableHead className="text-right">Cantidad (kg)</TableHead>
                   <TableHead>Destino</TableHead>
                 </TableRow>
@@ -161,10 +182,11 @@ const PaseProduccionPanel: React.FC = () => {
                     <TableCell className="font-mono text-sm text-primary">{m.boleta}</TableCell>
                     <TableCell>{m.fecha}</TableCell>
                     <TableCell>{m.producto?.nombre || '-'}</TableCell>
+                    <TableCell>{m.ubicacion && m.ubicacion !== m.cliente_proveedor ? m.ubicacion : '-'}</TableCell>
                     <TableCell className="text-right font-medium text-orange-600">
                       -{(m.peso_neto || 0).toLocaleString('es-MX')}
                     </TableCell>
-                    <TableCell>{m.ubicacion || m.cliente_proveedor || '-'}</TableCell>
+                    <TableCell>{m.cliente_proveedor || '-'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
