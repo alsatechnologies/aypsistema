@@ -1,0 +1,10 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "zoom",
+  "description": "Permite que el sistema publicado cambie el zoom de la ventana (Ctrl/Cmd + y -)",
+  "windows": ["main"],
+  "remote": {
+    "urls": ["https://aypsistema.vercel.app/*"]
+  },
+  "permissions": ["core:webview:allow-set-webview-zoom"]
+}

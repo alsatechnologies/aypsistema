@@ -11,9 +11,9 @@ const ZOOM_PASO: f64 = 0.1;
 const ZOOM_MIN: f64 = 0.5;
 const ZOOM_MAX: f64 = 2.0;
 
-// En Windows, Ctrl +/- lo resuelve WebView2 (zoomHotkeysEnabled en tauri.conf.json).
-// En Mac no existe ese soporte nativo, así que se agrega un menú "Zoom" con
-// los atajos Cmd + / Cmd - / Cmd 0, que ajusta el zoom del webview desde Rust.
+// Windows: se inyecta zoom.js, que escucha Ctrl + / Ctrl - / Ctrl 0 y Ctrl + rueda
+// y cambia el zoom vía IPC (permiso en capabilities/zoom.json).
+// Mac: menú "Zoom" con los atajos Cmd + / Cmd - / Cmd 0, que ajusta el zoom desde Rust.
 #[cfg(target_os = "macos")]
 fn menu_mac(app: &tauri::AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
     use tauri::menu::{Menu, MenuItem, Submenu};
@@ -33,6 +33,13 @@ fn main() {
     tauri::Builder::default()
         .manage(Zoom(Mutex::new(1.0)))
         .setup(|_app| {
+            // La ventana se crea aquí (create: false en tauri.conf.json) para poder inyectar zoom.js
+            let config = _app.config().app.windows[0].clone();
+            let ventana = tauri::WebviewWindowBuilder::from_config(_app.handle(), &config)?;
+            #[cfg(target_os = "windows")]
+            let ventana = ventana.initialization_script(include_str!("zoom.js"));
+            ventana.build()?;
+
             #[cfg(target_os = "macos")]
             {
                 let menu = menu_mac(_app.handle())?;
