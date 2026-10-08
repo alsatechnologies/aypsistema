@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { StatusPill } from '@/components/ui/status-pill';
 import { TipoPill } from '@/components/ui/tipo-pill';
-import { Search, Scale, Truck, Train, Clock, CheckCircle, FileText, Printer, Save, Ship, Plus, Eye, BookmarkPlus, Calendar, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Scale, Truck, Train, Clock, CheckCircle, FileText, Printer, Save, Ship, Plus, Eye, BookmarkPlus, Calendar, X, ChevronLeft, ChevronRight, Factory } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -19,6 +19,7 @@ import SellosSection from '@/components/reciba/SellosSection';
 import AnalisisDinamico from '@/components/reciba/AnalisisDinamico';
 import DescuentosPanel from '@/components/reciba/DescuentosPanel';
 import NuevoEmbarqueDialog from '@/components/embarque/NuevoEmbarqueDialog';
+import PaseProduccionPanel from '@/components/embarque/PaseProduccionPanel';
 import BoletaEmbarqueDialog from '@/components/embarque/BoletaEmbarqueDialog';
 import { generateNumeroBoleta, TipoOperacion } from '@/utils/folioGenerator';
 import { toast } from 'sonner';
@@ -747,6 +748,19 @@ const EmbarquePage = () => {
     <Layout>
       <Header title="Embarque" subtitle="Báscula - Salida de producto terminado" />
       <div className="p-6">
+        <Tabs defaultValue="embarques" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="embarques" className="flex items-center gap-2">
+              <Truck className="h-4 w-4" />
+              Embarques
+            </TabsTrigger>
+            <TabsTrigger value="pase-produccion" className="flex items-center gap-2">
+              <Factory className="h-4 w-4" />
+              Pase a Producción
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="embarques">
         {/* Search, Filters and New Button */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
           <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
@@ -923,6 +937,12 @@ const EmbarquePage = () => {
             )}
           </CardContent>
         </Card>
+          </TabsContent>
+
+          <TabsContent value="pase-produccion">
+            <PaseProduccionPanel />
+          </TabsContent>
+        </Tabs>
 
         {/* Formulario de Báscula Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

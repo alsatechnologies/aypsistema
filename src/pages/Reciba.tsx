@@ -6,12 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { StatusPill } from '@/components/ui/status-pill';
-import { Search, Scale, Truck, Train, Clock, CheckCircle, FileText, Printer, Save, BookmarkPlus, Plus, Calendar, X, Factory, ArrowRightLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Scale, Truck, Train, Clock, CheckCircle, FileText, Printer, Save, BookmarkPlus, Plus, Calendar, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -29,7 +28,7 @@ import type { Proveedor } from '@/services/supabase/proveedores';
 import { useAlmacenes } from '@/services/hooks/useAlmacenes';
 import { getOrdenByBoleta } from '@/services/supabase/ordenes';
 import { getProductoConAnalisis } from '@/services/supabase/productos';
-import { createMovimiento, getMovimientos } from '@/services/supabase/movimientos';
+import { createMovimiento } from '@/services/supabase/movimientos';
 import type { Recepcion as RecepcionDB } from '@/services/supabase/recepciones';
 import { formatDateTimeMST, formatDateTimeSplitMST } from '@/utils/dateUtils';
 import { validarRecepcion, puedeModificarRegistro } from '@/utils/validations';
@@ -120,68 +119,6 @@ const Reciba = () => {
   const [choferEditable, setChoferEditable] = useState<string>('');
   const [placasEditable, setPlacasEditable] = useState<string>('');
   const [procedenciaEditable, setProcedenciaEditable] = useState<string>('');
-
-  // Estado pase a producción
-  const [ppProductoId, setPpProductoId] = useState<string>('');
-  const [ppCantidad, setPpCantidad] = useState<string>('');
-  const [ppDestino, setPpDestino] = useState<string>('');
-  const [ppGuardando, setPpGuardando] = useState(false);
-  const [ppHistorial, setPpHistorial] = useState<any[]>([]);
-  const [ppLoadingHistorial, setPpLoadingHistorial] = useState(false);
-
-  const productosSemilla = productosDB.filter(p =>
-    p.nombre.toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes('SEMILLA')
-  );
-
-  const cargarHistorialPP = async () => {
-    setPpLoadingHistorial(true);
-    try {
-      const data = await getMovimientos({ tipo: 'Producción', limit: 50 }) as any;
-      setPpHistorial(Array.isArray(data) ? data : data.data || []);
-    } catch { /* silencioso */ }
-    finally { setPpLoadingHistorial(false); }
-  };
-
-  useEffect(() => { cargarHistorialPP(); }, []);
-
-  const handlePaseProduccion = async () => {
-    if (!ppProductoId) { toast.error('Seleccione un producto'); return; }
-    const kg = parseFloat(ppCantidad);
-    if (!kg || kg <= 0) { toast.error('Ingrese una cantidad válida'); return; }
-    if (!ppDestino.trim()) { toast.error('Ingrese el destino'); return; }
-
-    setPpGuardando(true);
-    try {
-      const ahora = new Date();
-      const fecha = `${ahora.getFullYear()}-${String(ahora.getMonth()+1).padStart(2,'0')}-${String(ahora.getDate()).padStart(2,'0')}`;
-      const boleta = `PP-${fecha.replace(/-/g,'')}-${Date.now().toString().slice(-6)}`;
-
-      await createMovimiento({
-        boleta,
-        producto_id: parseInt(ppProductoId),
-        cliente_proveedor: ppDestino.trim(),
-        tipo: 'Producción',
-        transporte: null,
-        fecha,
-        ubicacion: ppDestino.trim(),
-        peso_neto: kg,
-        peso_bruto: kg,
-        peso_tara: null,
-        chofer: null,
-        placas: null,
-      });
-
-      toast.success(`Pase registrado — ${kg.toLocaleString('es-MX')} kg → ${ppDestino}`);
-      setPpProductoId('');
-      setPpCantidad('');
-      setPpDestino('');
-      await cargarHistorialPP();
-    } catch (err) {
-      toast.error('Error al registrar el pase');
-    } finally {
-      setPpGuardando(false);
-    }
-  };
 
   // Verificar si el usuario puede editar/eliminar
   const puedeEditarEliminar = usuario?.rol === 'Administrador' || usuario?.rol === 'Oficina';
@@ -844,19 +781,6 @@ const Reciba = () => {
     <Layout>
       <Header title="Reciba" subtitle="Báscula - Recepción de materia prima" />
       <div className="p-6">
-        <Tabs defaultValue="recepciones" className="w-full">
-          <TabsList className="mb-6">
-            <TabsTrigger value="recepciones" className="flex items-center gap-2">
-              <Scale className="h-4 w-4" />
-              Recepciones
-            </TabsTrigger>
-            <TabsTrigger value="pase-produccion" className="flex items-center gap-2">
-              <Factory className="h-4 w-4" />
-              Pase a Producción
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="recepciones">
         {/* Search, Filters y Nueva Operación */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
           <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
@@ -1031,111 +955,6 @@ const Reciba = () => {
             )}
           </CardContent>
         </Card>
-
-          </TabsContent>
-
-          {/* ── PASE A PRODUCCIÓN ─────────────────────────── */}
-          <TabsContent value="pase-produccion">
-            <div className="max-w-2xl mx-auto space-y-6">
-              {/* Formulario */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <ArrowRightLeft className="h-5 w-5" />
-                    Registrar Pase de Semilla a Producción
-                  </CardTitle>
-                  <CardDescription>
-                    La cantidad registrada se descontará del inventario de semilla.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Producto (Semilla) *</Label>
-                    <Select value={ppProductoId} onValueChange={setPpProductoId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar semilla..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {productosSemilla.map(p => (
-                          <SelectItem key={p.id} value={p.id.toString()}>{p.nombre}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Cantidad (kg) *</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="1"
-                        placeholder="0"
-                        value={ppCantidad}
-                        onChange={e => setPpCantidad(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Destino *</Label>
-                      <Input
-                        placeholder="Ej: Extracción Planta 1"
-                        value={ppDestino}
-                        onChange={e => setPpDestino(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <Button
-                    className="w-full bg-primary hover:bg-primary/90"
-                    onClick={handlePaseProduccion}
-                    disabled={ppGuardando}
-                  >
-                    {ppGuardando ? 'Registrando...' : 'Registrar Pase'}
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Historial */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Historial de Pases</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {ppLoadingHistorial ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">Cargando...</p>
-                  ) : ppHistorial.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-4">Sin registros aún</p>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Boleta</TableHead>
-                          <TableHead>Fecha</TableHead>
-                          <TableHead>Producto</TableHead>
-                          <TableHead className="text-right">Cantidad (kg)</TableHead>
-                          <TableHead>Destino</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {ppHistorial.map(m => (
-                          <TableRow key={m.id}>
-                            <TableCell className="font-mono text-sm text-primary">{m.boleta}</TableCell>
-                            <TableCell>{m.fecha}</TableCell>
-                            <TableCell>{m.producto?.nombre || '-'}</TableCell>
-                            <TableCell className="text-right font-medium text-orange-600">
-                              -{(m.peso_neto || 0).toLocaleString('es-MX')}
-                            </TableCell>
-                            <TableCell>{m.ubicacion || m.cliente_proveedor || '-'}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-        </Tabs>
 
         {/* Dialog Nueva Operación */}
         <NuevaOperacionDialog 
