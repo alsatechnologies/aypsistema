@@ -15,6 +15,7 @@ export interface Movimiento {
   peso_tara?: number | null;
   chofer?: string | null;
   placas?: string | null;
+  almacen_id?: number | null;
   created_at?: string;
   producto?: { id: number; nombre: string };
 }

@@ -194,7 +194,7 @@ export async function deleteInventarioAlmacen(id: number) {
 }
 
 // Recalcular inventario desde la base + movimientos nuevos
-// Evita errores de delta: siempre calcula base + entradas - salidas
+// Evita errores de delta: siempre calcula base + entradas - salidas - pases a producción
 export async function recalcularInventarioDesdeBase(
   almacenId: number,
   productoId: number
@@ -204,7 +204,7 @@ export async function recalcularInventarioDesdeBase(
   // Obtener base y IDs de corte
   const { data: inv } = await supabase
     .from('inventario_almacenes')
-    .select('cantidad_base, base_max_recepcion_id, base_max_embarque_id')
+    .select('cantidad_base, base_max_recepcion_id, base_max_embarque_id, base_max_pase_id')
     .eq('almacen_id', almacenId)
     .eq('producto_id', productoId)
     .single();
@@ -212,6 +212,7 @@ export async function recalcularInventarioDesdeBase(
   const cantidadBase = Number(inv?.cantidad_base) || 0;
   const maxRecepcionId = Number(inv?.base_max_recepcion_id) || 0;
   const maxEmbarqueId = Number(inv?.base_max_embarque_id) || 0;
+  const maxPaseId = Number(inv?.base_max_pase_id) || 0;
 
   // Sumar recepciones nuevas (id > maxRecepcionId, Completado)
   const { data: recepciones } = await supabase
@@ -231,10 +232,20 @@ export async function recalcularInventarioDesdeBase(
     .eq('estatus', 'Completado')
     .gt('id', maxEmbarqueId);
 
+  // Restar pases a producción nuevos (movimientos tipo 'Producción' con almacén de procedencia)
+  const { data: pases } = await supabase
+    .from('movimientos')
+    .select('peso_neto')
+    .eq('almacen_id', almacenId)
+    .eq('producto_id', productoId)
+    .eq('tipo', 'Producción')
+    .gt('id', maxPaseId);
+
   const totalEntradas = (recepciones || []).reduce((s, r) => s + (Number(r.peso_neto) || 0), 0);
   const totalSalidas = (embarques || []).reduce((s, e) => s + (Number(e.peso_neto) || 0), 0);
+  const totalPases = (pases || []).reduce((s, m) => s + (Number(m.peso_neto) || 0), 0);
 
-  const nuevaCantidad = Math.max(0, cantidadBase + totalEntradas - totalSalidas);
+  const nuevaCantidad = Math.max(0, cantidadBase + totalEntradas - totalSalidas - totalPases);
 
   await upsertInventarioAlmacen(almacenId, productoId, nuevaCantidad);
 

@@ -9,13 +9,15 @@
 ALTER TABLE inventario_almacenes
   ADD COLUMN IF NOT EXISTS cantidad_base NUMERIC DEFAULT 0,
   ADD COLUMN IF NOT EXISTS base_max_recepcion_id INTEGER DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS base_max_embarque_id INTEGER DEFAULT 0;
+  ADD COLUMN IF NOT EXISTS base_max_embarque_id INTEGER DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS base_max_pase_id INTEGER DEFAULT 0;
 
 -- PASO 2: Inicializar con valores actuales y IDs máximos de boletas completadas
 DO $$
 DECLARE
   v_max_recepcion_id INTEGER;
   v_max_embarque_id INTEGER;
+  v_max_pase_id INTEGER;
 BEGIN
   SELECT COALESCE(MAX(id), 0) INTO v_max_recepcion_id
   FROM recepciones WHERE estatus = 'Completado';
@@ -23,10 +25,14 @@ BEGIN
   SELECT COALESCE(MAX(id), 0) INTO v_max_embarque_id
   FROM embarques WHERE estatus = 'Completado';
 
+  SELECT COALESCE(MAX(id), 0) INTO v_max_pase_id
+  FROM movimientos WHERE tipo = 'Producción';
+
   UPDATE inventario_almacenes SET
     cantidad_base = cantidad,
     base_max_recepcion_id = v_max_recepcion_id,
-    base_max_embarque_id = v_max_embarque_id;
+    base_max_embarque_id = v_max_embarque_id,
+    base_max_pase_id = v_max_pase_id;
 
   RAISE NOTICE 'Base establecida. Max recepcion ID: %, Max embarque ID: %',
     v_max_recepcion_id, v_max_embarque_id;

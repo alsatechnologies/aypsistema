@@ -8,12 +8,24 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ArrowRightLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { useProductos } from '@/services/hooks/useProductos';
-import { useAlmacenes } from '@/services/hooks/useAlmacenes';
 import { createMovimiento, getMovimientos } from '@/services/supabase/movimientos';
+import {
+  getInventarioByProducto,
+  recalcularInventarioDesdeBase,
+  actualizarCapacidadActualAlmacen,
+} from '@/services/supabase/inventarioAlmacenes';
+
+// Almacén que tiene existencia del producto seleccionado
+interface AlmacenConExistencia {
+  id: number;
+  nombre: string;
+  cantidad: number;
+}
+
+const formatKg = (kg: number) => kg.toLocaleString('es-MX', { maximumFractionDigits: 0 });
 
 const PaseProduccionPanel: React.FC = () => {
   const { productos: productosDB } = useProductos();
-  const { almacenes: almacenesDB } = useAlmacenes();
 
   const [ppProductoId, setPpProductoId] = useState<string>('');
   const [ppCantidad, setPpCantidad] = useState<string>('');
@@ -22,6 +34,8 @@ const PaseProduccionPanel: React.FC = () => {
   const [ppGuardando, setPpGuardando] = useState(false);
   const [ppHistorial, setPpHistorial] = useState<any[]>([]);
   const [ppLoadingHistorial, setPpLoadingHistorial] = useState(false);
+  const [almacenesConProducto, setAlmacenesConProducto] = useState<AlmacenConExistencia[]>([]);
+  const [cargandoAlmacenes, setCargandoAlmacenes] = useState(false);
 
   const productosSemilla = productosDB.filter(p =>
     p.nombre.toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes('SEMILLA')
@@ -38,12 +52,46 @@ const PaseProduccionPanel: React.FC = () => {
 
   useEffect(() => { cargarHistorialPP(); }, []);
 
+  // Solo se ofrecen los almacenes que tienen existencia del producto seleccionado
+  const cargarAlmacenesConProducto = async (productoId: string) => {
+    if (!productoId) { setAlmacenesConProducto([]); return; }
+    setCargandoAlmacenes(true);
+    try {
+      const data = await getInventarioByProducto(parseInt(productoId)) as any[];
+      setAlmacenesConProducto(
+        data
+          .filter(i => Number(i.cantidad) > 0 && i.almacen)
+          .map(i => ({ id: i.almacen.id, nombre: i.almacen.nombre, cantidad: Number(i.cantidad) }))
+          .sort((a, b) => a.nombre.localeCompare(b.nombre))
+      );
+    } catch {
+      setAlmacenesConProducto([]);
+      toast.error('No se pudo consultar el inventario del producto');
+    } finally {
+      setCargandoAlmacenes(false);
+    }
+  };
+
+  const handleProductoChange = (productoId: string) => {
+    setPpProductoId(productoId);
+    setPpAlmacenId('');
+    cargarAlmacenesConProducto(productoId);
+  };
+
+  const almacenSeleccionado = almacenesConProducto.find(a => a.id.toString() === ppAlmacenId);
+  const kgCapturados = parseFloat(ppCantidad) || 0;
+  const excedeExistencia = !!almacenSeleccionado && kgCapturados > almacenSeleccionado.cantidad;
+
   const handlePaseProduccion = async () => {
     if (!ppProductoId) { toast.error('Seleccione un producto'); return; }
     const kg = parseFloat(ppCantidad);
     if (!kg || kg <= 0) { toast.error('Ingrese una cantidad válida'); return; }
-    const almacen = almacenesDB.find(a => a.id.toString() === ppAlmacenId);
+    const almacen = almacenSeleccionado;
     if (!almacen) { toast.error('Seleccione el almacén de procedencia'); return; }
+    if (kg > almacen.cantidad) {
+      toast.error(`Inventario insuficiente: ${almacen.nombre} tiene ${formatKg(almacen.cantidad)} kg`);
+      return;
+    }
     if (!ppDestino.trim()) { toast.error('Ingrese el destino'); return; }
 
     setPpGuardando(true);
@@ -60,6 +108,7 @@ const PaseProduccionPanel: React.FC = () => {
         transporte: null,
         fecha,
         ubicacion: almacen.nombre,
+        almacen_id: almacen.id,
         peso_neto: kg,
         peso_bruto: kg,
         peso_tara: null,
@@ -67,14 +116,25 @@ const PaseProduccionPanel: React.FC = () => {
         placas: null,
       });
 
-      toast.success(`Pase registrado — ${kg.toLocaleString('es-MX')} kg de ${almacen.nombre} → ${ppDestino}`);
+      // Descontar del inventario del almacén (base + entradas - salidas - pases)
+      const productoId = parseInt(ppProductoId);
+      try {
+        await recalcularInventarioDesdeBase(almacen.id, productoId);
+        await actualizarCapacidadActualAlmacen(almacen.id);
+      } catch {
+        toast.warning('El pase se registró, pero no se pudo actualizar el inventario. Revise el almacén.');
+      }
+
+      toast.success(`Pase registrado — ${formatKg(kg)} kg de ${almacen.nombre} → ${ppDestino}`);
       setPpProductoId('');
       setPpCantidad('');
       setPpDestino('');
       setPpAlmacenId('');
+      setAlmacenesConProducto([]);
       await cargarHistorialPP();
-    } catch (err) {
-      toast.error('Error al registrar el pase');
+    } catch (err: any) {
+      // La base de datos rechaza pases sin existencia del producto en el almacén
+      toast.error(err?.message ? `No se registró el pase: ${err.message}` : 'Error al registrar el pase');
     } finally {
       setPpGuardando(false);
     }
@@ -90,13 +150,13 @@ const PaseProduccionPanel: React.FC = () => {
             Registrar Pase de Semilla a Producción
           </CardTitle>
           <CardDescription>
-            La cantidad registrada se descontará del inventario de semilla.
+            La cantidad se descuenta del inventario del producto en el almacén de procedencia.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label>Producto (Semilla) *</Label>
-            <Select value={ppProductoId} onValueChange={setPpProductoId}>
+            <Select value={ppProductoId} onValueChange={handleProductoChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Seleccionar semilla..." />
               </SelectTrigger>
@@ -110,16 +170,32 @@ const PaseProduccionPanel: React.FC = () => {
 
           <div className="space-y-2">
             <Label>Procedencia (almacén) *</Label>
-            <Select value={ppAlmacenId} onValueChange={setPpAlmacenId}>
+            <Select
+              value={ppAlmacenId}
+              onValueChange={setPpAlmacenId}
+              disabled={!ppProductoId || cargandoAlmacenes || almacenesConProducto.length === 0}
+            >
               <SelectTrigger>
-                <SelectValue placeholder="¿De qué almacén sale la semilla?" />
+                <SelectValue
+                  placeholder={
+                    !ppProductoId ? 'Primero seleccione la semilla'
+                    : cargandoAlmacenes ? 'Consultando inventario...'
+                    : almacenesConProducto.length === 0 ? 'Ningún almacén tiene este producto'
+                    : '¿De qué almacén sale la semilla?'
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
-                {almacenesDB.map(a => (
-                  <SelectItem key={a.id} value={a.id.toString()}>{a.nombre}</SelectItem>
+                {almacenesConProducto.map(a => (
+                  <SelectItem key={a.id} value={a.id.toString()}>
+                    {a.nombre} — {formatKg(a.cantidad)} kg disponibles
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {ppProductoId && !cargandoAlmacenes && almacenesConProducto.length === 0 && (
+              <p className="text-xs text-destructive">No hay inventario de esta semilla en ningún almacén.</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -132,7 +208,14 @@ const PaseProduccionPanel: React.FC = () => {
                 placeholder="0"
                 value={ppCantidad}
                 onChange={e => setPpCantidad(e.target.value)}
+                max={almacenSeleccionado?.cantidad}
+                aria-invalid={excedeExistencia}
               />
+              {almacenSeleccionado && (
+                <p className={`text-xs ${excedeExistencia ? 'text-destructive' : 'text-muted-foreground'}`}>
+                  {excedeExistencia ? 'Excede lo disponible: ' : 'Disponible: '}{formatKg(almacenSeleccionado.cantidad)} kg
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Destino *</Label>
@@ -147,7 +230,7 @@ const PaseProduccionPanel: React.FC = () => {
           <Button
             className="w-full bg-primary hover:bg-primary/90"
             onClick={handlePaseProduccion}
-            disabled={ppGuardando}
+            disabled={ppGuardando || excedeExistencia}
           >
             {ppGuardando ? 'Registrando...' : 'Registrar Pase'}
           </Button>
