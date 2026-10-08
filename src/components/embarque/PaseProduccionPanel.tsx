@@ -410,7 +410,7 @@ const PaseProduccionPanel: React.FC = () => {
             onClick={handlePaseProduccion}
             disabled={ppGuardando || excedeExistencia}
           >
-            {ppGuardando ? 'Registrando...' : 'Registrar Pase'}
+            {ppGuardando ? 'Registrando...' : 'Registrar Movimiento'}
           </Button>
           </div>
         </CardContent>
