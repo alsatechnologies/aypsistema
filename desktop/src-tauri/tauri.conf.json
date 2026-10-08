@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "AYP Sistema",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "identifier": "com.aceitesyproteinas.sistema",
   "build": {
     "frontendDist": "https://aypsistema.vercel.app"
@@ -17,7 +17,8 @@
         "minHeight": 800,
         "resizable": true,
         "maximized": true,
-        "center": true
+        "center": true,
+        "zoomHotkeysEnabled": true
       }
     ],
     "security": {
