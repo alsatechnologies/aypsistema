@@ -81,7 +81,14 @@ const Laboratorio = () => {
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
 
+  // Fecha local (no UTC), para que después de las 5 pm no se registre el día siguiente
+  const hoyLocal = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
   const [formData, setFormData] = useState({
+    fecha: hoyLocal(),
     turno: 'Matutino' as 'Matutino' | 'Vespertino' | 'Nocturno',
     responsable: '',
     // Pasta
@@ -218,6 +225,14 @@ const Laboratorio = () => {
       toast.error('Seleccione un responsable');
       return;
     }
+    if (!formData.fecha) {
+      toast.error('Seleccione la fecha del reporte');
+      return;
+    }
+    if (formData.fecha > hoyLocal()) {
+      toast.error('La fecha del reporte no puede ser futura');
+      return;
+    }
 
     try {
       const proteina = formData.pastaProteina
@@ -239,7 +254,7 @@ const Laboratorio = () => {
 
       await addReporte({
         id: '', // Se generará automáticamente
-        fecha: new Date().toISOString().split('T')[0],
+        fecha: formData.fecha,
         responsable: formData.responsable,
         turno: formData.turno,
         estatus: 'Pendiente',
@@ -278,6 +293,7 @@ const Laboratorio = () => {
       await loadReportes();
       
       setFormData({
+        fecha: hoyLocal(),
         turno: 'Matutino',
         responsable: '',
         pastaTexturaPromedio: '',
@@ -421,7 +437,20 @@ const Laboratorio = () => {
             </DialogHeader>
             <div className="space-y-6 py-4">
               {/* Info General */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="lab-fecha">Fecha *</Label>
+                  <Input
+                    id="lab-fecha"
+                    type="date"
+                    max={hoyLocal()}
+                    value={formData.fecha}
+                    onChange={(e) => setFormData({ ...formData, fecha: e.target.value })}
+                  />
+                  {formData.fecha && formData.fecha < hoyLocal() && (
+                    <p className="text-xs text-amber-700 dark:text-amber-400">Reporte de fecha pasada</p>
+                  )}
+                </div>
                 <div className="space-y-2">
                   <Label>Turno *</Label>
                   <Select value={formData.turno} onValueChange={(v) => setFormData({ ...formData, turno: v as any })}>
