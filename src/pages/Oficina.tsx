@@ -5,7 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, FileText, Clock, CheckCircle, Printer, Eye, Truck, Ship, Calendar, X } from 'lucide-react';
+import { StatusPill } from '@/components/ui/status-pill';
+import { TipoPill } from '@/components/ui/tipo-pill';
+import { Plus, Search, FileText, Clock, CheckCircle, Printer, Eye, Truck, Ship, Calendar, X, Calculator } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -20,15 +22,18 @@ import { useProveedores } from '@/services/hooks/useProveedores';
 import type { Orden as OrdenDB } from '@/services/supabase/ordenes';
 import CompletarOrdenDialog from '@/components/oficina/CompletarOrdenDialog';
 import { toast } from 'sonner';
-import { formatDateTimeMST } from '@/utils/dateUtils';
+import { formatDateTimeMST, formatDateTimeSplitMST } from '@/utils/dateUtils';
 import { createEmbarque, getEmbarqueByBoleta, updateEmbarque } from '@/services/supabase/embarques';
 import { createRecepcion, getRecepcionByBoleta, updateRecepcion } from '@/services/supabase/recepciones';
 import { getMovimientoByBoleta, updateMovimiento } from '@/services/supabase/movimientos';
 import { createOrden, deleteOrden } from '@/services/supabase/ordenes';
+import { getProductoConAnalisis } from '@/services/supabase/productos';
 import { getCurrentDateTimeMST } from '@/utils/dateUtils';
 import { useAuth } from '@/contexts/AuthContext';
 import { Trash2, Edit } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import AnalisisDinamico from '@/components/reciba/AnalisisDinamico';
+import DescuentosPanel from '@/components/reciba/DescuentosPanel';
 
 interface Orden {
   id: number;
@@ -64,6 +69,30 @@ const Oficina = () => {
 
   // Verificar si el usuario puede editar/eliminar
   const puedeEditarEliminar = usuario?.rol === 'Administrador' || usuario?.rol === 'Oficina';
+
+  // Estado calculadora
+  const [calcProductoId, setCalcProductoId] = useState<string>('');
+  const [calcAnalisis, setCalcAnalisis] = useState<any[]>([]);
+  const [calcLoadingAnalisis, setCalcLoadingAnalisis] = useState(false);
+  const [calcPesoBruto, setCalcPesoBruto] = useState<string>('');
+  const [calcPesoTara, setCalcPesoTara] = useState<string>('');
+  const [calcValores, setCalcValores] = useState<Record<string, number>>({});
+
+  const calcPesoNeto = Math.max(0, (parseFloat(calcPesoBruto) || 0) - (parseFloat(calcPesoTara) || 0));
+
+  useEffect(() => {
+    if (!calcProductoId) {
+      setCalcAnalisis([]);
+      setCalcValores({});
+      return;
+    }
+    setCalcLoadingAnalisis(true);
+    getProductoConAnalisis(parseInt(calcProductoId))
+      .then(p => setCalcAnalisis(p.analisis || []))
+      .catch(() => setCalcAnalisis([]))
+      .finally(() => setCalcLoadingAnalisis(false));
+    setCalcValores({});
+  }, [calcProductoId]);
   
   // Estado para el formulario de nueva orden
   const [nuevaOrdenData, setNuevaOrdenData] = useState({
@@ -290,6 +319,10 @@ const Oficina = () => {
     cliente_id?: number | null;
     proveedor_id?: number | null;
     tipo_transporte?: string;
+    nombre_chofer?: string | null;
+    vehiculo?: string | null;
+    placas?: string | null;
+    destino?: string | null;
   }) => {
     try {
       const orden = ordenesDB.find(o => o.id === ordenId);
@@ -334,7 +367,11 @@ const Oficina = () => {
         producto_id: data.producto_id,
         cliente_id: data.cliente_id,
         proveedor_id: data.proveedor_id,
-        tipo_transporte: data.tipo_transporte || null
+        tipo_transporte: data.tipo_transporte || null,
+        nombre_chofer: data.nombre_chofer ?? orden.nombre_chofer,
+        vehiculo: data.vehiculo ?? orden.vehiculo,
+        placas: data.placas ?? orden.placas,
+        destino: data.destino ?? orden.destino,
       };
 
       // Solo actualizar boleta y estatus si es temporal
@@ -358,9 +395,9 @@ const Oficina = () => {
             const recepcionData = {
               producto_id: data.producto_id,
               proveedor_id: data.proveedor_id,
-              procedencia: orden.destino || null,
-              chofer: orden.nombre_chofer || null,
-              placas: orden.placas || null,
+              procedencia: (data.destino ?? orden.destino) || null,
+              chofer: (data.nombre_chofer ?? orden.nombre_chofer) || null,
+              placas: (data.placas ?? orden.placas) || null,
               fecha: fechaMST,
               tipo_transporte: data.tipo_transporte || null,
               estatus: 'Pendiente'
@@ -413,9 +450,9 @@ const Oficina = () => {
             const embarqueData = {
               producto_id: data.producto_id,
               cliente_id: data.cliente_id,
-              chofer: orden.nombre_chofer || null,
-              placas: orden.placas || null,
-              destino: orden.destino || null,
+              chofer: (data.nombre_chofer ?? orden.nombre_chofer) || null,
+              placas: (data.placas ?? orden.placas) || null,
+              destino: (data.destino ?? orden.destino) || null,
               fecha: fechaMST,
               tipo_transporte: data.tipo_transporte || null,
               tipo_embarque: orden.tipo_operacion === 'Embarque Nacional' ? 'Nacional' : 'Exportación'
@@ -489,24 +526,9 @@ const Oficina = () => {
     }
   };
 
-  const getEstatusBadge = (estatus: string) => {
-    const config: Record<string, { className: string; icon: React.ReactNode }> = {
-      'Nuevo': { className: 'bg-yellow-100 text-yellow-700 border-yellow-300', icon: <Clock className="h-3 w-3 mr-1" /> },
-      'En Proceso': { className: 'bg-orange-100 text-orange-700 border-orange-300', icon: <FileText className="h-3 w-3 mr-1" /> },
-      'Completado': { className: 'bg-green-100 text-green-700 border-green-300', icon: <CheckCircle className="h-3 w-3 mr-1" /> },
-    };
-    const { className, icon } = config[estatus] || { className: 'bg-muted', icon: null };
-    return <Badge className={`flex items-center w-fit ${className}`}>{icon}{estatus}</Badge>;
-  };
+  const getEstatusBadge = (estatus: string) => <StatusPill estatus={estatus} />;
 
-  const getTipoOperacionBadge = (tipo: string) => {
-    const colors: Record<string, string> = {
-      'Reciba': 'bg-green-500 text-white',
-      'Embarque Nacional': 'bg-blue-500 text-white',
-      'Embarque Exportación': 'bg-purple-500 text-white',
-    };
-    return <Badge className={colors[tipo] || 'bg-gray-500 text-white'}>{tipo}</Badge>;
-  };
+  const getTipoOperacionBadge = (tipo: string) => <TipoPill tipo={tipo} />;
 
   const filteredOrdenes = ordenes.filter(o => {
     // Filtro de búsqueda
@@ -531,6 +553,19 @@ const Oficina = () => {
     <Layout>
       <Header title="Oficina" subtitle="Gestión de órdenes y documentación" />
       <div className="p-6">
+        <Tabs defaultValue="ordenes" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="ordenes" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Órdenes
+            </TabsTrigger>
+            <TabsTrigger value="calculadora" className="flex items-center gap-2">
+              <Calculator className="h-4 w-4" />
+              Calculadora
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="ordenes">
         {/* Search, Filters and New */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
           <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
@@ -871,8 +906,7 @@ const Oficina = () => {
                   <TableHead>Cliente/Proveedor</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Destino/Origen</TableHead>
-                  <TableHead>Chofer</TableHead>
-                  <TableHead>Placas</TableHead>
+                  <TableHead>Transporte</TableHead>
                   <TableHead>Ingreso</TableHead>
                   <TableHead>Estatus</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
@@ -892,13 +926,32 @@ const Oficina = () => {
                     }}
                   >
                     <TableCell className="font-mono font-bold text-primary">{orden.boleta}</TableCell>
-                    <TableCell className="font-medium">{orden.producto || '-'}</TableCell>
-                    <TableCell>{orden.cliente || '-'}</TableCell>
+                    <TableCell className="font-medium min-w-[140px] max-w-[200px]">
+                      <span className="line-clamp-2">{orden.producto || '-'}</span>
+                    </TableCell>
+                    <TableCell className="min-w-[140px] max-w-[200px]">
+                      <span className="line-clamp-2">{orden.cliente || '-'}</span>
+                    </TableCell>
                     <TableCell>{getTipoOperacionBadge(orden.tipoOperacion)}</TableCell>
                     <TableCell>{orden.destino}</TableCell>
-                    <TableCell>{orden.nombreChofer}</TableCell>
-                    <TableCell className="font-mono text-sm">{orden.placas}</TableCell>
-                    <TableCell>{formatDateTimeMST(orden.fechaHoraIngreso || null)}</TableCell>
+                    <TableCell className="max-w-[180px]">
+                      <div className="flex flex-col gap-0.5 leading-tight">
+                        <span className="truncate">{orden.nombreChofer || '-'}</span>
+                        <span className="font-mono text-xs text-muted-foreground truncate">{orden.placas || '-'}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="tabular-nums whitespace-nowrap">
+                      {(() => {
+                        const { fecha, hora } = formatDateTimeSplitMST(orden.fechaHoraIngreso || null);
+                        if (!fecha) return '-';
+                        return (
+                          <div className="flex flex-col gap-0.5 leading-tight">
+                            <span>{fecha}</span>
+                            {hora && <span className="text-xs text-muted-foreground">{hora}</span>}
+                          </div>
+                        );
+                      })()}
+                    </TableCell>
                     <TableCell>{getEstatusBadge(orden.estatus)}</TableCell>
                     <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       {orden.estatus === 'Nuevo' && orden.boleta.startsWith('TEMP-') ? (
@@ -1059,6 +1112,98 @@ const Oficina = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+          </TabsContent>
+
+          {/* ── CALCULADORA ────────────────────────────────── */}
+          <TabsContent value="calculadora">
+            <div className="max-w-2xl mx-auto space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calculator className="h-5 w-5" />
+                    Calculadora de Peso Neto con Descuentos
+                  </CardTitle>
+                  <CardDescription>
+                    Consulta de peso neto final aplicando descuentos por análisis — solo para visualización, sin guardar registros.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Producto */}
+                  <div className="space-y-2">
+                    <Label>Producto</Label>
+                    <Select value={calcProductoId} onValueChange={setCalcProductoId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar producto..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {productos.map(p => (
+                          <SelectItem key={p.id} value={p.id.toString()}>{p.nombre}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Pesos */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label>Peso Bruto (kg)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        value={calcPesoBruto}
+                        onChange={e => setCalcPesoBruto(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Peso Tara (kg)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        value={calcPesoTara}
+                        onChange={e => setCalcPesoTara(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Peso Neto (kg)</Label>
+                      <div className="h-10 flex items-center px-3 rounded-md border bg-muted font-semibold text-primary">
+                        {calcPesoNeto.toLocaleString('es-MX', { maximumFractionDigits: 2 })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Análisis */}
+                  {calcProductoId && (
+                    <div className="space-y-2">
+                      <Label>Análisis del Producto</Label>
+                      {calcLoadingAnalisis ? (
+                        <p className="text-sm text-muted-foreground">Cargando análisis...</p>
+                      ) : (
+                        <AnalisisDinamico
+                          analisis={calcAnalisis}
+                          valores={calcValores}
+                          onChange={(nombre, valor) =>
+                            setCalcValores(prev => ({ ...prev, [nombre]: valor }))
+                          }
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  {/* Resultado */}
+                  {calcProductoId && calcPesoNeto > 0 && calcAnalisis.length > 0 && (
+                    <DescuentosPanel
+                      analisis={calcAnalisis}
+                      valoresAnalisis={calcValores}
+                      pesoNeto={calcPesoNeto}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </Layout>
   );

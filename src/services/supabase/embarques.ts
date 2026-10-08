@@ -18,6 +18,7 @@ export interface Embarque {
   peso_bruto?: number | null;
   peso_tara?: number | null;
   peso_neto?: number | null;
+  ajuste_kg?: number | null;
   tipo_transporte?: string | null;
   tipo_embarque?: string | null;
   sello_entrada_1?: string | null;

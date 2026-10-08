@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
-export type Rol = 'Oficina' | 'Portero' | 'Báscula' | 'Calidad' | 'Laboratorio' | 'Producción' | 'Administrador';
+export type Rol = 'Oficina' | 'Portero' | 'Báscula' | 'Calidad' | 'Laboratorio' | 'Producción' | 'Exportaciones' | 'Administrador';
 
 export interface Usuario {
   id: number;
@@ -32,7 +32,8 @@ const permisosPorRol: Record<Rol, string[]> = {
   'Calidad': ['control-calidad'],
   'Laboratorio': ['laboratorio'],
   'Producción': ['produccion'],
-  'Administrador': ['oficina', 'reciba', 'embarque', 'movimientos', 'proveedores', 'clientes', 'reportes', 'ingreso', 'control-calidad', 'laboratorio', 'produccion', 'configuracion', 'auditoria']
+  'Exportaciones': ['exportaciones'],
+  'Administrador': ['oficina', 'reciba', 'embarque', 'movimientos', 'proveedores', 'clientes', 'reportes', 'ingreso', 'control-calidad', 'laboratorio', 'produccion', 'configuracion', 'auditoria', 'exportaciones']
 };
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {

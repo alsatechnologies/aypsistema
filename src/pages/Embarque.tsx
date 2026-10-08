@@ -5,7 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Search, Scale, Truck, Train, Clock, CheckCircle, FileText, Printer, Save, Ship, Plus, Eye, BookmarkPlus, Calendar, X } from 'lucide-react';
+import { StatusPill } from '@/components/ui/status-pill';
+import { TipoPill } from '@/components/ui/tipo-pill';
+import { Search, Scale, Truck, Train, Clock, CheckCircle, FileText, Printer, Save, Ship, Plus, Eye, BookmarkPlus, Calendar, X, ChevronLeft, ChevronRight, Factory } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
@@ -17,6 +19,7 @@ import SellosSection from '@/components/reciba/SellosSection';
 import AnalisisDinamico from '@/components/reciba/AnalisisDinamico';
 import DescuentosPanel from '@/components/reciba/DescuentosPanel';
 import NuevoEmbarqueDialog from '@/components/embarque/NuevoEmbarqueDialog';
+import PaseProduccionPanel from '@/components/embarque/PaseProduccionPanel';
 import BoletaEmbarqueDialog from '@/components/embarque/BoletaEmbarqueDialog';
 import { generateNumeroBoleta, TipoOperacion } from '@/utils/folioGenerator';
 import { toast } from 'sonner';
@@ -54,6 +57,7 @@ interface Embarque {
   pesoBruto?: number | null;
   pesoTara?: number | null;
   pesoNeto?: number | null;
+  ajusteKg?: number | null;
   tipoTransporte?: string | null;
   tipoEmbarque?: string | null;
   sellos?: {
@@ -92,13 +96,16 @@ const EmbarquePage = () => {
   const [isNuevoDialogOpen, setIsNuevoDialogOpen] = useState(false);
   const [isBoletaDialogOpen, setIsBoletaDialogOpen] = useState(false);
   const [consecutivo, setConsecutivo] = useState(5);
-  const [fechaDesde, setFechaDesde] = useState('');
-  const [fechaHasta, setFechaHasta] = useState('');
+  const hoy = format(new Date(), 'yyyy-MM-dd');
+  const [modoDia, setModoDia] = useState(true);
+  const [fechaDesde, setFechaDesde] = useState(hoy);
+  const [fechaHasta, setFechaHasta] = useState(hoy);
   const [embarqueAEliminar, setEmbarqueAEliminar] = useState<Embarque | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // Verificar si el usuario puede editar/eliminar
   const puedeEditarEliminar = usuario?.rol === 'Administrador' || usuario?.rol === 'Oficina';
+  const canAjuste = ['Administrador', 'Oficina', 'Sistemas'].includes(usuario?.rol ?? '');
 
   // Mapear embarques de DB a formato local
   const embarques: Embarque[] = embarquesDB.map(e => ({
@@ -114,6 +121,7 @@ const EmbarquePage = () => {
     pesoBruto: e.peso_bruto,
     pesoTara: e.peso_tara,
     pesoNeto: e.peso_neto,
+    ajusteKg: e.ajuste_kg,
     tipoTransporte: e.tipo_transporte as any,
     tipoEmbarque: e.tipo_embarque as any,
     sellos: e.sello_entrada_1 || e.sello_entrada_2 || e.sello_entrada_3 || e.sello_entrada_4 || e.sello_entrada_5 || e.sello_salida_1 || e.sello_salida_2 || e.sello_salida_3 || e.sello_salida_4 || e.sello_salida_5 ? {
@@ -157,6 +165,7 @@ const EmbarquePage = () => {
     valoresAnalisis: {} as Record<string, number>,
     pesoBruto: 0,
     pesoTara: 0,
+    ajusteKg: null as number | null,
     almacenId: null as number | null,
     placas: ''
   });
@@ -193,25 +202,9 @@ const EmbarquePage = () => {
     cargarAnalisis();
   }, [selectedEmbarque?.productoId]);
 
-  const getEstatusBadge = (estatus: string) => {
-    const config: Record<string, { className: string; icon: React.ReactNode }> = {
-      'Pendiente': { className: 'bg-yellow-100 text-yellow-700', icon: <Clock className="h-3 w-3 mr-1" /> },
-      'Peso Tara': { className: 'bg-purple-100 text-purple-700', icon: <Scale className="h-3 w-3 mr-1" /> },
-      'En Carga': { className: 'bg-orange-100 text-orange-700', icon: <Truck className="h-3 w-3 mr-1" /> },
-      'Peso Bruto': { className: 'bg-blue-100 text-blue-700', icon: <Scale className="h-3 w-3 mr-1" /> },
-      'Completado': { className: 'bg-green-100 text-green-700', icon: <CheckCircle className="h-3 w-3 mr-1" /> },
-    };
-    const { className, icon } = config[estatus] || { className: 'bg-muted', icon: null };
-    return <Badge className={`flex items-center w-fit ${className}`}>{icon}{estatus}</Badge>;
-  };
+  const getEstatusBadge = (estatus: string) => <StatusPill estatus={estatus} />;
 
-  const getTipoEmbarqueBadge = (tipo: string) => {
-    const colors: Record<string, string> = {
-      'Nacional': 'bg-blue-500 text-white',
-      'Exportación': 'bg-purple-500 text-white',
-    };
-    return <Badge className={colors[tipo]}>{tipo}</Badge>;
-  };
+  const getTipoEmbarqueBadge = (tipo: string) => <TipoPill tipo={tipo} />;
 
   const getTransporteIcon = (tipo: string | null | undefined) => {
     if (!tipo) return <Truck className="h-4 w-4 text-muted-foreground" />;
@@ -236,6 +229,7 @@ const EmbarquePage = () => {
       valoresAnalisis: embarque.valoresAnalisis || {},
       pesoBruto: embarque.pesoBruto || 0,
       pesoTara: embarque.pesoTara || 0,
+      ajusteKg: embarque.ajusteKg ?? null,
       almacenId: embarque.almacenId || null,
       placas: embarque.placas || ''
     });
@@ -434,6 +428,7 @@ const EmbarquePage = () => {
         peso_bruto: formData.pesoBruto > 0 ? formData.pesoBruto : null,
         peso_tara: formData.pesoTara > 0 ? formData.pesoTara : null,
         peso_neto: pesoNeto > 0 ? pesoNeto : null,
+        ajuste_kg: formData.ajusteKg ?? null,
         sello_entrada_1: formData.sellos.selloEntrada1 || null,
         sello_entrada_2: formData.sellos.selloEntrada2 || null,
         sello_entrada_3: formData.sellos.selloEntrada3 || null,
@@ -502,6 +497,7 @@ const EmbarquePage = () => {
         peso_bruto: formData.pesoBruto,
         peso_tara: formData.pesoTara,
         peso_neto: pesoNeto,
+        ajuste_kg: formData.ajusteKg ?? null,
         sello_entrada_1: formData.sellos.selloEntrada1 || null,
         sello_entrada_2: formData.sellos.selloEntrada2 || null,
         sello_entrada_3: formData.sellos.selloEntrada3 || null,
@@ -628,6 +624,7 @@ const EmbarquePage = () => {
       }
 
       const pesoNeto = formData.pesoBruto - formData.pesoTara;
+      const pesoFinal = formData.ajusteKg ? pesoNeto - formData.ajusteKg : pesoNeto;
       // Usar la fecha guardada en la boleta
       const fechaActual = selectedEmbarque.fecha
         ? selectedEmbarque.fecha.split('-').reverse().join('/')
@@ -685,8 +682,8 @@ const EmbarquePage = () => {
           horatara: fechaHoraTara.hora
         },
         pesos_info2: {
-          deduccion: 0,
-          peso_neto_analizado: pesoNeto
+          deduccion: formData.ajusteKg ?? 0,
+          peso_neto_analizado: pesoFinal
         },
         observaciones: observaciones || '',
         // La API espera sellos como array de strings (sin null)
@@ -736,12 +733,12 @@ const EmbarquePage = () => {
       e.chofer.toLowerCase().includes(search.toLowerCase());
     
     let matchesDate = true;
-    if (fechaDesde || fechaHasta) {
+    if (modoDia && (fechaDesde || fechaHasta)) {
       const embarqueFecha = e.fecha || '';
       if (fechaDesde && embarqueFecha < fechaDesde) matchesDate = false;
       if (fechaHasta && embarqueFecha > fechaHasta) matchesDate = false;
     }
-    
+
     return matchesSearch && matchesDate;
   });
 
@@ -751,6 +748,19 @@ const EmbarquePage = () => {
     <Layout>
       <Header title="Embarque" subtitle="Báscula - Salida de producto terminado" />
       <div className="p-6">
+        <Tabs defaultValue="embarques" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="embarques" className="flex items-center gap-2">
+              <Truck className="h-4 w-4" />
+              Embarques
+            </TabsTrigger>
+            <TabsTrigger value="pase-produccion" className="flex items-center gap-2">
+              <Factory className="h-4 w-4" />
+              Pase a Producción
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="embarques">
         {/* Search, Filters and New Button */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
           <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
@@ -764,29 +774,55 @@ const EmbarquePage = () => {
             />
             </div>
             <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <Input 
-                type="date" 
-                className="w-36"
-                value={fechaDesde}
-                onChange={(e) => setFechaDesde(e.target.value)}
-              />
-              <span className="text-muted-foreground">-</span>
-              <Input 
-                type="date" 
-                className="w-36"
-                value={fechaHasta}
-                onChange={(e) => setFechaHasta(e.target.value)}
-              />
-              {(fechaDesde || fechaHasta) && (
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => { setFechaDesde(''); setFechaHasta(''); }}
-                  title="Limpiar filtros"
+              {/* Toggle modo */}
+              <div className="flex rounded-md border overflow-hidden text-xs">
+                <button
+                  className={`px-3 py-1.5 font-medium transition-colors ${modoDia ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-muted'}`}
+                  onClick={() => { setModoDia(true); setFechaDesde(hoy); setFechaHasta(hoy); }}
                 >
-                  <X className="h-4 w-4" />
-                </Button>
+                  Por día
+                </button>
+                <button
+                  className={`px-3 py-1.5 font-medium transition-colors border-l ${!modoDia ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-muted'}`}
+                  onClick={() => setModoDia(false)}
+                >
+                  Ver todo
+                </button>
+              </div>
+              {/* Navegador de día */}
+              {modoDia && (
+                <>
+                  <Button variant="ghost" size="icon" className="h-8 w-8"
+                    onClick={() => {
+                      if (!fechaDesde) return;
+                      const d = new Date(fechaDesde + 'T12:00:00');
+                      d.setDate(d.getDate() - 1);
+                      const f = format(d, 'yyyy-MM-dd');
+                      setFechaDesde(f); setFechaHasta(f);
+                    }}
+                    title="Día anterior"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Input
+                    type="date"
+                    className="w-36 text-center"
+                    value={fechaDesde}
+                    onChange={(e) => { setFechaDesde(e.target.value); setFechaHasta(e.target.value); }}
+                  />
+                  <Button variant="ghost" size="icon" className="h-8 w-8"
+                    onClick={() => {
+                      if (!fechaDesde) return;
+                      const d = new Date(fechaDesde + 'T12:00:00');
+                      d.setDate(d.getDate() + 1);
+                      const f = format(d, 'yyyy-MM-dd');
+                      setFechaDesde(f); setFechaHasta(f);
+                    }}
+                    title="Día siguiente"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </>
               )}
             </div>
           </div>
@@ -812,11 +848,9 @@ const EmbarquePage = () => {
                   <TableHead>Boleta</TableHead>
                   <TableHead>Producto</TableHead>
                   <TableHead>Cliente</TableHead>
-                  <TableHead>Destino</TableHead>
+                  <TableHead>Destino · Almacén</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Transporte</TableHead>
-                  <TableHead>Placas</TableHead>
-                  <TableHead>Chofer</TableHead>
                   <TableHead>Fecha</TableHead>
                   <TableHead>Estatus</TableHead>
                   {puedeEditarEliminar && <TableHead className="text-right">Acciones</TableHead>}
@@ -830,19 +864,31 @@ const EmbarquePage = () => {
                     onClick={() => handleRowClick(embarque)}
                   >
                     <TableCell className="font-mono font-bold text-primary">{embarque.boleta}</TableCell>
-                    <TableCell className="font-medium">{embarque.producto}</TableCell>
-                    <TableCell>{embarque.cliente}</TableCell>
-                    <TableCell>{embarque.destino}</TableCell>
-                    <TableCell>{getTipoEmbarqueBadge(embarque.tipoEmbarque)}</TableCell>
-                    <TableCell>
-                      <span className="flex items-center gap-1">
-                        {getTransporteIcon(embarque.tipoTransporte)}
-                        {embarque.tipoTransporte || 'Camión'}
-                      </span>
+                    <TableCell className="font-medium min-w-[140px] max-w-[200px]">
+                      <span className="line-clamp-2">{embarque.producto}</span>
                     </TableCell>
-                    <TableCell className="font-mono">{embarque.placas || '-'}</TableCell>
-                    <TableCell>{embarque.chofer}</TableCell>
-                    <TableCell>{embarque.fecha}</TableCell>
+                    <TableCell className="min-w-[140px] max-w-[200px]">
+                      <span className="line-clamp-2">{embarque.cliente}</span>
+                    </TableCell>
+                    <TableCell className="max-w-[180px]">
+                      <div className="flex flex-col gap-0.5 leading-tight">
+                        <span className="truncate">{embarque.destino || '-'}</span>
+                        <span className="text-xs text-muted-foreground truncate">
+                          {almacenesDB.find(a => a.id === embarque.almacenId)?.nombre || '-'}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>{getTipoEmbarqueBadge(embarque.tipoEmbarque)}</TableCell>
+                    <TableCell className="max-w-[200px]">
+                      <div className="flex flex-col gap-0.5 leading-tight">
+                        <span className="truncate">{embarque.chofer || '-'}</span>
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
+                          {getTransporteIcon(embarque.tipoTransporte)}
+                          {embarque.tipoTransporte || 'Camión'} · <span className="font-mono truncate">{embarque.placas || '-'}</span>
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="tabular-nums whitespace-nowrap">{embarque.fecha}</TableCell>
                     <TableCell>{getEstatusBadge(embarque.estatus)}</TableCell>
                     {puedeEditarEliminar && (
                       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
@@ -891,6 +937,12 @@ const EmbarquePage = () => {
             )}
           </CardContent>
         </Card>
+          </TabsContent>
+
+          <TabsContent value="pase-produccion">
+            <PaseProduccionPanel />
+          </TabsContent>
+        </Tabs>
 
         {/* Formulario de Báscula Dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -912,7 +964,7 @@ const EmbarquePage = () => {
                       {selectedEmbarque.tipoTransporte || 'Camión'}
                     </span>
                     {selectedEmbarque.tipoEmbarque === 'Exportación' && (
-                      <Badge className="bg-purple-500 text-white ml-2">Exportación</Badge>
+                      <TipoPill tipo="Exportación" className="ml-2" />
                     )}
                     <HistorialCambiosButton
                       tabla="embarques"
@@ -1209,6 +1261,37 @@ const EmbarquePage = () => {
                           {formatNumber(formData.pesoBruto - formData.pesoTara)} Kg
                         </span>
                       </div>
+                      {/* Corrección de peso — solo ferroviaria + roles con permiso */}
+                      {selectedEmbarque.tipoTransporte === 'Ferroviaria' && canAjuste && (
+                        <>
+                          <Separator className="my-3" />
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <label className="text-sm font-medium">Corrección (kg a restar)</label>
+                              <span className="text-xs text-muted-foreground">Solo jumbos ferroviarios</span>
+                            </div>
+                            <input
+                              type="number"
+                              step="1"
+                              placeholder="0"
+                              className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm"
+                              value={formData.ajusteKg ?? ''}
+                              onChange={e => setFormData(f => ({
+                                ...f,
+                                ajusteKg: e.target.value === '' ? null : Number(e.target.value)
+                              }))}
+                            />
+                          </div>
+                          {formData.ajusteKg != null && formData.ajusteKg > 0 && (
+                            <div className="flex justify-between text-lg font-bold mt-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                              <span className="text-green-800">Peso Final Corregido:</span>
+                              <span className="text-green-700">
+                                {formatNumber(formData.pesoBruto - formData.pesoTara - formData.ajusteKg)} Kg
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>

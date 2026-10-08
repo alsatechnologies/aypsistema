@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { StatusPill } from '@/components/ui/status-pill';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -198,15 +199,7 @@ const Laboratorio = () => {
 
   const responsables = ['Q.F.B. Karen López', 'Ing. Carlos Mendoza', 'Q.F.B. Ana García'];
 
-  const getEstatusBadge = (estatus: string) => {
-    const config: Record<string, { className: string; icon: React.ReactNode }> = {
-      'Pendiente': { className: 'bg-yellow-100 text-yellow-700', icon: <Clock className="h-3 w-3 mr-1" /> },
-      'En proceso': { className: 'bg-blue-100 text-blue-700', icon: <FlaskConical className="h-3 w-3 mr-1" /> },
-      'Completado': { className: 'bg-green-100 text-green-700', icon: <CheckCircle className="h-3 w-3 mr-1" /> },
-    };
-    const { className, icon } = config[estatus] || { className: 'bg-muted', icon: null };
-    return <Badge className={`flex items-center w-fit ${className}`}>{icon}{estatus}</Badge>;
-  };
+  const getEstatusBadge = (estatus: string) => <StatusPill estatus={estatus} />;
 
   const filteredReportes = reportes.filter(r => {
     const matchesSearch = 

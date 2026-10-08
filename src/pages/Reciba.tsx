@@ -5,12 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Search, Scale, Truck, Train, Clock, CheckCircle, FileText, Printer, Save, BookmarkPlus, Plus, Calendar, X } from 'lucide-react';
+import { StatusPill } from '@/components/ui/status-pill';
+import { Search, Scale, Truck, Train, Clock, CheckCircle, FileText, Printer, Save, BookmarkPlus, Plus, Calendar, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -90,8 +90,10 @@ const Reciba = () => {
   const [isNuevaOperacionOpen, setIsNuevaOperacionOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [tipoBascula, setTipoBascula] = useState<'Camión' | 'Ferroviaria'>('Camión');
-  const [fechaDesde, setFechaDesde] = useState('');
-  const [fechaHasta, setFechaHasta] = useState('');
+  const hoy = format(new Date(), 'yyyy-MM-dd');
+  const [modoDia, setModoDia] = useState(true);
+  const [fechaDesde, setFechaDesde] = useState(hoy);
+  const [fechaHasta, setFechaHasta] = useState(hoy);
   
   // Estado del formulario
   const [productoSeleccionado, setProductoSeleccionado] = useState<number | null>(null);
@@ -114,6 +116,9 @@ const Reciba = () => {
   const [observaciones, setObservaciones] = useState<string>('');
   const [recepcionAEliminar, setRecepcionAEliminar] = useState<Recepcion | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [choferEditable, setChoferEditable] = useState<string>('');
+  const [placasEditable, setPlacasEditable] = useState<string>('');
+  const [procedenciaEditable, setProcedenciaEditable] = useState<string>('');
 
   // Verificar si el usuario puede editar/eliminar
   const puedeEditarEliminar = usuario?.rol === 'Administrador' || usuario?.rol === 'Oficina';
@@ -186,6 +191,9 @@ const Reciba = () => {
       setHoraPesoTara(selectedRecepcion.horaPesoTara || null);
       setHoraPesoNeto(selectedRecepcion.horaPesoNeto || null);
       setObservaciones(selectedRecepcion.observaciones || '');
+      setChoferEditable(selectedRecepcion.chofer || '');
+      setPlacasEditable(selectedRecepcion.placas || '');
+      setProcedenciaEditable(selectedRecepcion.procedencia || '');
       // Inicializar fecha/hora manual con la fecha de la boleta (para modo retroactivo)
       const fechaBoleta = selectedRecepcion.fecha || new Date().toISOString().split('T')[0];
       setFechaBrutoManual(fechaBoleta);
@@ -205,17 +213,7 @@ const Reciba = () => {
     }
   }, [pesoBruto, pesoTara, pesoNeto, horaPesoNeto, selectedRecepcion, horaPesoTara]);
 
-  const getEstatusBadge = (estatus: string) => {
-    const config: Record<string, { className: string; icon: React.ReactNode }> = {
-      'Pendiente': { className: 'bg-yellow-100 text-yellow-700', icon: <Clock className="h-3 w-3 mr-1" /> },
-      'Peso Bruto': { className: 'bg-blue-100 text-blue-700', icon: <Scale className="h-3 w-3 mr-1" /> },
-      'En Descarga': { className: 'bg-orange-100 text-orange-700', icon: <Truck className="h-3 w-3 mr-1" /> },
-      'Peso Tara': { className: 'bg-purple-100 text-purple-700', icon: <Scale className="h-3 w-3 mr-1" /> },
-      'Completado': { className: 'bg-green-100 text-green-700', icon: <CheckCircle className="h-3 w-3 mr-1" /> },
-    };
-    const { className, icon } = config[estatus] || { className: 'bg-muted', icon: null };
-    return <Badge className={`flex items-center w-fit ${className}`}>{icon}{estatus}</Badge>;
-  };
+  const getEstatusBadge = (estatus: string) => <StatusPill estatus={estatus} />;
 
   const getTransporteIcon = (tipo: string) => {
     return tipo === 'Camión' ? <Truck className="h-4 w-4 text-muted-foreground" /> : <Train className="h-4 w-4 text-muted-foreground" />;
@@ -317,7 +315,10 @@ const Reciba = () => {
         hora_peso_bruto: horaPesoBruto || null,
         hora_peso_tara: horaPesoTara || null,
         hora_peso_neto: horaPesoNeto || null,
-        observaciones: observaciones || null
+        observaciones: observaciones || null,
+        chofer: choferEditable || null,
+        placas: placasEditable || null,
+        procedencia: procedenciaEditable || null,
       });
       
       await loadRecepciones();
@@ -471,7 +472,9 @@ const Reciba = () => {
         estatus: 'Completado',
         tipo_bascula: tipoBascula,
         almacen_id: almacenSeleccionado || null,
-        placas: selectedRecepcion.placas || null,
+        chofer: choferEditable || null,
+        placas: placasEditable || null,
+        procedencia: procedenciaEditable || null,
         hora_peso_bruto: horaPesoBruto || null,
         hora_peso_tara: horaPesoTara || null,
         hora_peso_neto: horaPesoNeto || null,
@@ -486,6 +489,9 @@ const Reciba = () => {
         const movimientoExistente = await getMovimientoByBoleta(boletaFinal);
         const almacen = almacenSeleccionado ? almacenesDB.find(a => a.id === almacenSeleccionado) : null;
 
+        const { pesoNetoAnalizado } = calcularDescuentos();
+        const pesoAnalizado = pesoNetoAnalizado !== pesoNeto ? pesoNetoAnalizado : null;
+
         if (!movimientoExistente) {
           const proveedor = proveedoresDB.find(p => p.id === proveedorIdFinal);
 
@@ -498,6 +504,7 @@ const Reciba = () => {
             fecha: selectedRecepcion.fecha,
             ubicacion: almacen?.nombre || null,
             peso_neto: pesoNeto,
+            peso_neto_analizado: pesoAnalizado,
             peso_bruto: pesoBruto,
             peso_tara: pesoTara,
             chofer: selectedRecepcion.chofer || null,
@@ -507,6 +514,7 @@ const Reciba = () => {
           // Actualizar pesos si cambiaron
           await updateMovimiento(movimientoExistente.id, {
             peso_neto: pesoNeto,
+            peso_neto_analizado: pesoAnalizado,
             peso_bruto: pesoBruto,
             peso_tara: pesoTara,
             ubicacion: almacen?.nombre || movimientoExistente.ubicacion,
@@ -758,12 +766,12 @@ const Reciba = () => {
       r.chofer.toLowerCase().includes(search.toLowerCase());
     
     let matchesDate = true;
-    if (fechaDesde || fechaHasta) {
+    if (modoDia && (fechaDesde || fechaHasta)) {
       const recepcionFecha = r.fecha || '';
       if (fechaDesde && recepcionFecha < fechaDesde) matchesDate = false;
       if (fechaHasta && recepcionFecha > fechaHasta) matchesDate = false;
     }
-    
+
     return matchesSearch && matchesDate;
   });
 
@@ -786,29 +794,55 @@ const Reciba = () => {
             />
             </div>
             <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <Input 
-                type="date" 
-                className="w-36"
-                value={fechaDesde}
-                onChange={(e) => setFechaDesde(e.target.value)}
-              />
-              <span className="text-muted-foreground">-</span>
-              <Input 
-                type="date" 
-                className="w-36"
-                value={fechaHasta}
-                onChange={(e) => setFechaHasta(e.target.value)}
-              />
-              {(fechaDesde || fechaHasta) && (
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  onClick={() => { setFechaDesde(''); setFechaHasta(''); }}
-                  title="Limpiar filtros"
+              {/* Toggle modo */}
+              <div className="flex rounded-md border overflow-hidden text-xs">
+                <button
+                  className={`px-3 py-1.5 font-medium transition-colors ${modoDia ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-muted'}`}
+                  onClick={() => { setModoDia(true); setFechaDesde(hoy); setFechaHasta(hoy); }}
                 >
-                  <X className="h-4 w-4" />
-                </Button>
+                  Por día
+                </button>
+                <button
+                  className={`px-3 py-1.5 font-medium transition-colors border-l ${!modoDia ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-muted'}`}
+                  onClick={() => setModoDia(false)}
+                >
+                  Ver todo
+                </button>
+              </div>
+              {/* Navegador de día */}
+              {modoDia && (
+                <>
+                  <Button variant="ghost" size="icon" className="h-8 w-8"
+                    onClick={() => {
+                      if (!fechaDesde) return;
+                      const d = new Date(fechaDesde + 'T12:00:00');
+                      d.setDate(d.getDate() - 1);
+                      const f = format(d, 'yyyy-MM-dd');
+                      setFechaDesde(f); setFechaHasta(f);
+                    }}
+                    title="Día anterior"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Input
+                    type="date"
+                    className="w-36 text-center"
+                    value={fechaDesde}
+                    onChange={(e) => { setFechaDesde(e.target.value); setFechaHasta(e.target.value); }}
+                  />
+                  <Button variant="ghost" size="icon" className="h-8 w-8"
+                    onClick={() => {
+                      if (!fechaDesde) return;
+                      const d = new Date(fechaDesde + 'T12:00:00');
+                      d.setDate(d.getDate() + 1);
+                      const f = format(d, 'yyyy-MM-dd');
+                      setFechaDesde(f); setFechaHasta(f);
+                    }}
+                    title="Día siguiente"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </>
               )}
             </div>
           </div>
@@ -834,9 +868,11 @@ const Reciba = () => {
                   <TableHead>Boleta</TableHead>
                   <TableHead>Producto</TableHead>
                   <TableHead>Proveedor</TableHead>
+                  <TableHead>Procedencia</TableHead>
                   <TableHead>Chofer</TableHead>
                   <TableHead>Placas</TableHead>
                   <TableHead>Transporte</TableHead>
+                  <TableHead>Almacén</TableHead>
                   <TableHead>Fecha</TableHead>
                   <TableHead>Estatus</TableHead>
                   {puedeEditarEliminar && <TableHead className="text-right">Acciones</TableHead>}
@@ -854,6 +890,7 @@ const Reciba = () => {
                     </TableCell>
                     <TableCell className="font-medium">{recepcion.producto}</TableCell>
                     <TableCell>{recepcion.proveedor}</TableCell>
+                    <TableCell>{recepcion.procedencia || '-'}</TableCell>
                     <TableCell>{recepcion.chofer}</TableCell>
                     <TableCell className="font-mono">{recepcion.placas}</TableCell>
                     <TableCell>
@@ -862,6 +899,7 @@ const Reciba = () => {
                         {recepcion.tipoTransporte}
                       </span>
                     </TableCell>
+                    <TableCell>{almacenesDB.find(a => a.id === recepcion.almacenId)?.nombre || '-'}</TableCell>
                     <TableCell>{recepcion.fecha}</TableCell>
                     <TableCell>{getEstatusBadge(recepcion.estatus)}</TableCell>
                     {puedeEditarEliminar && (
@@ -981,16 +1019,35 @@ const Reciba = () => {
                       </div>
                     )}
                     <div>
-                      <Label className="text-xs text-muted-foreground">Chofer / Placas</Label>
-                      <p className="font-medium">{selectedRecepcion.chofer}</p>
-                      <p className="text-sm font-mono text-muted-foreground">{selectedRecepcion.placas}</p>
+                      <Label className="text-xs text-muted-foreground">Chofer</Label>
+                      <Input
+                        value={choferEditable}
+                        onChange={e => setChoferEditable(e.target.value)}
+                        placeholder="Nombre del chofer"
+                        disabled={isCompletado}
+                        className="mt-1 h-8 text-sm"
+                      />
                     </div>
-                    {selectedRecepcion.procedencia && (
-                      <div>
-                        <Label className="text-xs text-muted-foreground">Procedencia</Label>
-                        <p className="font-medium">{selectedRecepcion.procedencia}</p>
-                      </div>
-                    )}
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Placas</Label>
+                      <Input
+                        value={placasEditable}
+                        onChange={e => setPlacasEditable(e.target.value)}
+                        placeholder="ABC-123-A"
+                        disabled={isCompletado}
+                        className="mt-1 h-8 text-sm font-mono"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Procedencia</Label>
+                      <Input
+                        value={procedenciaEditable}
+                        onChange={e => setProcedenciaEditable(e.target.value)}
+                        placeholder="Ciudad, Estado"
+                        disabled={isCompletado}
+                        className="mt-1 h-8 text-sm"
+                      />
+                    </div>
                   </div>
 
                   {/* Segunda fila: Producto, Proveedor, Almacén */}

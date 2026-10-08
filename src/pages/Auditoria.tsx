@@ -308,6 +308,25 @@ const Auditoria = () => {
 
   const getEtiquetaCampo = (key: string) => CAMPOS_AMIGABLES[key] || key;
 
+  const formatValor = (valor: any): string => {
+    if (valor === null || valor === undefined) return '-';
+    if (typeof valor === 'boolean') return valor ? 'Sí' : 'No';
+    if (typeof valor === 'object') {
+      // Objetos relacionales: extraer el nombre legible
+      if (valor.nombre) return valor.nombre;
+      if (valor.empresa) return valor.empresa;
+      if (valor.nombre_completo) return valor.nombre_completo;
+      return JSON.stringify(valor);
+    }
+    if (typeof valor === 'string') {
+      // Timestamps ISO → formato legible
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(valor)) {
+        return formatDateTimeMST(valor);
+      }
+    }
+    return String(valor);
+  };
+
   const renderJsonDiff = (anterior: Record<string, any> | null, nuevo: Record<string, any> | null) => {
     const allKeys = new Set([
       ...Object.keys(anterior || {}),
@@ -315,53 +334,46 @@ const Auditoria = () => {
     ]);
     const excludeKeys = ['created_at', 'updated_at', 'id', 'producto_id', 'almacen_id', 'cliente_id', 'proveedor_id', 'activo'];
     const contextKeys = ['_producto', '_almacen', '_reporte_id', '_responsable', '_fecha'];
-    const contexto = contextKeys
-      .filter(key => nuevo?.[key] || anterior?.[key])
-      .map(key => ({ label: getEtiquetaCampo(key), value: nuevo?.[key] || anterior?.[key] }));
+
+    const filas = Array.from(allKeys)
+      .filter(key => !excludeKeys.includes(key) && !contextKeys.includes(key))
+      .map(key => {
+        const vAntes = formatValor(anterior?.[key]);
+        const vDespues = formatValor(nuevo?.[key]);
+        // Ignorar si no cambió nada entre los dos datos
+        if (anterior && nuevo && vAntes === vDespues) return null;
+        // Ignorar si ambos son '-'
+        if (vAntes === '-' && vDespues === '-') return null;
+        return { key, vAntes, vDespues };
+      })
+      .filter(Boolean) as { key: string; vAntes: string; vDespues: string }[];
+
+    if (filas.length === 0) {
+      return <p className="text-xs text-muted-foreground italic">Sin cambios registrados</p>;
+    }
 
     return (
-      <div className="space-y-3">
-        {contexto.length > 0 && (
-          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-xs text-blue-600 font-medium mb-1">Contexto:</p>
-            {contexto.map((ctx, idx) => (
-              <p key={idx} className="text-sm">
-                <span className="font-medium">{ctx.label}:</span> {ctx.value}
-              </p>
-            ))}
-          </div>
-        )}
-        <div className="space-y-2 max-h-96 overflow-y-auto">
-          {Array.from(allKeys)
-            .filter(key => !excludeKeys.includes(key) && !contextKeys.includes(key))
-            .map(key => {
-              const valorAnterior = anterior?.[key];
-              const valorNuevo = nuevo?.[key];
-              const cambio = JSON.stringify(valorAnterior) !== JSON.stringify(valorNuevo);
-              if (!cambio && anterior && nuevo) return null;
-              return (
-                <div key={key} className={cn(
-                  "p-2 rounded text-sm",
-                  cambio ? "bg-yellow-50 border border-yellow-200" : "bg-gray-50"
-                )}>
-                  <span className="font-medium text-gray-700">{getEtiquetaCampo(key)}:</span>
-                  {anterior && valorAnterior !== undefined && (
-                    <div className="ml-2 text-red-600">
-                      <span className="text-xs text-gray-500">Antes: </span>
-                      {typeof valorAnterior === 'object' ? JSON.stringify(valorAnterior) : String(valorAnterior || '-')}
-                    </div>
-                  )}
-                  {nuevo && valorNuevo !== undefined && (
-                    <div className="ml-2 text-green-600">
-                      <span className="text-xs text-gray-500">Después: </span>
-                      {typeof valorNuevo === 'object' ? JSON.stringify(valorNuevo) : String(valorNuevo || '-')}
-                    </div>
-                  )}
-                </div>
-              );
-            })
-            .filter(Boolean)}
-        </div>
+      <div className="space-y-1.5 max-h-96 overflow-y-auto">
+        {filas.map(({ key, vAntes, vDespues }) => {
+          const esNuevo = !anterior || vAntes === '-';
+          const esEliminado = !nuevo || vDespues === '-';
+          return (
+            <div key={key} className="flex items-start gap-2 text-sm py-1 border-b border-gray-100 last:border-0">
+              <span className="font-medium text-gray-600 min-w-[130px] shrink-0">{getEtiquetaCampo(key)}</span>
+              {esNuevo ? (
+                <span className="text-green-700">{vDespues}</span>
+              ) : esEliminado ? (
+                <span className="text-red-600 line-through">{vAntes}</span>
+              ) : (
+                <span className="flex items-center gap-1.5">
+                  <span className="text-gray-500">{vAntes}</span>
+                  <span className="text-gray-400">→</span>
+                  <span className="text-green-700 font-medium">{vDespues}</span>
+                </span>
+              )}
+            </div>
+          );
+        })}
       </div>
     );
   };
