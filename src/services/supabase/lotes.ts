@@ -513,3 +513,30 @@ export async function generarCodigoLoteParaOperacion(
   );
 }
 
+
+export type LoteEstatus = 'Generado' | 'Error' | 'Sin datos';
+
+// Registrar en la boleta cómo terminó el intento de generar su lote
+// (columnas lote_estatus / lote_error / lote_intento_at, migración 038).
+// Nunca lanza error: no debe tapar el error original del guardado.
+export async function registrarEstatusLote(
+  tabla: 'embarques' | 'recepciones',
+  id: number,
+  estatus: LoteEstatus,
+  detalle: string | null = null
+): Promise<void> {
+  if (!supabase) return;
+
+  const { error } = await supabase
+    .from(tabla)
+    .update({
+      lote_estatus: estatus,
+      lote_error: detalle ? detalle.slice(0, 2000) : null,
+      lote_intento_at: new Date().toISOString()
+    })
+    .eq('id', id);
+
+  if (error) {
+    console.error(`[LOTES] No se pudo registrar lote_estatus en ${tabla} ${id}:`, error);
+  }
+}

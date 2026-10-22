@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { generarCodigoLoteParaOperacion } from './lotes';
+import { generarCodigoLoteParaOperacion, registrarEstatusLote } from './lotes';
 import { registrarAuditoria } from './auditoria';
 import { logger } from '@/services/logger';
 import { recalcularInventarioDesdeBase } from './inventarioAlmacenes';
@@ -42,6 +42,9 @@ export interface Embarque {
   producto?: { id: number; nombre: string };
   cliente?: { id: number; empresa: string };
   almacen_id?: number | null; // Para generar código de lote
+  lote_estatus?: 'Generado' | 'Error' | 'Sin datos' | 'Manual' | null;
+  lote_error?: string | null;
+  lote_intento_at?: string | null;
 }
 
 // Obtener todos los embarques (con paginación opcional)
@@ -275,7 +278,13 @@ export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
       // PASO 3: Actualizar la boleta con el código de lote generado
       const { data: dataActualizada, error: errorActualizacion } = await supabase
         .from('embarques')
-        .update({ codigo_lote: codigo, updated_at: new Date().toISOString() })
+        .update({
+          codigo_lote: codigo,
+          lote_estatus: 'Generado',
+          lote_error: null,
+          lote_intento_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
         .eq('id', id)
         .select(`
           *,
@@ -309,12 +318,20 @@ export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
         }
       }
 
+      await registrarAuditoria({
+        tabla: 'embarques',
+        registro_id: id,
+        accion: 'UPDATE',
+        datos_anteriores: embarqueAnterior || null,
+        datos_nuevos: dataActualizada,
+      });
+
       // Retornar la boleta actualizada con el lote
       return dataActualizada;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       const errorDetails = error instanceof Error ? error.stack : String(error);
-      
+
       logger.error('Error crítico al generar código de lote (después de guardar)', {
         error: errorMessage,
         details: errorDetails,
@@ -324,7 +341,17 @@ export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
         almacenId,
         tipoEmbarque
       }, 'Embarques');
-      
+
+      // Dejar rastro en la boleta y en auditoría antes de avisar al usuario
+      await registrarEstatusLote('embarques', id, 'Error', errorMessage);
+      await registrarAuditoria({
+        tabla: 'embarques',
+        registro_id: id,
+        accion: 'UPDATE',
+        datos_anteriores: embarqueAnterior || null,
+        datos_nuevos: { ...dataGuardada, lote_estatus: 'Error', lote_error: errorMessage },
+      });
+
       // ⚠️ IMPORTANTE: La boleta ya se guardó, pero no tiene lote
       // Lanzar error para que el usuario sepa que necesita reintentar
       throw new Error(
@@ -342,6 +369,13 @@ export async function updateEmbarque(id: number, embarque: Partial<Embarque>) {
       tieneProductoId: !!productoId,
       tieneAlmacenId: !!almacenId
     }, 'Embarques');
+
+    const faltantes = [
+      !clienteId && 'cliente',
+      !productoId && 'producto',
+      !almacenId && 'almacén'
+    ].filter(Boolean).join(', ');
+    await registrarEstatusLote('embarques', id, 'Sin datos', `Falta: ${faltantes}`);
   }
   
   // Usar la boleta guardada (con o sin lote)

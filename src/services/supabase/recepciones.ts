@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { generarCodigoLoteParaOperacion } from './lotes';
+import { generarCodigoLoteParaOperacion, registrarEstatusLote } from './lotes';
 import { registrarAuditoria } from './auditoria';
 import { logger } from '@/services/logger';
 import { recalcularInventarioDesdeBase } from './inventarioAlmacenes';
@@ -35,6 +35,9 @@ export interface Recepcion {
   producto?: { id: number; nombre: string };
   proveedor?: { id: number; empresa: string };
   almacen_id?: number | null; // Para generar código de lote
+  lote_estatus?: 'Generado' | 'Error' | 'Sin datos' | 'Manual' | null;
+  lote_error?: string | null;
+  lote_intento_at?: string | null;
 }
 
 // Obtener todas las recepciones (con paginación opcional)
@@ -184,7 +187,8 @@ export async function updateRecepcion(id: number, recepcion: Partial<Recepcion>)
   const proveedorId = dataGuardada.proveedor_id || recepcion.proveedor_id || recepcionAnterior?.proveedor_id;
   const productoId = dataGuardada.producto_id || recepcion.producto_id || recepcionAnterior?.producto_id;
   const almacenId = dataGuardada.almacen_id || recepcion.almacen_id || recepcionAnterior?.almacen_id;
-  
+  let dataConLote: typeof dataGuardada | null = null;
+
   // Solo generar lote si:
   // 1. El estatus final es 'Completado'
   // 2. NO existe lote en la BD (verificación directa)
@@ -242,7 +246,13 @@ export async function updateRecepcion(id: number, recepcion: Partial<Recepcion>)
       // PASO 3: Actualizar la boleta con el código de lote generado
       const { data: dataActualizada, error: errorActualizacion } = await supabase
         .from('recepciones')
-        .update({ codigo_lote: codigo, updated_at: new Date().toISOString() })
+        .update({
+          codigo_lote: codigo,
+          lote_estatus: 'Generado',
+          lote_error: null,
+          lote_intento_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
         .eq('id', id)
         .select(`
           *,
@@ -263,11 +273,11 @@ export async function updateRecepcion(id: number, recepcion: Partial<Recepcion>)
       logger.info(`Código de lote generado y asignado para recepción ${id}: ${codigo}`, { recepcionId: id, codigo }, 'Recepciones');
       
       // Retornar la boleta actualizada con el lote
-      const data = dataActualizada;
+      dataConLote = dataActualizada;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
       const errorDetails = error instanceof Error ? error.stack : String(error);
-      
+
       logger.error('Error crítico al generar código de lote (después de guardar)', {
         error: errorMessage,
         details: errorDetails,
@@ -276,7 +286,17 @@ export async function updateRecepcion(id: number, recepcion: Partial<Recepcion>)
         productoId,
         almacenId
       }, 'Recepciones');
-      
+
+      // Dejar rastro en la boleta y en auditoría antes de avisar al usuario
+      await registrarEstatusLote('recepciones', id, 'Error', errorMessage);
+      await registrarAuditoria({
+        tabla: 'recepciones',
+        registro_id: id,
+        accion: 'UPDATE',
+        datos_anteriores: recepcionAnterior || null,
+        datos_nuevos: { ...dataGuardada, lote_estatus: 'Error', lote_error: errorMessage },
+      });
+
       // ⚠️ IMPORTANTE: La boleta ya se guardó, pero no tiene lote
       // Lanzar error para que el usuario sepa que necesita reintentar
       throw new Error(
@@ -294,10 +314,17 @@ export async function updateRecepcion(id: number, recepcion: Partial<Recepcion>)
       tieneProductoId: !!productoId,
       tieneAlmacenId: !!almacenId
     }, 'Recepciones');
+
+    const faltantes = [
+      !proveedorId && 'proveedor',
+      !productoId && 'producto',
+      !almacenId && 'almacén'
+    ].filter(Boolean).join(', ');
+    await registrarEstatusLote('recepciones', id, 'Sin datos', `Falta: ${faltantes}`);
   }
-  
-  // Retornar la boleta guardada (con o sin lote)
-  const data = dataGuardada;
+
+  // Retornar la boleta guardada (con lote si se generó)
+  const data = dataConLote ?? dataGuardada;
   
   // SUMAR AL INVENTARIO: Si la recepción está completada y tiene peso_neto y almacen_id
   // Recalcula desde la base para evitar errores de delta acumulados
