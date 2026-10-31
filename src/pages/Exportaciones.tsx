@@ -4,7 +4,7 @@ import Header from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { StatusPill } from '@/components/ui/status-pill';
+import { StatusPill, type StatusTone } from '@/components/ui/status-pill';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,10 +16,11 @@ import { Separator } from '@/components/ui/separator';
 import {
   Plus, Search, Truck, Package, ClipboardList, Edit2, Trash2,
   MapPin, Calendar, ArrowRight, CheckCircle2, Clock, AlertCircle,
-  Wrench, Ship, List, ChevronLeft, ChevronRight
+  Wrench, Ship, List, ChevronLeft, ChevronRight, Printer
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useExportaciones } from '@/services/hooks/useExportaciones';
+import OrdenExportacionPrintDialog from '@/components/exportaciones/OrdenExportacionPrintDialog';
 import type { CargaExportacion, OrdenExportacion, UnidadExportacion } from '@/services/supabase/exportaciones';
 
 const PRODUCTOS_EXPORTACION = [
@@ -35,10 +36,30 @@ const UBICACIONES = [
   'Mexicali, BC',
   'Culiacán, Sin',
   'Mazatlán, Sin',
+  'Sufragio, Sin',
   'Empalme, Son',
   'USA',
+  'Richmond, CA',
+  'Arbuckle, CA',
   'En tránsito',
   'Taller ANCAF',
+];
+
+const RESPONSABLES_CARGA = ['Cynthia', 'Eduardo', 'César'];
+
+const TIPOS_UNIDAD: { value: UnidadExportacion['tipo']; label: string }[] = [
+  { value: 'jumbo', label: 'Jumbo' },
+  { value: 'tolva', label: 'Tolva' },
+  { value: 'contenedor', label: 'Contenedor' },
+  { value: 'camion', label: 'Camión' },
+];
+
+const ESTATUS_UNIDAD: { value: UnidadExportacion['estatus']; label: string; tone: StatusTone }[] = [
+  { value: 'cargado',         label: 'Cargado',            tone: 'blue' },
+  { value: 'vacio',           label: 'Vacío',              tone: 'green' },
+  { value: 'cargado_destino', label: 'Cargado en destino', tone: 'violet' },
+  { value: 'taller',          label: 'Taller',             tone: 'red' },
+  { value: 'inactivo',        label: 'Inactivo',           tone: 'gray' },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -57,16 +78,49 @@ function estatusBadge(estatus: string) {
 }
 
 function estatusUnidadBadge(estatus: string) {
-  if (estatus === 'activo')       return <StatusPill estatus={estatus} label="Activo" />;
-  if (estatus === 'en_reparacion') return <StatusPill estatus={estatus} label="En taller" />;
-  if (estatus === 'en_transito')  return <StatusPill estatus={estatus} label="En tránsito" />;
-  return <StatusPill estatus={estatus} />;
+  const cfg = ESTATUS_UNIDAD.find(e => e.value === estatus);
+  return <StatusPill estatus={estatus} label={cfg?.label} tone={cfg?.tone} />;
+}
+
+function hoyISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// Días entre dos fechas 'YYYY-MM-DD' (sin hasta = hoy)
+function diasEntre(desde?: string | null, hasta?: string | null) {
+  if (!desde) return null;
+  const a = Date.parse(desde.slice(0, 10));
+  const b = Date.parse((hasta ?? hoyISO()).slice(0, 10));
+  if (Number.isNaN(a) || Number.isNaN(b)) return null;
+  return Math.round((b - a) / 86_400_000);
 }
 
 function diasEnTaller(fechaEntrada?: string | null) {
-  if (!fechaEntrada) return null;
-  const diff = Math.floor((Date.now() - new Date(fechaEntrada).getTime()) / 86_400_000);
-  return diff;
+  return diasEntre(fechaEntrada);
+}
+
+// Tránsito: embarque → llegada a destino (si no ha llegado, cuenta a hoy)
+function diasTransito(c: CargaExportacion) {
+  if (!c.fecha_embarque) return null;
+  return { dias: diasEntre(c.fecha_embarque, c.fecha_llegada_destino), enCurso: !c.fecha_llegada_destino };
+}
+
+// Destino: llegada → salida de destino (si no ha salido, cuenta a hoy)
+function diasEnDestino(c: CargaExportacion) {
+  if (!c.fecha_llegada_destino) return null;
+  return { dias: diasEntre(c.fecha_llegada_destino, c.fecha_salida_destino), enCurso: !c.fecha_salida_destino };
+}
+
+function DiasCell({ valor }: { valor: { dias: number | null; enCurso: boolean } | null }) {
+  if (!valor || valor.dias === null) return <span className="text-muted-foreground">—</span>;
+  // Fecha capturada a futuro (programada): todavía no corre
+  if (valor.dias < 0) return <span className="text-muted-foreground" title="La fecha capturada aún no llega">Programada</span>;
+  return (
+    <span className={valor.enCurso ? 'font-medium' : 'text-muted-foreground'} title={valor.enCurso ? 'En curso (contando hasta hoy)' : 'Cerrado'}>
+      {valor.dias} {valor.dias === 1 ? 'día' : 'días'}{valor.enCurso ? ' ·' : ''}
+    </span>
+  );
 }
 
 // ─── Formulario de Carga ──────────────────────────────────────────────────────
@@ -89,6 +143,8 @@ const FormCarga: React.FC<FormCargaProps> = ({ open, onClose, onSave, initial, o
     ubicacion_actual: initial?.ubicacion_actual ?? '',
     eta_apsa: initial?.eta_apsa ?? '',
     fecha_embarque: initial?.fecha_embarque ?? '',
+    fecha_llegada_destino: initial?.fecha_llegada_destino ?? '',
+    fecha_salida_destino: initial?.fecha_salida_destino ?? '',
     estatus: initial?.estatus ?? 'pendiente',
     notas: initial?.notas ?? '',
     ajuste_kg: initial?.ajuste_kg ?? null,
@@ -104,6 +160,8 @@ const FormCarga: React.FC<FormCargaProps> = ({ open, onClose, onSave, initial, o
       ubicacion_actual: initial?.ubicacion_actual ?? '',
       eta_apsa: initial?.eta_apsa ?? '',
       fecha_embarque: initial?.fecha_embarque ?? '',
+      fecha_llegada_destino: initial?.fecha_llegada_destino ?? '',
+      fecha_salida_destino: initial?.fecha_salida_destino ?? '',
       estatus: initial?.estatus ?? 'pendiente',
       notas: initial?.notas ?? '',
       ajuste_kg: initial?.ajuste_kg ?? null,
@@ -113,7 +171,13 @@ const FormCarga: React.FC<FormCargaProps> = ({ open, onClose, onSave, initial, o
   const handleSave = async () => {
     setSaving(true);
     try {
-      await onSave(form);
+      await onSave({
+        ...form,
+        eta_apsa: form.eta_apsa || null,
+        fecha_embarque: form.fecha_embarque || null,
+        fecha_llegada_destino: form.fecha_llegada_destino || null,
+        fecha_salida_destino: form.fecha_salida_destino || null,
+      });
       onClose();
     } finally {
       setSaving(false);
@@ -121,7 +185,7 @@ const FormCarga: React.FC<FormCargaProps> = ({ open, onClose, onSave, initial, o
   };
 
   const unidadesDisponibles = unidades.filter(u =>
-    u.estatus === 'activo' || u.id === initial?.unidad_id
+    u.estatus === 'vacio' || u.id === initial?.unidad_id
   );
 
   return (
@@ -143,7 +207,7 @@ const FormCarga: React.FC<FormCargaProps> = ({ open, onClose, onSave, initial, o
                   <SelectItem value="none">Sin orden</SelectItem>
                   {ordenes.filter(o => o.estatus !== 'cancelada' && o.estatus !== 'completada').map(o => (
                     <SelectItem key={o.id} value={o.id.toString()}>
-                      {o.cliente?.nombre} — {o.producto}
+                      {o.cliente?.empresa} — {o.producto}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -159,7 +223,7 @@ const FormCarga: React.FC<FormCargaProps> = ({ open, onClose, onSave, initial, o
                 <SelectContent>
                   {unidadesDisponibles.map(u => (
                     <SelectItem key={u.id} value={u.id.toString()}>
-                      {u.identificador} ({u.tipo})
+                      {u.identificador} ({TIPOS_UNIDAD.find(t => t.value === u.tipo)?.label ?? u.tipo})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -245,13 +309,32 @@ const FormCarga: React.FC<FormCargaProps> = ({ open, onClose, onSave, initial, o
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Label>Llegada a destino</Label>
+              <Input
+                type="date"
+                value={form.fecha_llegada_destino ?? ''}
+                onChange={e => setForm(f => ({ ...f, fecha_llegada_destino: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Salida de destino</Label>
+              <Input
+                type="date"
+                value={form.fecha_salida_destino ?? ''}
+                onChange={e => setForm(f => ({ ...f, fecha_salida_destino: e.target.value }))}
+              />
+            </div>
+          </div>
+
           <div className="space-y-1">
-            <Label>Notas</Label>
+            <Label>Notas / tipo de carga</Label>
             <Textarea
               value={form.notas ?? ''}
               onChange={e => setForm(f => ({ ...f, notas: e.target.value }))}
               rows={2}
-              placeholder="Observaciones opcionales..."
+              placeholder="Ej. carga de aceite orgánico, 1 flexi... (se ve en el calendario)"
             />
           </div>
 
@@ -297,7 +380,7 @@ interface FormOrdenProps {
   onClose: () => void;
   onSave: (data: Partial<OrdenExportacion>) => Promise<void>;
   initial?: OrdenExportacion | null;
-  clientes: Array<{ id: number; nombre: string; tipo_unidad: string }>;
+  clientes: Array<{ id: number; empresa: string }>;
 }
 
 const FormOrden: React.FC<FormOrdenProps> = ({ open, onClose, onSave, initial, clientes }) => {
@@ -310,6 +393,7 @@ const FormOrden: React.FC<FormOrdenProps> = ({ open, onClose, onSave, initial, c
     tipo_unidad: initial?.tipo_unidad ?? 'jumbo',
     notas: initial?.notas ?? '',
     estatus: initial?.estatus ?? 'pendiente',
+    responsable_carga: initial?.responsable_carga ?? '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -323,6 +407,7 @@ const FormOrden: React.FC<FormOrdenProps> = ({ open, onClose, onSave, initial, c
       tipo_unidad: initial?.tipo_unidad ?? 'jumbo',
       notas: initial?.notas ?? '',
       estatus: initial?.estatus ?? 'pendiente',
+      responsable_carga: initial?.responsable_carga ?? '',
     });
   }, [initial, open]);
 
@@ -333,7 +418,11 @@ const FormOrden: React.FC<FormOrdenProps> = ({ open, onClose, onSave, initial, c
     }
     setSaving(true);
     try {
-      await onSave(form);
+      await onSave({
+        ...form,
+        fecha_embarque: form.fecha_embarque || null,
+        responsable_carga: form.responsable_carga || null,
+      });
       onClose();
     } finally {
       setSaving(false);
@@ -344,7 +433,7 @@ const FormOrden: React.FC<FormOrdenProps> = ({ open, onClose, onSave, initial, c
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{initial ? 'Editar orden' : 'Nueva orden de exportación'}</DialogTitle>
+          <DialogTitle>{initial ? `Editar orden ${initial.folio}` : 'Nueva orden de exportación'}</DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-2">
           <div className="space-y-1">
@@ -356,7 +445,7 @@ const FormOrden: React.FC<FormOrdenProps> = ({ open, onClose, onSave, initial, c
               <SelectTrigger><SelectValue placeholder="Seleccionar cliente" /></SelectTrigger>
               <SelectContent>
                 {clientes.map(c => (
-                  <SelectItem key={c.id} value={c.id.toString()}>{c.nombre}</SelectItem>
+                  <SelectItem key={c.id} value={c.id.toString()}>{c.empresa}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -412,12 +501,24 @@ const FormOrden: React.FC<FormOrdenProps> = ({ open, onClose, onSave, initial, c
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="jumbo">Jumbo</SelectItem>
-                  <SelectItem value="contenedor">Contenedor</SelectItem>
-                  <SelectItem value="tolva">Tolva</SelectItem>
+                  {TIPOS_UNIDAD.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label>Responsable de carga</Label>
+            <Select
+              value={form.responsable_carga || 'none'}
+              onValueChange={v => setForm(f => ({ ...f, responsable_carga: v === 'none' ? '' : v }))}
+            >
+              <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">— Sin asignar —</SelectItem>
+                {RESPONSABLES_CARGA.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
 
           {initial && (
@@ -472,7 +573,7 @@ const FormUnidad: React.FC<FormUnidadProps> = ({ open, onClose, onSave, initial 
   const [form, setForm] = useState<Partial<UnidadExportacion>>({
     identificador: initial?.identificador ?? '',
     tipo: initial?.tipo ?? 'jumbo',
-    estatus: initial?.estatus ?? 'activo',
+    estatus: initial?.estatus ?? 'vacio',
     ubicacion_actual: initial?.ubicacion_actual ?? '',
     fecha_entrada_taller: initial?.fecha_entrada_taller ?? '',
     notas: initial?.notas ?? '',
@@ -483,7 +584,7 @@ const FormUnidad: React.FC<FormUnidadProps> = ({ open, onClose, onSave, initial 
     setForm({
       identificador: initial?.identificador ?? '',
       tipo: initial?.tipo ?? 'jumbo',
-      estatus: initial?.estatus ?? 'activo',
+      estatus: initial?.estatus ?? 'vacio',
       ubicacion_actual: initial?.ubicacion_actual ?? '',
       fecha_entrada_taller: initial?.fecha_entrada_taller ?? '',
       notas: initial?.notas ?? '',
@@ -494,7 +595,7 @@ const FormUnidad: React.FC<FormUnidadProps> = ({ open, onClose, onSave, initial 
     if (!form.identificador) { toast.error('El identificador es obligatorio'); return; }
     setSaving(true);
     try {
-      await onSave(form);
+      await onSave({ ...form, fecha_entrada_taller: form.fecha_entrada_taller || null });
       onClose();
     } finally {
       setSaving(false);
@@ -526,9 +627,7 @@ const FormUnidad: React.FC<FormUnidadProps> = ({ open, onClose, onSave, initial 
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="jumbo">Jumbo</SelectItem>
-                  <SelectItem value="tolva">Tolva</SelectItem>
-                  <SelectItem value="contenedor">Contenedor</SelectItem>
+                  {TIPOS_UNIDAD.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -538,14 +637,12 @@ const FormUnidad: React.FC<FormUnidadProps> = ({ open, onClose, onSave, initial 
             <div className="space-y-1">
               <Label>Estatus</Label>
               <Select
-                value={form.estatus ?? 'activo'}
+                value={form.estatus ?? 'vacio'}
                 onValueChange={v => setForm(f => ({ ...f, estatus: v as UnidadExportacion['estatus'] }))}
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="activo">Activo</SelectItem>
-                  <SelectItem value="en_reparacion">En taller</SelectItem>
-                  <SelectItem value="en_transito">En tránsito</SelectItem>
+                  {ESTATUS_UNIDAD.map(e => <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -564,7 +661,7 @@ const FormUnidad: React.FC<FormUnidadProps> = ({ open, onClose, onSave, initial 
             </div>
           </div>
 
-          {form.estatus === 'en_reparacion' && (
+          {form.estatus === 'taller' && (
             <div className="space-y-1">
               <Label>Fecha de entrada a taller</Label>
               <Input
@@ -601,9 +698,28 @@ const FormUnidad: React.FC<FormUnidadProps> = ({ open, onClose, onSave, initial 
 const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
+// Tipos de evento del calendario y su color
+type TipoEventoCal = 'carga_jumbo' | 'carga_contenedor' | 'carga_camion' | 'carga_tolva' | 'llegada_vacio';
+
+const EVENTOS_CAL: Record<TipoEventoCal, { label: string; chip: string; dot: string }> = {
+  carga_jumbo:      { label: 'Carga de jumbos',        chip: 'bg-blue-100 text-blue-900 dark:bg-blue-900/40 dark:text-blue-200',         dot: 'bg-blue-600' },
+  carga_contenedor: { label: 'Carga de contenedores',  chip: 'bg-violet-100 text-violet-900 dark:bg-violet-900/40 dark:text-violet-200', dot: 'bg-violet-600' },
+  carga_camion:     { label: 'Carga de camiones',      chip: 'bg-orange-100 text-orange-900 dark:bg-orange-900/40 dark:text-orange-200', dot: 'bg-orange-600' },
+  carga_tolva:      { label: 'Carga de tolvas',        chip: 'bg-teal-100 text-teal-900 dark:bg-teal-900/40 dark:text-teal-200',         dot: 'bg-teal-600' },
+  llegada_vacio:    { label: 'Llegada de vacíos',      chip: 'bg-gray-200 text-gray-800 dark:bg-gray-700/60 dark:text-gray-200',         dot: 'bg-gray-500' },
+};
+
 interface EventoCal {
-  tipo: 'eta' | 'embarque';
+  tipo: TipoEventoCal;
   carga: CargaExportacion;
+}
+
+function tipoCarga(c: CargaExportacion): TipoEventoCal {
+  const t = c.unidad?.tipo ?? c.orden?.tipo_unidad;
+  if (t === 'contenedor') return 'carga_contenedor';
+  if (t === 'camion') return 'carga_camion';
+  if (t === 'tolva') return 'carga_tolva';
+  return 'carga_jumbo';
 }
 
 function buildCalendar(year: number, month: number): (Date | null)[][] {
@@ -635,12 +751,12 @@ const CalendarioCargas: React.FC<{
     if (c.eta_apsa) {
       const k = c.eta_apsa.slice(0, 10);
       if (!eventosPorFecha.has(k)) eventosPorFecha.set(k, []);
-      eventosPorFecha.get(k)!.push({ tipo: 'eta', carga: c });
+      eventosPorFecha.get(k)!.push({ tipo: 'llegada_vacio', carga: c });
     }
     if (c.fecha_embarque) {
       const k = c.fecha_embarque.slice(0, 10);
       if (!eventosPorFecha.has(k)) eventosPorFecha.set(k, []);
-      eventosPorFecha.get(k)!.push({ tipo: 'embarque', carga: c });
+      eventosPorFecha.get(k)!.push({ tipo: tipoCarga(c), carga: c });
     }
   });
 
@@ -659,9 +775,13 @@ const CalendarioCargas: React.FC<{
       </div>
 
       {/* Leyenda */}
-      <div className="flex gap-4 mb-3 text-xs">
-        <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-blue-500" />Llegada a AYP</div>
-        <div className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-green-500" />Fecha embarque</div>
+      <div className="flex flex-wrap gap-x-4 gap-y-1 mb-3 text-xs">
+        {(Object.keys(EVENTOS_CAL) as TipoEventoCal[]).map(t => (
+          <div key={t} className="flex items-center gap-1">
+            <span className={`inline-block w-3 h-3 rounded ${EVENTOS_CAL[t].dot}`} />
+            {EVENTOS_CAL[t].label}
+          </div>
+        ))}
       </div>
 
       {/* Grid */}
@@ -692,14 +812,18 @@ const CalendarioCargas: React.FC<{
                       <button
                         key={ei}
                         onClick={() => onEditCarga(ev.carga)}
-                        className={`w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded truncate font-medium
-                          ${ev.tipo === 'eta'
-                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300'
-                            : 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
-                          }`}
-                        title={`${ev.tipo === 'eta' ? 'ETA' : 'Embarque'}: ${ev.carga.unidad?.identificador ?? '—'} — ${ev.carga.orden?.cliente?.nombre ?? '—'}`}
+                        className={`w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded font-medium ${EVENTOS_CAL[ev.tipo].chip}`}
+                        title={[
+                          `${EVENTOS_CAL[ev.tipo].label}: ${ev.carga.unidad?.identificador ?? '—'} — ${ev.carga.orden?.cliente?.empresa ?? '—'}`,
+                          ev.carga.notas ? `Notas: ${ev.carga.notas}` : '',
+                        ].filter(Boolean).join('\n')}
                       >
-                        {ev.tipo === 'eta' ? '↓' : '↑'} {ev.carga.unidad?.identificador ?? 'Contenedor'}
+                        <span className="block truncate">
+                          {ev.tipo === 'llegada_vacio' ? '↓' : '↑'} {ev.carga.unidad?.identificador ?? ev.carga.orden?.folio ?? 'Sin unidad'}
+                        </span>
+                        {ev.carga.notas && (
+                          <span className="block truncate font-normal opacity-80">{ev.carga.notas}</span>
+                        )}
                       </button>
                     ))}
                     {eventos.length > 3 && (
@@ -732,12 +856,14 @@ const Exportaciones = () => {
   const [editingOrden, setEditingOrden]     = useState<OrdenExportacion | null>(null);
   const [editingUnidad, setEditingUnidad]   = useState<UnidadExportacion | null>(null);
   const [confirmDelete, setConfirmDelete]   = useState<CargaExportacion | null>(null);
+  const [ordenImprimir, setOrdenImprimir]   = useState<OrdenExportacion | null>(null);
 
-  // Resumen flota
-  const enviados   = cargas.filter(c => c.estatus === 'enviado').length;
-  const enApsa     = unidades.filter(u => u.ubicacion_actual === 'APSA' && u.estatus === 'activo').length;
-  const enTaller   = unidades.filter(u => u.estatus === 'en_reparacion').length;
-  const enTransito = cargas.filter(c => c.estatus !== 'enviado' && c.ubicacion_actual && c.ubicacion_actual !== 'APSA').length;
+  // Resumen flota (por estatus de unidad)
+  const contarEstatus = (e: UnidadExportacion['estatus']) => unidades.filter(u => u.estatus === e).length;
+  const cargadas   = contarEstatus('cargado');
+  const enDestino  = contarEstatus('cargado_destino');
+  const vacias     = contarEstatus('vacio');
+  const enTaller   = contarEstatus('taller');
 
   // Filtros
   const cargasFiltradas = cargas.filter(c => {
@@ -745,7 +871,7 @@ const Exportaciones = () => {
     return (
       c.unidad?.identificador?.toLowerCase().includes(q) ||
       c.proxima_carga?.toLowerCase().includes(q) ||
-      c.orden?.cliente?.nombre?.toLowerCase().includes(q) ||
+      c.orden?.cliente?.empresa?.toLowerCase().includes(q) ||
       c.ubicacion_actual?.toLowerCase().includes(q)
     );
   });
@@ -753,8 +879,10 @@ const Exportaciones = () => {
   const ordenesFiltradas = ordenes.filter(o => {
     const q = search.toLowerCase();
     return (
-      o.cliente?.nombre?.toLowerCase().includes(q) ||
-      o.producto?.toLowerCase().includes(q)
+      o.folio?.toLowerCase().includes(q) ||
+      o.cliente?.empresa?.toLowerCase().includes(q) ||
+      o.producto?.toLowerCase().includes(q) ||
+      o.responsable_carga?.toLowerCase().includes(q)
     );
   });
 
@@ -765,7 +893,8 @@ const Exportaciones = () => {
     if (tabFlota === 'jumbo') return matchSearch && u.tipo === 'jumbo';
     if (tabFlota === 'tolva') return matchSearch && u.tipo === 'tolva';
     if (tabFlota === 'contenedor') return matchSearch && u.tipo === 'contenedor';
-    if (tabFlota === 'taller') return matchSearch && u.estatus === 'en_reparacion';
+    if (tabFlota === 'camion') return matchSearch && u.tipo === 'camion';
+    if (tabFlota === 'taller') return matchSearch && u.estatus === 'taller';
     return matchSearch;
   });
 
@@ -804,9 +933,9 @@ const Exportaciones = () => {
       {/* Resumen */}
       <div className="mb-6 grid grid-cols-2 md:grid-cols-4 rounded-xl border bg-card divide-y md:divide-y-0 md:divide-x divide-border/70">
         {[
-          { label: 'Enviados', value: enviados, hint: 'Cargas con estatus enviado', tone: '' },
-          { label: 'En APSA', value: enApsa, hint: 'Unidades activas listas', tone: '' },
-          { label: 'En tránsito', value: enTransito, hint: 'Cargas fuera de APSA', tone: '' },
+          { label: 'Cargadas', value: cargadas, hint: 'Unidades cargadas', tone: '' },
+          { label: 'En destino', value: enDestino, hint: 'Cargadas en destino', tone: '' },
+          { label: 'Vacías', value: vacias, hint: 'Disponibles para cargar', tone: '' },
           { label: 'En taller', value: enTaller, hint: 'Unidades en reparación', tone: enTaller > 0 ? 'text-[#9B1C1C] dark:text-red-400' : '' },
         ].map(kpi => (
           <div key={kpi.label} className="flex flex-col gap-1.5 px-5 py-4">
@@ -894,6 +1023,8 @@ const Exportaciones = () => {
                       <TableHead>Carga anterior</TableHead>
                       <TableHead>Próxima carga</TableHead>
                       <TableHead>Fecha embarque</TableHead>
+                      <TableHead>Días en tránsito</TableHead>
+                      <TableHead>Días en destino</TableHead>
                       <TableHead>Cliente</TableHead>
                       <TableHead className="text-right">Ajuste (kg)</TableHead>
                       <TableHead>Estatus</TableHead>
@@ -923,7 +1054,9 @@ const Exportaciones = () => {
                             </div>
                           ) : '—'}
                         </TableCell>
-                        <TableCell className="text-sm">{carga.orden?.cliente?.nombre ?? '—'}</TableCell>
+                        <TableCell className="text-sm"><DiasCell valor={diasTransito(carga)} /></TableCell>
+                        <TableCell className="text-sm"><DiasCell valor={diasEnDestino(carga)} /></TableCell>
+                        <TableCell className="text-sm">{carga.orden?.cliente?.empresa ?? '—'}</TableCell>
                         <TableCell className="text-right text-sm font-medium">
                           {carga.unidad?.tipo === 'jumbo' && carga.ajuste_kg != null
                             ? `${carga.ajuste_kg > 0 ? '+' : ''}${carga.ajuste_kg.toLocaleString('es-MX')} kg`
@@ -978,6 +1111,7 @@ const Exportaciones = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Folio</TableHead>
                       <TableHead>Cliente</TableHead>
                       <TableHead>Producto</TableHead>
                       <TableHead>Fecha pedido</TableHead>
@@ -985,6 +1119,7 @@ const Exportaciones = () => {
                       <TableHead>Unidades</TableHead>
                       <TableHead>Tipo</TableHead>
                       <TableHead>Cargas asignadas</TableHead>
+                      <TableHead>Responsable</TableHead>
                       <TableHead>Estatus</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
@@ -995,27 +1130,40 @@ const Exportaciones = () => {
                       const enviadas = cargasOrden.filter(c => c.estatus === 'enviado').length;
                       return (
                         <TableRow key={orden.id}>
-                          <TableCell className="font-medium">{orden.cliente?.nombre ?? '—'}</TableCell>
+                          <TableCell className="font-mono font-medium">{orden.folio}</TableCell>
+                          <TableCell className="font-medium">{orden.cliente?.empresa ?? '—'}</TableCell>
                           <TableCell>{orden.producto}</TableCell>
                           <TableCell className="text-sm">{orden.fecha_pedido}</TableCell>
                           <TableCell className="text-sm">{orden.fecha_embarque ?? '—'}</TableCell>
                           <TableCell className="text-center">{orden.unidades_solicitadas}</TableCell>
-                          <TableCell className="capitalize text-sm">{orden.tipo_unidad}</TableCell>
+                          <TableCell className="text-sm">{TIPOS_UNIDAD.find(t => t.value === orden.tipo_unidad)?.label ?? orden.tipo_unidad}</TableCell>
                           <TableCell>
                             <span className="text-sm">
                               <span className="font-medium text-green-600">{enviadas}</span>
                               <span className="text-muted-foreground"> / {cargasOrden.length} asignadas</span>
                             </span>
                           </TableCell>
+                          <TableCell className="text-sm">{orden.responsable_carga ?? '—'}</TableCell>
                           <TableCell>{estatusBadge(orden.estatus)}</TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => { setEditingOrden(orden); setFormOrdenOpen(true); }}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
+                            <div className="flex justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label={`Imprimir orden ${orden.folio}`}
+                                onClick={() => setOrdenImprimir(orden)}
+                              >
+                                <Printer className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label={`Editar orden ${orden.folio}`}
+                                onClick={() => { setEditingOrden(orden); setFormOrdenOpen(true); }}
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
@@ -1033,7 +1181,7 @@ const Exportaciones = () => {
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <div>
                 <CardTitle>Flota de unidades</CardTitle>
-                <CardDescription>Jumbos, tolvas y contenedores</CardDescription>
+                <CardDescription>Jumbos, tolvas, contenedores y camiones</CardDescription>
               </div>
               <Button onClick={() => { setEditingUnidad(null); setFormUnidadOpen(true); }}>
                 <Plus className="h-4 w-4 mr-2" /> Nueva unidad
@@ -1046,6 +1194,7 @@ const Exportaciones = () => {
                   <TabsTrigger value="jumbo">Jumbos</TabsTrigger>
                   <TabsTrigger value="tolva">Tolvas</TabsTrigger>
                   <TabsTrigger value="contenedor">Contenedores</TabsTrigger>
+                  <TabsTrigger value="camion">Camiones</TabsTrigger>
                   <TabsTrigger value="taller">
                     <Wrench className="h-3 w-3 mr-1" />
                     En taller
@@ -1075,7 +1224,7 @@ const Exportaciones = () => {
                       return (
                         <TableRow key={u.id}>
                           <TableCell className="font-mono font-medium">{u.identificador}</TableCell>
-                          <TableCell className="capitalize text-sm">{u.tipo}</TableCell>
+                          <TableCell className="text-sm">{TIPOS_UNIDAD.find(t => t.value === u.tipo)?.label ?? u.tipo}</TableCell>
                           <TableCell className="text-sm">{u.ubicacion_actual ?? '—'}</TableCell>
                           <TableCell>{estatusUnidadBadge(u.estatus)}</TableCell>
                           <TableCell>
@@ -1130,6 +1279,12 @@ const Exportaciones = () => {
         onClose={() => { setFormUnidadOpen(false); setEditingUnidad(null); }}
         onSave={handleSaveUnidad}
         initial={editingUnidad}
+      />
+
+      <OrdenExportacionPrintDialog
+        orden={ordenImprimir}
+        open={!!ordenImprimir}
+        onOpenChange={v => !v && setOrdenImprimir(null)}
       />
 
       {/* Confirmar eliminación */}

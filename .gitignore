@@ -27,3 +27,6 @@ dist-ssr
 .env
 .env.local
 .env.production
+
+# Supabase CLI (archivos locales de supabase link)
+supabase/.temp/

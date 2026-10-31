@@ -1,18 +1,16 @@
 import { supabase } from '@/lib/supabase';
 
-export interface ClienteExportacion {
+// Cliente del sistema (tabla clientes), el mismo de embarques y Reciba
+export interface ClienteSistema {
   id: number;
-  nombre: string;
-  tipo_unidad: string;
-  activo: boolean;
-  created_at?: string;
+  empresa: string;
 }
 
 export interface UnidadExportacion {
   id: number;
   identificador: string;
-  tipo: 'jumbo' | 'tolva' | 'contenedor';
-  estatus: 'activo' | 'en_reparacion' | 'en_transito';
+  tipo: 'jumbo' | 'tolva' | 'contenedor' | 'camion';
+  estatus: 'cargado' | 'vacio' | 'cargado_destino' | 'taller' | 'inactivo';
   ubicacion_actual?: string | null;
   fecha_entrada_taller?: string | null;
   notas?: string | null;
@@ -23,6 +21,7 @@ export interface UnidadExportacion {
 
 export interface OrdenExportacion {
   id: number;
+  folio: string; // OE-0001, lo genera la base
   cliente_id: number;
   producto: string;
   fecha_pedido: string;
@@ -31,9 +30,10 @@ export interface OrdenExportacion {
   tipo_unidad: string;
   notas?: string | null;
   estatus: 'pendiente' | 'en_proceso' | 'completada' | 'cancelada';
+  responsable_carga?: string | null;
   created_at?: string;
   updated_at?: string;
-  cliente?: ClienteExportacion;
+  cliente?: ClienteSistema;
   cargas?: CargaExportacion[];
 }
 
@@ -46,6 +46,8 @@ export interface CargaExportacion {
   ubicacion_actual?: string | null;
   eta_apsa?: string | null;
   fecha_embarque?: string | null;
+  fecha_llegada_destino?: string | null;
+  fecha_salida_destino?: string | null;
   estatus: 'pendiente' | 'orden' | 'enviado';
   notas?: string | null;
   peso_neto?: number | null;
@@ -58,38 +60,15 @@ export interface CargaExportacion {
 
 // ─── Clientes ─────────────────────────────────────────────────────────────────
 
-export async function getClientesExportacion() {
+export async function getClientesParaExportacion() {
   if (!supabase) throw new Error('Supabase no configurado');
   const { data, error } = await supabase
-    .from('clientes_exportacion')
-    .select('*')
+    .from('clientes')
+    .select('id, empresa')
     .eq('activo', true)
-    .order('nombre');
+    .order('empresa');
   if (error) throw error;
-  return data as ClienteExportacion[];
-}
-
-export async function createClienteExportacion(cliente: Omit<ClienteExportacion, 'id' | 'created_at'>) {
-  if (!supabase) throw new Error('Supabase no configurado');
-  const { data, error } = await supabase
-    .from('clientes_exportacion')
-    .insert(cliente)
-    .select()
-    .single();
-  if (error) throw error;
-  return data as ClienteExportacion;
-}
-
-export async function updateClienteExportacion(id: number, updates: Partial<ClienteExportacion>) {
-  if (!supabase) throw new Error('Supabase no configurado');
-  const { data, error } = await supabase
-    .from('clientes_exportacion')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
-  if (error) throw error;
-  return data as ClienteExportacion;
+  return data as ClienteSistema[];
 }
 
 // ─── Unidades ─────────────────────────────────────────────────────────────────
@@ -137,7 +116,7 @@ export async function getOrdenesExportacion(filtros?: { estatus?: string; client
     .from('ordenes_exportacion')
     .select(`
       *,
-      cliente:clientes_exportacion(*),
+      cliente:clientes(id, empresa),
       cargas:cargas_exportacion(*, unidad:unidades_exportacion(*))
     `)
     .order('fecha_pedido', { ascending: false });
@@ -150,7 +129,7 @@ export async function getOrdenesExportacion(filtros?: { estatus?: string; client
   return data as OrdenExportacion[];
 }
 
-export async function createOrdenExportacion(orden: Omit<OrdenExportacion, 'id' | 'created_at' | 'updated_at' | 'cliente' | 'cargas'>) {
+export async function createOrdenExportacion(orden: Omit<OrdenExportacion, 'id' | 'folio' | 'created_at' | 'updated_at' | 'cliente' | 'cargas'>) {
   if (!supabase) throw new Error('Supabase no configurado');
   const { data, error } = await supabase
     .from('ordenes_exportacion')
@@ -182,7 +161,7 @@ export async function getCargasExportacion(ordenId?: number) {
     .select(`
       *,
       unidad:unidades_exportacion(*),
-      orden:ordenes_exportacion(*, cliente:clientes_exportacion(*))
+      orden:ordenes_exportacion(*, cliente:clientes(id, empresa))
     `)
     .order('created_at', { ascending: false });
 
