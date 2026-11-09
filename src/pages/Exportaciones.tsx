@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useExportaciones } from '@/services/hooks/useExportaciones';
+import { useAuth } from '@/contexts/AuthContext';
 import OrdenExportacionPrintDialog from '@/components/exportaciones/OrdenExportacionPrintDialog';
 import type { CargaExportacion, OrdenExportacion, UnidadExportacion } from '@/services/supabase/exportaciones';
 
@@ -130,16 +131,17 @@ interface FormCargaProps {
   onClose: () => void;
   onSave: (data: Partial<CargaExportacion>) => Promise<void>;
   initial?: CargaExportacion | null;
+  ordenInicial?: OrdenExportacion | null; // carga nueva desde "Asignar unidad" de una orden
   ordenes: OrdenExportacion[];
   unidades: UnidadExportacion[];
 }
 
-const FormCarga: React.FC<FormCargaProps> = ({ open, onClose, onSave, initial, ordenes, unidades }) => {
+const FormCarga: React.FC<FormCargaProps> = ({ open, onClose, onSave, initial, ordenInicial, ordenes, unidades }) => {
   const [form, setForm] = useState<Partial<CargaExportacion>>({
-    orden_id: initial?.orden_id ?? undefined,
+    orden_id: initial?.orden_id ?? ordenInicial?.id ?? undefined,
     unidad_id: initial?.unidad_id ?? undefined,
     carga_anterior: initial?.carga_anterior ?? '',
-    proxima_carga: initial?.proxima_carga ?? '',
+    proxima_carga: initial?.proxima_carga ?? ordenInicial?.producto ?? '',
     ubicacion_actual: initial?.ubicacion_actual ?? '',
     eta_apsa: initial?.eta_apsa ?? '',
     fecha_embarque: initial?.fecha_embarque ?? '',
@@ -153,10 +155,10 @@ const FormCarga: React.FC<FormCargaProps> = ({ open, onClose, onSave, initial, o
 
   React.useEffect(() => {
     setForm({
-      orden_id: initial?.orden_id ?? undefined,
+      orden_id: initial?.orden_id ?? ordenInicial?.id ?? undefined,
       unidad_id: initial?.unidad_id ?? undefined,
       carga_anterior: initial?.carga_anterior ?? '',
-      proxima_carga: initial?.proxima_carga ?? '',
+      proxima_carga: initial?.proxima_carga ?? ordenInicial?.producto ?? '',
       ubicacion_actual: initial?.ubicacion_actual ?? '',
       eta_apsa: initial?.eta_apsa ?? '',
       fecha_embarque: initial?.fecha_embarque ?? '',
@@ -166,7 +168,7 @@ const FormCarga: React.FC<FormCargaProps> = ({ open, onClose, onSave, initial, o
       notas: initial?.notas ?? '',
       ajuste_kg: initial?.ajuste_kg ?? null,
     });
-  }, [initial, open]);
+  }, [initial, ordenInicial, open]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -192,7 +194,9 @@ const FormCarga: React.FC<FormCargaProps> = ({ open, onClose, onSave, initial, o
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{initial ? 'Editar carga' : 'Nueva carga'}</DialogTitle>
+          <DialogTitle>
+            {initial ? 'Editar carga' : ordenInicial ? `Asignar unidad a ${ordenInicial.folio}` : 'Nueva carga'}
+          </DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-2">
           <div className="grid grid-cols-2 gap-4">
@@ -205,9 +209,9 @@ const FormCarga: React.FC<FormCargaProps> = ({ open, onClose, onSave, initial, o
                 <SelectTrigger><SelectValue placeholder="Sin orden" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Sin orden</SelectItem>
-                  {ordenes.filter(o => o.estatus !== 'cancelada' && o.estatus !== 'completada').map(o => (
+                  {ordenes.filter(o => (o.estatus !== 'cancelada' && o.estatus !== 'completada') || o.id === initial?.orden_id).map(o => (
                     <SelectItem key={o.id} value={o.id.toString()}>
-                      {o.cliente?.empresa} — {o.producto}
+                      {o.folio} · {o.cliente?.empresa} — {o.producto}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -737,7 +741,7 @@ function buildCalendar(year: number, month: number): (Date | null)[][] {
 
 const CalendarioCargas: React.FC<{
   cargas: CargaExportacion[];
-  onEditCarga: (c: CargaExportacion) => void;
+  onEditCarga?: (c: CargaExportacion) => void;
 }> = ({ cargas, onEditCarga }) => {
   const hoy = new Date();
   const [mes, setMes] = useState(hoy.getMonth());
@@ -811,8 +815,9 @@ const CalendarioCargas: React.FC<{
                     {eventos.slice(0, 3).map((ev, ei) => (
                       <button
                         key={ei}
-                        onClick={() => onEditCarga(ev.carga)}
-                        className={`w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded font-medium ${EVENTOS_CAL[ev.tipo].chip}`}
+                        onClick={() => onEditCarga?.(ev.carga)}
+                        disabled={!onEditCarga}
+                        className={`w-full text-left text-[10px] leading-tight px-1 py-0.5 rounded font-medium disabled:cursor-default ${EVENTOS_CAL[ev.tipo].chip}`}
                         title={[
                           `${EVENTOS_CAL[ev.tipo].label}: ${ev.carga.unidad?.identificador ?? '—'} — ${ev.carga.orden?.cliente?.empresa ?? '—'}`,
                           ev.carga.notas ? `Notas: ${ev.carga.notas}` : '',
@@ -844,6 +849,9 @@ const CalendarioCargas: React.FC<{
 
 const Exportaciones = () => {
   const { clientes, unidades, ordenes, cargas, loading, addOrden, editOrden, addCarga, editCarga, removeCarga, addUnidad, editUnidad } = useExportaciones();
+  const { usuario } = useAuth();
+  // Báscula y Oficina entran solo a consultar
+  const puedeEditar = usuario?.rol === 'Administrador' || usuario?.rol === 'Exportaciones';
 
   const [search, setSearch] = useState('');
   const [tabFlota, setTabFlota] = useState('todas');
@@ -857,6 +865,7 @@ const Exportaciones = () => {
   const [editingUnidad, setEditingUnidad]   = useState<UnidadExportacion | null>(null);
   const [confirmDelete, setConfirmDelete]   = useState<CargaExportacion | null>(null);
   const [ordenImprimir, setOrdenImprimir]   = useState<OrdenExportacion | null>(null);
+  const [ordenParaCarga, setOrdenParaCarga] = useState<OrdenExportacion | null>(null);
 
   // Resumen flota (por estatus de unidad)
   const contarEstatus = (e: UnidadExportacion['estatus']) => unidades.filter(u => u.estatus === e).length;
@@ -869,7 +878,9 @@ const Exportaciones = () => {
   const cargasFiltradas = cargas.filter(c => {
     const q = search.toLowerCase();
     return (
+      !q ||
       c.unidad?.identificador?.toLowerCase().includes(q) ||
+      c.orden?.folio?.toLowerCase().includes(q) ||
       c.proxima_carga?.toLowerCase().includes(q) ||
       c.orden?.cliente?.empresa?.toLowerCase().includes(q) ||
       c.ubicacion_actual?.toLowerCase().includes(q)
@@ -880,6 +891,7 @@ const Exportaciones = () => {
     const q = search.toLowerCase();
     return (
       o.folio?.toLowerCase().includes(q) ||
+      o.cargas?.some(c => c.unidad?.identificador?.toLowerCase().includes(q)) ||
       o.cliente?.empresa?.toLowerCase().includes(q) ||
       o.producto?.toLowerCase().includes(q) ||
       o.responsable_carga?.toLowerCase().includes(q)
@@ -927,7 +939,10 @@ const Exportaciones = () => {
 
   return (
     <Layout>
-      <Header title="Exportaciones" subtitle="Control de órdenes, cargas y flota de exportación" />
+      <Header
+        title="Exportaciones"
+        subtitle={puedeEditar ? 'Control de órdenes, cargas y flota de exportación' : 'Órdenes, cargas y flota de exportación (solo consulta)'}
+      />
 
       <div className="p-6">
       {/* Resumen */}
@@ -950,7 +965,7 @@ const Exportaciones = () => {
       <div className="relative mb-4">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Buscar por unidad, cliente, producto o ubicación..."
+          placeholder="Buscar por folio, unidad, cliente, producto o ubicación..."
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="pl-9"
@@ -998,9 +1013,11 @@ const Exportaciones = () => {
                     <Calendar className="h-4 w-4" /> Calendario
                   </button>
                 </div>
-                <Button onClick={() => { setEditingCarga(null); setFormCargaOpen(true); }}>
-                  <Plus className="h-4 w-4 mr-2" /> Nueva carga
-                </Button>
+                {puedeEditar && (
+                  <Button onClick={() => { setEditingCarga(null); setOrdenParaCarga(null); setFormCargaOpen(true); }}>
+                    <Plus className="h-4 w-4 mr-2" /> Nueva carga
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent>
@@ -1009,7 +1026,7 @@ const Exportaciones = () => {
               ) : vistaCal ? (
                 <CalendarioCargas
                   cargas={cargasFiltradas}
-                  onEditCarga={c => { setEditingCarga(c); setFormCargaOpen(true); }}
+                  onEditCarga={puedeEditar ? c => { setEditingCarga(c); setFormCargaOpen(true); } : undefined}
                 />
               ) : cargasFiltradas.length === 0 ? (
                 <p className="text-center text-muted-foreground py-8">No hay cargas registradas</p>
@@ -1018,6 +1035,7 @@ const Exportaciones = () => {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Unidad</TableHead>
+                      <TableHead>Orden</TableHead>
                       <TableHead>Ubicación</TableHead>
                       <TableHead>Llegada a AYP</TableHead>
                       <TableHead>Carga anterior</TableHead>
@@ -1028,7 +1046,7 @@ const Exportaciones = () => {
                       <TableHead>Cliente</TableHead>
                       <TableHead className="text-right">Ajuste (kg)</TableHead>
                       <TableHead>Estatus</TableHead>
-                      <TableHead className="text-right">Acciones</TableHead>
+                      {puedeEditar && <TableHead className="text-right">Acciones</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1037,6 +1055,7 @@ const Exportaciones = () => {
                         <TableCell className="font-mono font-medium">
                           {carga.unidad?.identificador ?? '—'}
                         </TableCell>
+                        <TableCell className="font-mono text-sm whitespace-nowrap">{carga.orden?.folio ?? '—'}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1 text-sm">
                             <MapPin className="h-3 w-3 text-muted-foreground" />
@@ -1063,24 +1082,26 @@ const Exportaciones = () => {
                             : carga.unidad?.tipo === 'jumbo' ? '—' : ''}
                         </TableCell>
                         <TableCell>{estatusBadge(carga.estatus)}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => { setEditingCarga(carga); setFormCargaOpen(true); }}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setConfirmDelete(carga)}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
+                        {puedeEditar && (
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => { setEditingCarga(carga); setFormCargaOpen(true); }}
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setConfirmDelete(carga)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -1098,9 +1119,11 @@ const Exportaciones = () => {
                 <CardTitle>Órdenes de exportación</CardTitle>
                 <CardDescription>Pedidos por cliente</CardDescription>
               </div>
-              <Button onClick={() => { setEditingOrden(null); setFormOrdenOpen(true); }}>
-                <Plus className="h-4 w-4 mr-2" /> Nueva orden
-              </Button>
+              {puedeEditar && (
+                <Button onClick={() => { setEditingOrden(null); setFormOrdenOpen(true); }}>
+                  <Plus className="h-4 w-4 mr-2" /> Nueva orden
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -1118,7 +1141,7 @@ const Exportaciones = () => {
                       <TableHead>Fecha embarque</TableHead>
                       <TableHead>Unidades</TableHead>
                       <TableHead>Tipo</TableHead>
-                      <TableHead>Cargas asignadas</TableHead>
+                      <TableHead>Unidades asignadas</TableHead>
                       <TableHead>Responsable</TableHead>
                       <TableHead>Estatus</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
@@ -1128,6 +1151,7 @@ const Exportaciones = () => {
                     {ordenesFiltradas.map(orden => {
                       const cargasOrden = orden.cargas ?? [];
                       const enviadas = cargasOrden.filter(c => c.estatus === 'enviado').length;
+                      const asignadas = cargasOrden.filter(c => c.unidad).map(c => c.unidad!.identificador);
                       return (
                         <TableRow key={orden.id}>
                           <TableCell className="font-mono font-medium">{orden.folio}</TableCell>
@@ -1138,15 +1162,29 @@ const Exportaciones = () => {
                           <TableCell className="text-center">{orden.unidades_solicitadas}</TableCell>
                           <TableCell className="text-sm">{TIPOS_UNIDAD.find(t => t.value === orden.tipo_unidad)?.label ?? orden.tipo_unidad}</TableCell>
                           <TableCell>
-                            <span className="text-sm">
-                              <span className="font-medium text-green-600">{enviadas}</span>
-                              <span className="text-muted-foreground"> / {cargasOrden.length} asignadas</span>
-                            </span>
+                            <div className="font-mono text-sm font-medium">
+                              {asignadas.length > 0
+                                ? asignadas.map(id => <div key={id} className="whitespace-nowrap">{id}</div>)
+                                : '—'}
+                            </div>
+                            <div className="text-xs text-muted-foreground whitespace-nowrap">
+                              {asignadas.length} de {orden.unidades_solicitadas} · {enviadas} {enviadas === 1 ? 'enviada' : 'enviadas'}
+                            </div>
                           </TableCell>
                           <TableCell className="text-sm">{orden.responsable_carga ?? '—'}</TableCell>
                           <TableCell>{estatusBadge(orden.estatus)}</TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-1">
+                              {puedeEditar && orden.estatus !== 'completada' && orden.estatus !== 'cancelada' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="whitespace-nowrap"
+                                  onClick={() => { setEditingCarga(null); setOrdenParaCarga(orden); setFormCargaOpen(true); }}
+                                >
+                                  <Truck className="h-4 w-4 mr-1" /> Asignar unidad
+                                </Button>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -1155,14 +1193,16 @@ const Exportaciones = () => {
                               >
                                 <Printer className="h-4 w-4" />
                               </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label={`Editar orden ${orden.folio}`}
-                                onClick={() => { setEditingOrden(orden); setFormOrdenOpen(true); }}
-                              >
-                                <Edit2 className="h-4 w-4" />
-                              </Button>
+                              {puedeEditar && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  aria-label={`Editar orden ${orden.folio}`}
+                                  onClick={() => { setEditingOrden(orden); setFormOrdenOpen(true); }}
+                                >
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>
@@ -1183,9 +1223,11 @@ const Exportaciones = () => {
                 <CardTitle>Flota de unidades</CardTitle>
                 <CardDescription>Jumbos, tolvas, contenedores y camiones</CardDescription>
               </div>
-              <Button onClick={() => { setEditingUnidad(null); setFormUnidadOpen(true); }}>
-                <Plus className="h-4 w-4 mr-2" /> Nueva unidad
-              </Button>
+              {puedeEditar && (
+                <Button onClick={() => { setEditingUnidad(null); setFormUnidadOpen(true); }}>
+                  <Plus className="h-4 w-4 mr-2" /> Nueva unidad
+                </Button>
+              )}
             </CardHeader>
             <CardContent>
               <Tabs value={tabFlota} onValueChange={setTabFlota} className="mb-4">
@@ -1215,7 +1257,7 @@ const Exportaciones = () => {
                       <TableHead>Estatus</TableHead>
                       <TableHead>Días en taller</TableHead>
                       <TableHead>Notas</TableHead>
-                      <TableHead className="text-right">Acciones</TableHead>
+                      {puedeEditar && <TableHead className="text-right">Acciones</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1237,15 +1279,17 @@ const Exportaciones = () => {
                           <TableCell className="text-sm text-muted-foreground max-w-[160px] truncate">
                             {u.notas ?? '—'}
                           </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => { setEditingUnidad(u); setFormUnidadOpen(true); }}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
+                          {puedeEditar && (
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => { setEditingUnidad(u); setFormUnidadOpen(true); }}
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          )}
                         </TableRow>
                       );
                     })}
@@ -1261,9 +1305,10 @@ const Exportaciones = () => {
       {/* Dialogs */}
       <FormCarga
         open={formCargaOpen}
-        onClose={() => { setFormCargaOpen(false); setEditingCarga(null); }}
+        onClose={() => { setFormCargaOpen(false); setEditingCarga(null); setOrdenParaCarga(null); }}
         onSave={handleSaveCarga}
         initial={editingCarga}
+        ordenInicial={ordenParaCarga}
         ordenes={ordenes}
         unidades={unidades}
       />

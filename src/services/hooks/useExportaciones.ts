@@ -91,11 +91,8 @@ export function useExportaciones() {
 
   const editCarga = async (id: number, updates: Partial<CargaExportacion>) => {
     const actualizada = await updateCargaExportacion(id, updates);
-    setCargas(prev => prev.map(c => c.id === id ? { ...c, ...actualizada } : c));
-    setOrdenes(prev => prev.map(o => ({
-      ...o,
-      cargas: o.cargas?.map(c => c.id === id ? { ...c, ...actualizada } : c)
-    })));
+    // La orden o la unidad pudieron cambiar: recargar para traer las relaciones
+    await loadAll();
     toast.success('Carga actualizada');
     return actualizada;
   };

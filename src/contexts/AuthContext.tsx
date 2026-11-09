@@ -26,9 +26,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Mapeo de roles a módulos permitidos
 const permisosPorRol: Record<Rol, string[]> = {
-  'Oficina': ['oficina', 'reciba', 'embarque', 'movimientos', 'proveedores', 'clientes', 'reportes', 'ingreso'],
+  'Oficina': ['oficina', 'reciba', 'embarque', 'movimientos', 'proveedores', 'clientes', 'reportes', 'ingreso', 'exportaciones'],
   'Portero': ['ingreso'],
-  'Báscula': ['reciba', 'embarque', 'movimientos', 'reportes', 'configuracion', 'produccion', 'laboratorio'],
+  'Báscula': ['reciba', 'embarque', 'movimientos', 'reportes', 'configuracion', 'produccion', 'laboratorio', 'exportaciones'],
   'Calidad': ['control-calidad'],
   'Laboratorio': ['laboratorio'],
   'Producción': ['produccion'],
