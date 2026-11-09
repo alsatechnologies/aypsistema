@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import Logo from '@/components/Logo';
 import { useAuth, rutaInicialPorRol } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
+import { APP_VERSION } from '@/version';
 
 const Login = () => {
   const [usuarioOCorreo, setUsuarioOCorreo] = useState('');
@@ -113,7 +114,7 @@ const Login = () => {
         </div>
         
         <div className="text-xs text-gray-400">
-          V 1.0
+          V {APP_VERSION}
         </div>
       </div>
       
