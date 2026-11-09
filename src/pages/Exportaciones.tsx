@@ -134,9 +134,10 @@ interface FormCargaProps {
   ordenInicial?: OrdenExportacion | null; // carga nueva desde "Asignar unidad" de una orden
   ordenes: OrdenExportacion[];
   unidades: UnidadExportacion[];
+  cargas: CargaExportacion[];
 }
 
-const FormCarga: React.FC<FormCargaProps> = ({ open, onClose, onSave, initial, ordenInicial, ordenes, unidades }) => {
+const FormCarga: React.FC<FormCargaProps> = ({ open, onClose, onSave, initial, ordenInicial, ordenes, unidades, cargas }) => {
   const [form, setForm] = useState<Partial<CargaExportacion>>({
     orden_id: initial?.orden_id ?? ordenInicial?.id ?? undefined,
     unidad_id: initial?.unidad_id ?? undefined,
@@ -186,8 +187,14 @@ const FormCarga: React.FC<FormCargaProps> = ({ open, onClose, onSave, initial, o
     }
   };
 
+  // Una carga queda abierta hasta marcarse "Enviado": su unidad no se ofrece para otra carga
+  const unidadesOcupadas = new Set(
+    cargas
+      .filter(c => c.estatus !== 'enviado' && c.unidad_id != null && c.id !== initial?.id)
+      .map(c => c.unidad_id as number)
+  );
   const unidadesDisponibles = unidades.filter(u =>
-    u.estatus === 'vacio' || u.id === initial?.unidad_id
+    (u.estatus === 'vacio' && !unidadesOcupadas.has(u.id)) || u.id === initial?.unidad_id
   );
 
   return (
@@ -225,6 +232,9 @@ const FormCarga: React.FC<FormCargaProps> = ({ open, onClose, onSave, initial, o
               >
                 <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                 <SelectContent>
+                  {unidadesDisponibles.length === 0 && (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">No hay unidades vacías libres</div>
+                  )}
                   {unidadesDisponibles.map(u => (
                     <SelectItem key={u.id} value={u.id.toString()}>
                       {u.identificador} ({TIPOS_UNIDAD.find(t => t.value === u.tipo)?.label ?? u.tipo})
@@ -232,6 +242,7 @@ const FormCarga: React.FC<FormCargaProps> = ({ open, onClose, onSave, initial, o
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">Vacías y sin otra carga abierta</p>
             </div>
           </div>
 
@@ -916,6 +927,11 @@ const Exportaciones = () => {
     } else {
       await addCarga(data as any);
     }
+    // "Enviado" = jumbo cargado y documentado: la unidad pasa a Cargado
+    const unidad = unidades.find(u => u.id === data.unidad_id);
+    if (data.estatus === 'enviado' && unidad?.estatus === 'vacio') {
+      await editUnidad(unidad.id, { estatus: 'cargado' });
+    }
     setEditingCarga(null);
   };
 
@@ -1311,6 +1327,7 @@ const Exportaciones = () => {
         ordenInicial={ordenParaCarga}
         ordenes={ordenes}
         unidades={unidades}
+        cargas={cargas}
       />
       <FormOrden
         open={formOrdenOpen}
