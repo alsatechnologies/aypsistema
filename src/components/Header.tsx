@@ -3,6 +3,7 @@ import React from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/contexts/ThemeContext';
+import { APP_VERSION } from '@/version';
 
 interface HeaderProps {
   title: string;
@@ -31,6 +32,12 @@ const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
         {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
       </div>
       <div className="flex items-center gap-3">
+        <span
+          className="rounded-md border px-2 py-0.5 font-mono text-[12px] text-muted-foreground"
+          title="Versión del sistema"
+        >
+          V {APP_VERSION}
+        </span>
         <span className="font-mono text-[12.5px] text-muted-foreground">
           {formattedDate} · {formattedTime}
         </span>

@@ -8,9 +8,10 @@
 //
 // En cada cambio: actualizar APP_VERSION y agregar su línea al historial.
 
-export const APP_VERSION = '1.1';
+export const APP_VERSION = '1.2';
 
 export const HISTORIAL_VERSIONES: { version: string; fecha: string; cambio: string }[] = [
+  { version: '1.2', fecha: '2026-11-09', cambio: 'Versión visible en el encabezado de todas las pantallas' },
   { version: '1.1', fecha: '2026-11-09', cambio: 'Punto de partida del control de versiones: lotes (037/038), ajustes de Exportaciones, consulta para Báscula/Oficina y jumbos con carga abierta' },
   { version: '1.0', fecha: '2025-12-10', cambio: 'Versión inicial del sistema' },
 ];
